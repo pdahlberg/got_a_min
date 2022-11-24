@@ -2,7 +2,7 @@
 seeds = false
 skip-lint = false
 [programs.localnet]
-got_a_min = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+got_a_min = "5kdCwKP8D1ciS9xyc3zRp1PaUcyD2yiBFkgBr8u3jn3K"
 
 [registry]
 url = "https://api.apr.dev"
@@ -13,3 +13,4 @@ wallet = "/home/pmd/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+echo-script = "echo 'Hello world!'"
