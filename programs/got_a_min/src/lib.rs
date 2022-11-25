@@ -1,4 +1,4 @@
-use anchor_lang::{prelude::*, system_program};
+use anchor_lang::{solana_program::entrypoint::ProgramResult, prelude::*};
 
 declare_id!("5kdCwKP8D1ciS9xyc3zRp1PaUcyD2yiBFkgBr8u3jn3K");
 
@@ -6,7 +6,9 @@ declare_id!("5kdCwKP8D1ciS9xyc3zRp1PaUcyD2yiBFkgBr8u3jn3K");
 pub mod got_a_min {
     use super::*;
 
-    pub fn produce(ctx: Context<ProduceResource>) -> Result<()> {
+    pub fn produce(ctx: Context<ProduceResource>) -> ProgramResult {
+        let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
+    
         Ok(())
     }
 }
