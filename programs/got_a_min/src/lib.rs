@@ -17,8 +17,7 @@ pub struct ProduceResource<'info> {
     pub resource: Account<'info, Resource>,
     #[account(mut)]
     pub owner: Signer<'info>,
-    #[account(address = system_program::ID)]
-    pub system_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[account]
