@@ -44,7 +44,7 @@ describe("got_a_min", () => {
     let result = await program.account.resource.fetch(resource.publicKey);
     expect(result.amount.toNumber()).to.equal(0);
     
-    await program.methods
+    /*await program.methods
       .produce()
       .accounts({
         resource: resource.publicKey,
@@ -56,7 +56,7 @@ describe("got_a_min", () => {
 
     let result2 = await program.account.resource.fetch(resource.publicKey);
     
-    expect(result2.amount.toNumber()).to.equal(1);
+    expect(result2.amount.toNumber()).to.equal(1);*/
   });
 
 });
