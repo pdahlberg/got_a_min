@@ -1,17 +1,25 @@
-use anchor_lang::{solana_program::entrypoint::ProgramResult, prelude::*};
+use anchor_lang::prelude::*;
 
 declare_id!("5kdCwKP8D1ciS9xyc3zRp1PaUcyD2yiBFkgBr8u3jn3K");
+
+#[error_code]
+pub enum ErrorCode2 {
+    #[msg("This error is just for fun.")]
+    ErrorForFun,
+}
 
 #[program]
 pub mod got_a_min {
     use super::*;
 
-    pub fn produce(ctx: Context<ProduceResource>) -> ProgramResult {
+    pub fn produce(ctx: Context<ProduceResource>) -> Result<()> {
         let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
         let owner: &Signer = &ctx.accounts.owner;
 
         resource.owner = *owner.key;
         resource.amount += 1;
+
+        require!(resource.amount < 3, super::ErrorCode2::ErrorForFun);
 
         Ok(())
     }

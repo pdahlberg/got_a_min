@@ -8,9 +8,16 @@ describe("got_a_min", () => {
 
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
 
-  it("Is initialized!", async () => {
+  it("Produce with error", async () => {
     // Add your test here.
-    const tx = await program.methods.produce().rpc();
-    console.log("Your transaction signature", tx);
+    const tx1 = await program.methods.produce().rpc();
+    console.log("Your transaction signature", tx1);
+
+    /*const tx2 = await program.methods.produce().rpc();
+    console.log("Your transaction signature", tx2);
+
+    const tx3 = await program.methods.produce().rpc();
+    console.log("Your transaction signature", tx3);
+    */
   });
 });
