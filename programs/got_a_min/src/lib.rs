@@ -21,6 +21,8 @@ pub mod got_a_min {
 
         require!(resource.amount < 3, super::ErrorCode2::ErrorForFun);
 
+        
+
         Ok(())
     }
 }
