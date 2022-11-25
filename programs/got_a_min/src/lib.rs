@@ -13,3 +13,19 @@ pub mod got_a_min {
 
 #[derive(Accounts)]
 pub struct Initialize {}
+
+#[account]
+pub struct Resource {
+    pub owner: Pubkey,
+    pub amount: i64,
+}
+
+const DISCRIMINATOR_LENGTH: usize = 8;
+const OWNER_LENGTH: usize = 32;
+const AMOUNT_LENGTH: usize = 8;
+
+impl Resource {
+    const LEN: usize = DISCRIMINATOR_LENGTH
+        + OWNER_LENGTH
+        + AMOUNT_LENGTH;
+}
