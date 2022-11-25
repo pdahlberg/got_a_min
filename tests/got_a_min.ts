@@ -26,7 +26,7 @@ describe("got_a_min", () => {
     console.log("Your transaction signature", tx);
 
     let result = await program.account.resource.fetch(resource.publicKey);
-    expect(result.amount.eqn(1)).to.equal(true);
+    expect(result.amount.toNumber()).to.equal(1);
   });
 
   /*it("Produce several", async () => {
