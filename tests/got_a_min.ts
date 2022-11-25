@@ -10,11 +10,11 @@ describe("got_a_min", () => {
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
 
-  it("Produce one", async () => {
+  it("Init resource", async () => {
     const resource = anchor.web3.Keypair.generate();
 
     await program.methods
-      .produce()
+      .init()
       .accounts({
         resource: resource.publicKey,
         owner: programProvider.wallet.publicKey,
@@ -25,7 +25,38 @@ describe("got_a_min", () => {
 
     let result = await program.account.resource.fetch(resource.publicKey);
     
-    expect(result.amount.toNumber()).to.equal(1);
+    expect(result.amount.toNumber()).to.equal(0);
+  });
+
+  it("Produce two", async () => {
+    const resource = anchor.web3.Keypair.generate();
+
+    await program.methods
+      .init()
+      .accounts({
+        resource: resource.publicKey,
+        owner: programProvider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([resource])
+      .rpc();
+
+    let result = await program.account.resource.fetch(resource.publicKey);
+    expect(result.amount.toNumber()).to.equal(0);
+    
+    await program.methods
+      .produce()
+      .accounts({
+        resource: resource.publicKey,
+        owner: programProvider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([resource])
+      .rpc();
+
+    let result2 = await program.account.resource.fetch(resource.publicKey);
+    
+    expect(result2.amount.toNumber()).to.equal(1);
   });
 
 });
