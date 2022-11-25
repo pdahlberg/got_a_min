@@ -8,7 +8,11 @@ pub mod got_a_min {
 
     pub fn produce(ctx: Context<ProduceResource>) -> ProgramResult {
         let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
-    
+        let owner: &Signer = &ctx.accounts.owner;
+
+        resource.owner = *owner.key;
+        resource.amount += 1;
+
         Ok(())
     }
 }
