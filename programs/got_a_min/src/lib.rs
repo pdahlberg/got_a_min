@@ -17,7 +17,7 @@ pub mod got_a_min {
         let owner: &Signer = &ctx.accounts.owner;
 
         resource.owner = *owner.key;
-        resource.amount += 1;
+        resource.amount += 5;
 
         require!(resource.amount < 3, super::ErrorCode2::ErrorForFun);
 

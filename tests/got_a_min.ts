@@ -10,14 +10,7 @@ describe("got_a_min", () => {
 
   it("Produce with error", async () => {
     // Add your test here.
-    const tx1 = await program.methods.produce().rpc();
-    console.log("Your transaction signature", tx1);
-
-    /*const tx2 = await program.methods.produce().rpc();
-    console.log("Your transaction signature", tx2);
-
-    const tx3 = await program.methods.produce().rpc();
-    console.log("Your transaction signature", tx3);
-    */
+    const tx = await program.methods.produce().rpc();
+    console.log("Your transaction signature", tx);
   });
 });
