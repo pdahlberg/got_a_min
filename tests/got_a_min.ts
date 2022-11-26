@@ -31,30 +31,9 @@ describe("got_a_min", () => {
 
   it("Produce 1", async () => {
     const resource = anchor.web3.Keypair.generate();
-    const playerKey = programProvider.wallet.publicKey;
-    console.log("Player key: ", playerKey);
 
     await program.methods
       .init()
-      .accounts({
-        resource: resource.publicKey,
-        owner: playerKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .signers([resource])
-      .rpc();
-
-    await program.methods
-      .produce()
-      .accounts({
-        resource: resource.publicKey,
-        owner: playerKey,
-      })
-      .signers([resource])
-      .rpc();
-    
-    /*await program.methods
-      .produce()
       .accounts({
         resource: resource.publicKey,
         owner: programProvider.wallet.publicKey,
@@ -63,13 +42,16 @@ describe("got_a_min", () => {
       .signers([resource])
       .rpc();
 
-    let result2 = await program.account.resource.fetch(resource.publicKey);
+    await program.methods
+      .produce()
+      .accounts({
+        resource: resource.publicKey,
+      })
+      .rpc();
     
-    expect(result2.amount.toNumber()).to.equal(1);*/
+    let result2 = await program.account.resource.fetch(resource.publicKey);
 
-    let result = await program.account.resource.fetch(resource.publicKey);
-
-    expect(result.amount.toNumber()).to.equal(1);
+    expect(result2.amount.toNumber()).to.equal(1);
   });
 
 });

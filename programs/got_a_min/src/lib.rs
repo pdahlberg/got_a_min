@@ -44,7 +44,6 @@ pub struct InitResource<'info> {
 pub struct ProduceResource<'info> {
     #[account(mut)]
     pub resource: Account<'info, Resource>,
-    pub owner: Signer<'info>,
 }
 
 #[account]
