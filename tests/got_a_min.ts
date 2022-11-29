@@ -13,9 +13,7 @@ describe("got_a_min", () => {
   it("Init resource", async () => {
     const resource = anchor.web3.Keypair.generate();
 
-    await init(program, resource);
-
-    let result = await program.account.resource.fetch(resource.publicKey);
+    let result = await init(program, resource);
     
     expect(result.amount.toNumber()).to.equal(0);
     expect(result.owner.toBase58).to.equal(programProvider.wallet.publicKey.toBase58);
@@ -44,6 +42,8 @@ async function init(program: Program<GotAMin>, resource) {
     })
     .signers(resource)
     .rpc();
+    
+    return await program.account.resource.fetch(resource.publicKey);
 }
 
 async function produce(program: Program<GotAMin>, resource) {
