@@ -13,15 +13,7 @@ describe("got_a_min", () => {
   it("Init resource", async () => {
     const resource = anchor.web3.Keypair.generate();
 
-    await program.methods
-      .init()
-      .accounts({
-        resource: resource.publicKey,
-        owner: programProvider.wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .signers([resource])
-      .rpc();
+    await init(program, resource);
 
     let result = await program.account.resource.fetch(resource.publicKey);
     
@@ -31,27 +23,38 @@ describe("got_a_min", () => {
 
   it("Produce 1", async () => {
     const resource = anchor.web3.Keypair.generate();
+    await init(program, resource);
 
-    await program.methods
-      .init()
-      .accounts({
-        resource: resource.publicKey,
-        owner: programProvider.wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .signers([resource])
-      .rpc();
+    let result = await produce(program, resource);
 
-    await program.methods
-      .produce()
-      .accounts({
-        resource: resource.publicKey,
-      })
-      .rpc();
-    
-    let result2 = await program.account.resource.fetch(resource.publicKey);
-
-    expect(result2.amount.toNumber()).to.equal(1);
+    expect(result.amount.toNumber()).to.equal(1);
   });
 
 });
+
+async function init(program: Program<GotAMin>, resource) {
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  await program.methods
+    .init()
+    .accounts({
+      resource: resource.publicKey,
+        owner: programProvider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+    })
+    .signers(resource)
+    .rpc();
+}
+
+async function produce(program: Program<GotAMin>, resource) {
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  await program.methods
+    .produce()
+    .accounts({
+      resource: resource.publicKey,
+    })
+    .rpc();
+
+  return await program.account.resource.fetch(resource.publicKey);
+}
