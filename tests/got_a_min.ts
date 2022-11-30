@@ -21,7 +21,7 @@ describe("got_a_min", () => {
 
   it("Produce 1 of resource A", async () => {
     const resource = anchor.web3.Keypair.generate();
-    await init(program, resource, "A");
+    await init(program, resource, 'A');
 
     let result = await produce(program, resource);
 
@@ -31,7 +31,7 @@ describe("got_a_min", () => {
 
   it("Produce 1 of resource B", async () => {
     const resource = anchor.web3.Keypair.generate();
-    await init(program, resource, "B");
+    await init(program, resource, 'B');
 
     let result = await produce(program, resource);
 
@@ -41,11 +41,11 @@ describe("got_a_min", () => {
 
 });
 
-async function init(program: Program<GotAMin>, resource, name: String) {
+async function init(program: Program<GotAMin>, resource, name: string) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
-    .init('A')
+    .init(name)
     .accounts({
       resource: resource.publicKey,
       owner: programProvider.wallet.publicKey,
