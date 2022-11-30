@@ -13,32 +13,43 @@ describe("got_a_min", () => {
   it("Init resource", async () => {
     const resource = anchor.web3.Keypair.generate();
 
-    let result = await init(program, resource);
+    let result = await init(program, resource, "A");
     
     expect(result.amount.toNumber()).to.equal(0);
     expect(result.owner.toBase58).to.equal(programProvider.wallet.publicKey.toBase58);
   });
 
-  it("Produce 1", async () => {
+  it("Produce 1 of resource A", async () => {
     const resource = anchor.web3.Keypair.generate();
-    await init(program, resource);
+    await init(program, resource, "A");
 
     let result = await produce(program, resource);
 
     expect(result.amount.toNumber()).to.equal(1);
+    expect(result.name).to.equal('A');
+  });
+
+  it("Produce 1 of resource B", async () => {
+    const resource = anchor.web3.Keypair.generate();
+    await init(program, resource, "B");
+
+    let result = await produce(program, resource);
+
+    expect(result.amount.toNumber()).to.equal(1);
+    expect(result.name).to.equal('B');
   });
 
 });
 
-async function init(program: Program<GotAMin>, resource) {
+async function init(program: Program<GotAMin>, resource, name: String) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
-    .init()
+    .init('A')
     .accounts({
       resource: resource.publicKey,
-        owner: programProvider.wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
+      owner: programProvider.wallet.publicKey,
+      systemProgram: anchor.web3.SystemProgram.programId,
     })
     .signers(resource)
     .rpc();

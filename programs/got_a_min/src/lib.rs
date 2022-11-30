@@ -12,12 +12,13 @@ pub enum ErrorCode2 {
 pub mod got_a_min {
     use super::*;
 
-    pub fn init(ctx: Context<InitResource>) -> Result<()> {
+    pub fn init(ctx: Context<InitResource>, name: String) -> Result<()> {
         let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
         let owner: &Signer = &ctx.accounts.owner;
 
         resource.owner = *owner.key;
         resource.amount = 0;
+        resource.name = name;
 
         Ok(())
     }
@@ -50,14 +51,17 @@ pub struct ProduceResource<'info> {
 pub struct Resource {
     pub owner: Pubkey,
     pub amount: i64,
+    pub name: String,
 }
 
 const DISCRIMINATOR_LENGTH: usize = 8;
 const OWNER_LENGTH: usize = 32;
 const AMOUNT_LENGTH: usize = 8;
+const NAME_LENGTH: usize = 16 * 4;
 
 impl Resource {
     const LEN: usize = DISCRIMINATOR_LENGTH
         + OWNER_LENGTH
-        + AMOUNT_LENGTH;
+        + AMOUNT_LENGTH 
+        + NAME_LENGTH;
 }
