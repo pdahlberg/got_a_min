@@ -12,13 +12,24 @@ pub enum ErrorCode2 {
 pub mod got_a_min {
     use super::*;
 
-    pub fn init(ctx: Context<InitResource>, name: String) -> Result<()> {
+    pub fn init_resource(ctx: Context<InitResource>, name: String) -> Result<()> {
         let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
         let owner: &Signer = &ctx.accounts.owner;
 
         resource.owner = *owner.key;
         resource.amount = 0;
         resource.name = name;
+
+        Ok(())
+    }
+
+    pub fn init_producer(ctx: Context<InitProducer>) -> Result<()> {
+        let producer: &mut Account<Producer> = &mut ctx.accounts.producer;
+        let owner: &Signer = &ctx.accounts.owner;
+        let resource = &ctx.accounts.resource;
+
+        producer.owner = *owner.key;
+        producer.resource_id = resource.key();
 
         Ok(())
     }
@@ -42,9 +53,26 @@ pub struct InitResource<'info> {
 }
 
 #[derive(Accounts)]
+pub struct InitProducer<'info> {
+    #[account(init, payer = owner, space = Resource::LEN)]
+    pub producer: Account<'info, Producer>,
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    pub resource: Account<'info, Resource>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 pub struct ProduceResource<'info> {
     #[account(mut)]
     pub resource: Account<'info, Resource>,
+}
+
+#[account]
+pub struct Producer {
+    pub owner: Pubkey,
+    pub resource_id: Pubkey,
+    pub production_rate: i64,
 }
 
 #[account]
