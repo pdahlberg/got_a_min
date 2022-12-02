@@ -32,16 +32,16 @@ describe("got_a_min", () => {
   });
 
   it("Produce 1 of resource A", async () => {
-    const resource = anchor.web3.Keypair.generate();
-    await initResource(program, resource, 'A');
+    let [resource, _] = await createResource(program, 'A');
+    let [producer, __] = await createProducer(program, resource);
 
-    let result = await produce(program, resource);
+    let result = await produce(program, producer, resource);
 
     expect(result.amount.toNumber()).to.equal(1);
     expect(result.name).to.equal('A');
   });
 
-  it("Produce 1 of resource B", async () => {
+  /*it("Produce 1 of resource B", async () => {
     const resource = anchor.web3.Keypair.generate();
     await initResource(program, resource, 'B');
 
@@ -49,9 +49,14 @@ describe("got_a_min", () => {
 
     expect(result.amount.toNumber()).to.equal(1);
     expect(result.name).to.equal('B');
-  });
+  });*/
 
 });
+
+async function createResource(program: Program<GotAMin>, name: string) {
+  const resource = anchor.web3.Keypair.generate();
+  return [resource, await initResource(program, resource, name)];
+}
 
 async function initResource(program: Program<GotAMin>, resource, name: string) {
   const programProvider = program.provider as anchor.AnchorProvider;
@@ -67,6 +72,11 @@ async function initResource(program: Program<GotAMin>, resource, name: string) {
     .rpc();
     
     return await program.account.resource.fetch(resource.publicKey);
+}
+
+async function createProducer(program: Program<GotAMin>, resource) {
+  const producer = anchor.web3.Keypair.generate();
+  return [producer, await initProducer(program, producer, resource)];
 }
 
 async function initProducer(program: Program<GotAMin>, producer, resource) {
@@ -85,12 +95,13 @@ async function initProducer(program: Program<GotAMin>, producer, resource) {
     return await program.account.producer.fetch(producer.publicKey);
 }
 
-async function produce(program: Program<GotAMin>, resource) {
+async function produce(program: Program<GotAMin>, producer, resource) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
     .produce()
     .accounts({
+      producer: producer.publicKey,
       resource: resource.publicKey,
     })
     .rpc();

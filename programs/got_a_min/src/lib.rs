@@ -64,6 +64,8 @@ pub struct InitProducer<'info> {
 #[derive(Accounts)]
 pub struct ProduceResource<'info> {
     #[account(mut)]
+    pub producer: Account<'info, Producer>,
+    #[account(mut)]
     pub resource: Account<'info, Resource>,
 }
 
