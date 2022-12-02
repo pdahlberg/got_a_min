@@ -12,14 +12,14 @@ pub enum ValidationError {
 pub mod got_a_min {
     use super::*;
 
-    pub fn init_resource(ctx: Context<InitResource>, name: String) -> Result<()> {
+    pub fn init_resource(ctx: Context<InitResource>, name: String, inputs: Vec<Pubkey>) -> Result<()> {
         let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
         let owner: &Signer = &ctx.accounts.owner;
 
         resource.owner = *owner.key;
         resource.amount = 0;
         resource.name = name;
-        resource.input = vec!();
+        resource.input = inputs;
 
         require!(resource.input.len() <= INPUT_MAX_SIZE, ValidationError::ResourceInputMax);
 

@@ -62,7 +62,7 @@ async function initResource(program: Program<GotAMin>, resource, name: string) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
-    .initResource(name)
+    .initResource(name, [])
     .accounts({
       resource: resource.publicKey,
       owner: programProvider.wallet.publicKey,
