@@ -1,5 +1,5 @@
 import * as anchor from "@project-serum/anchor";
-import chai from 'chai';
+//import { PublicKey, Keypair } from "@solana/web3.js";
 import { expect } from 'chai';
 import { Program } from "@project-serum/anchor";
 import { GotAMin } from "../target/types/got_a_min";
@@ -13,7 +13,17 @@ describe("got_a_min", () => {
   it("Init resource", async () => {
     const resource = anchor.web3.Keypair.generate();
 
-    let result = await initResource(program, resource, "A");
+    let result = await initResource(program, resource, "A", []);
+    
+    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(result.amount.toNumber()).to.equal(0);
+  });
+
+  it("Init resource with input", async () => {
+    const resource = anchor.web3.Keypair.generate();
+    let [resourceA, _] = await createResource(program, "A", []);
+
+    let result = await initResource(program, resource, "B", [resourceA]);
     
     expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
     expect(result.amount.toNumber()).to.equal(0);
@@ -22,7 +32,7 @@ describe("got_a_min", () => {
   it("Init producer", async () => {
     const producer = anchor.web3.Keypair.generate();
     const resource = anchor.web3.Keypair.generate();
-    await initResource(program, resource, "A");
+    await initResource(program, resource, "A", []);
 
     let result = await initProducer(program, producer, resource, 1);
     
@@ -32,7 +42,7 @@ describe("got_a_min", () => {
   });
 
   it("Produce 1 of resource A", async () => {
-    let [resource, _] = await createResource(program, 'A');
+    let [resource, _] = await createResource(program, 'A', []);
     let [producer, __] = await createProducer(program, resource, 1);
 
     let result = await produce(program, producer, resource);
@@ -42,7 +52,7 @@ describe("got_a_min", () => {
   });
 
   it("Produce 2 of resource B", async () => {
-    let [resource, _] = await createResource(program, 'B');
+    let [resource, _] = await createResource(program, 'B', []);
     let [producer, __] = await createProducer(program, resource, 2);
 
     let result = await produce(program, producer, resource);
@@ -53,16 +63,18 @@ describe("got_a_min", () => {
 
 });
 
-async function createResource(program: Program<GotAMin>, name: string) {
+async function createResource(program: Program<GotAMin>, name: string, inputs) {
   const resource = anchor.web3.Keypair.generate();
-  return [resource, await initResource(program, resource, name)];
+  return [resource, await initResource(program, resource, name, inputs)];
 }
 
-async function initResource(program: Program<GotAMin>, resource, name: string) {
+async function initResource(program: Program<GotAMin>, resource, name: string, inputs: anchor.web3.Keypair[]) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
+  let publicKeyInputs = inputs.map(kp => kp.publicKey);
+
   await program.methods
-    .initResource(name, [])
+    .initResource(name, publicKeyInputs)
     .accounts({
       resource: resource.publicKey,
       owner: programProvider.wallet.publicKey,
