@@ -23,13 +23,13 @@ pub mod got_a_min {
         Ok(())
     }
 
-    pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey) -> Result<()> {
+    pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, production_rate: i64) -> Result<()> {
         let producer: &mut Account<Producer> = &mut ctx.accounts.producer;
         let owner: &Signer = &ctx.accounts.owner;
 
         producer.owner = *owner.key;
         producer.resource_id = resource_id;
-        producer.production_rate = 1;
+        producer.production_rate = production_rate;
 
         Ok(())
     }
