@@ -3,9 +3,9 @@ use anchor_lang::prelude::*;
 declare_id!("5kdCwKP8D1ciS9xyc3zRp1PaUcyD2yiBFkgBr8u3jn3K");
 
 #[error_code]
-pub enum ErrorCode2 {
-    #[msg("This error is just for fun.")]
-    ErrorForFun,
+pub enum ValidationError {
+    #[msg("Resource has too many inputs defined.")]
+    ResourceInputMax,
 }
 
 #[program]
@@ -19,6 +19,9 @@ pub mod got_a_min {
         resource.owner = *owner.key;
         resource.amount = 0;
         resource.name = name;
+        resource.input = vec!();
+
+        require!(resource.input.len() <= INPUT_MAX_SIZE, ValidationError::ResourceInputMax);
 
         Ok(())
     }
@@ -81,7 +84,8 @@ impl Producer {
     const LEN: usize = DISCRIMINATOR_LENGTH
         + PUBLIC_KEY_LENGTH  // owner
         + PUBLIC_KEY_LENGTH  // resource_id
-        + PRODUCTION_RATE_LENGTH;
+        + PRODUCTION_RATE_LENGTH
+        + INPUT_LENGTH;
 }
 
 #[account]
@@ -89,6 +93,7 @@ pub struct Resource {
     pub owner: Pubkey,
     pub amount: i64,
     pub name: String,
+    pub input: Vec<Pubkey>,
 }
 
 impl Resource {
@@ -103,3 +108,5 @@ const PUBLIC_KEY_LENGTH: usize = 32;
 const PRODUCTION_RATE_LENGTH: usize = 8;
 const AMOUNT_LENGTH: usize = 8;
 const NAME_LENGTH: usize = 16 * 4;
+const INPUT_MAX_SIZE: usize = 2;
+const INPUT_LENGTH: usize = PUBLIC_KEY_LENGTH * INPUT_MAX_SIZE;
