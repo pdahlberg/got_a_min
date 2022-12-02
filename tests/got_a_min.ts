@@ -61,6 +61,19 @@ describe("got_a_min", () => {
     expect(result.amount.toNumber()).to.equal(2);
   });
 
+  it("Produce resource B with input A fails when A is empty", async () => {
+    let [resourceA, resourceAView] = await createResource(program, 'A', []);
+    let [producerA, __] = await createProducer(program, resourceA, 1);
+    let [resourceB, ___] = await createResource(program, 'B', [resourceA]);
+    let [producerB, ____] = await createProducer(program, resourceB, 2);
+
+    let result = await produce(program, producerB, resourceB);
+
+    expect(result.name).to.equal('B');
+    expect(result.amount.toNumber()).to.equal(0);
+    expect(resourceAView.amount.toNumber()).to.equal(0);    
+  });
+
 });
 
 async function createResource(program: Program<GotAMin>, name: string, inputs) {

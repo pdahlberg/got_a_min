@@ -43,6 +43,7 @@ pub mod got_a_min {
 
         resource.amount += producer.production_rate;
 
+
         Ok(())
     }
 }
