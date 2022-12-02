@@ -35,9 +35,10 @@ pub mod got_a_min {
     }
 
     pub fn produce(ctx: Context<ProduceResource>) -> Result<()> {
+        let producer = &ctx.accounts.producer;
         let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
 
-        resource.amount += 1;
+        resource.amount += producer.production_rate;
 
         Ok(())
     }
