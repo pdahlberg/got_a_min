@@ -67,7 +67,7 @@ describe("got_a_min", () => {
     let [resourceB, ___] = await createResource(program, 'B', [resourceA]);
     let [producerB, ____] = await createProducer(program, resourceB, 2);
 
-    let result = await produce(program, producerB, resourceB);
+    let result = await produce(program, producerB, resourceB, [resourceA]);
 
     expect(result.name).to.equal('B');
     expect(result.amount.toNumber()).to.equal(0);
@@ -120,15 +120,20 @@ async function initProducer(program: Program<GotAMin>, producer, resource, produ
     return await program.account.producer.fetch(producer.publicKey);
 }
 
-async function produce(program: Program<GotAMin>, producer, resource) {
+async function produce(program: Program<GotAMin>, producer, resource, inputResources = []) {
   const programProvider = program.provider as anchor.AnchorProvider;
+
+  let remainingAccounts = inputResources
+    .map(kp => ({ pubkey: kp.publicKey, isWritable: true, isSigner: false }));
 
   await program.methods
     .produce()
     .accounts({
       producer: producer.publicKey,
       resource: resource.publicKey,
+      
     })
+    .remainingAccounts(remainingAccounts) //([{pubkey: inputResources.publicKey, isWritable: true, isSigner: false},])
     .rpc();
 
   return await program.account.resource.fetch(resource.publicKey);

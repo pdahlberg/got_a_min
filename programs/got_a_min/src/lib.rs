@@ -6,6 +6,8 @@ declare_id!("5kdCwKP8D1ciS9xyc3zRp1PaUcyD2yiBFkgBr8u3jn3K");
 pub enum ValidationError {
     #[msg("Resource has too many inputs defined.")]
     ResourceInputMax,
+    #[msg("Missing resource account.")]
+    MissingResource,
 }
 
 #[program]
@@ -37,12 +39,22 @@ pub mod got_a_min {
         Ok(())
     }
 
-    pub fn produce(ctx: Context<ProduceResource>) -> Result<()> {
+    pub fn produce(ctx: Context<ProduceResource>, ) -> Result<()> {
         let producer = &ctx.accounts.producer;
         let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
 
         resource.amount += producer.production_rate;
+        let mut vec: Vec<AccountInfo> = vec!();
 
+        for unknown_account in ctx.remaining_accounts.iter() {
+            let b = resource.input.contains(unknown_account.key);
+            if b {
+                let known_account = unknown_account.to_account_info();
+                vec.push(known_account);
+            }
+        }
+
+        require!(resource.input.len() == vec.len(), ValidationError::MissingResource);
 
         Ok(())
     }
