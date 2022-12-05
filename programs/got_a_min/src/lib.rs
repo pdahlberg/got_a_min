@@ -62,7 +62,14 @@ pub mod got_a_min {
     }
 
     pub fn stuff(ctx: Context<Stuff>, ) -> Result<()> {
-        require!(false, ValidationError::ExperimentalError);
+        let producer = &ctx.accounts.producer;
+        let resource1: &mut Account<Resource> = &mut ctx.accounts.resource1;
+        let resource2: &mut Account<Resource> = &mut ctx.accounts.resource2;
+
+        resource1.amount = 0;
+        resource2.amount = 0;
+
+        //require!(false, ValidationError::ExperimentalError);
 
         Ok(())
     }
