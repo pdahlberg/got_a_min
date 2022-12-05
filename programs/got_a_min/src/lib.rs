@@ -5,6 +5,7 @@ declare_id!("5kdCwKP8D1ciS9xyc3zRp1PaUcyD2yiBFkgBr8u3jn3K");
 #[error_code]
 pub enum ValidationError {
     #[msg("Resource has too many inputs defined.")]                             ResourceInputMax,
+    #[msg("Missing resource input amount.")]                                    MissingResourceInputAmount,
     #[msg("Missing resource account.")]                                         MissingResource,
     #[msg("Input resource not supplied to production.")]                        InputResourceNotSupplied,
     #[msg("Input resource amount is too low.")]                                 InputResourceAmountTooLow,
@@ -15,7 +16,7 @@ pub enum ValidationError {
 pub mod got_a_min {
     use super::*;
 
-    pub fn init_resource(ctx: Context<InitResource>, name: String, inputs: Vec<Pubkey>) -> Result<()> {
+    pub fn init_resource(ctx: Context<InitResource>, name: String, inputs: Vec<Pubkey>, input_amounts: Vec<i64>) -> Result<()> {
         let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
         let owner: &Signer = &ctx.accounts.owner;
 
@@ -23,8 +24,10 @@ pub mod got_a_min {
         resource.amount = 0;
         resource.name = name;
         resource.input = inputs;
+        resource.input_amount = input_amounts;
 
         require!(resource.input.len() <= INPUT_MAX_SIZE, ValidationError::ResourceInputMax);
+        require!(resource.input.len() == resource.input_amount.len(), ValidationError::MissingResourceInputAmount);
 
         Ok(())
     }
@@ -45,17 +48,8 @@ pub mod got_a_min {
         let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
 
         resource.amount += producer.production_rate;
-        let mut vec: Vec<AccountInfo> = vec!();
 
-        for unknown_account in ctx.remaining_accounts.iter() {
-            let b = resource.input.contains(unknown_account.key);
-            if b {
-                let known_account = unknown_account.to_account_info();
-                vec.push(known_account);
-            }
-        }
-
-        require!(resource.input.len() == vec.len(), ValidationError::MissingResource);
+        require!(resource.input.is_empty(), ValidationError::ResourceInputMax);
 
         Ok(())
     }
@@ -65,12 +59,15 @@ pub mod got_a_min {
         let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
         let resource_input: &mut Account<Resource> = &mut ctx.accounts.resource_input;
 
-        let input_exists = resource_to_produce.input.iter().any(|input| input.key().eq(&resource_input.key()));
-        require!(input_exists, ValidationError::InputResourceNotSupplied);
-        require!(resource_input.amount >= 1, ValidationError::InputResourceAmountTooLow);
+        let input_exists = resource_to_produce.input.iter().position(|input| input.key().eq(&resource_input.key()));
+        require!(input_exists.is_some(), ValidationError::InputResourceNotSupplied);
+
+        let index = input_exists.unwrap();
+        let input_amount = resource_to_produce.input_amount[index];
+        require!(resource_input.amount >= input_amount, ValidationError::InputResourceAmountTooLow);
 
         resource_to_produce.amount += producer.production_rate;
-        resource_input.amount -= 1;
+        resource_input.amount -= input_amount;
 
         Ok(())
     }
@@ -133,6 +130,7 @@ pub struct Resource {
     pub amount: i64,
     pub name: String,
     pub input: Vec<Pubkey>,
+    pub input_amount: Vec<i64>,
 }
 
 impl Resource {

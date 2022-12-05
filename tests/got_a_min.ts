@@ -3,6 +3,7 @@ import * as anchor from "@project-serum/anchor";
 import { expect } from 'chai';
 import { Program } from "@project-serum/anchor";
 import { GotAMin } from "../target/types/got_a_min";
+import { publicKey } from "@project-serum/anchor/dist/cjs/utils";
 
 describe("got_a_min", () => {
   // Configure the client to use the local cluster.
@@ -23,7 +24,7 @@ describe("got_a_min", () => {
     const resource = anchor.web3.Keypair.generate();
     let [resourceA, _] = await createResource(program, "A", []);
 
-    let result = await initResource(program, resource, "B", [resourceA]);
+    let result = await initResource(program, resource, "B", [[resourceA, 1]]);
     
     expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
     expect(result.amount.toNumber()).to.equal(0);
@@ -64,7 +65,7 @@ describe("got_a_min", () => {
   it("Produce resource B with input A fails when A is empty", async () => {
     let [resourceA, _1] = await createResource(program, 'A', []);
     let [producerA, _2] = await createProducer(program, resourceA, 1);
-    let [resourceB, _3] = await createResource(program, 'B', [resourceA]);
+    let [resourceB, _3] = await createResource(program, 'B', [[resourceA, 1]]);
     let [producerB, _4] = await createProducer(program, resourceB, 2);
     let a = await produce(program, producerA, resourceA);
     expect(a.amount.toNumber()).to.equal(1);
@@ -84,13 +85,18 @@ async function createResource(program: Program<GotAMin>, name: string, inputs) {
   return [resource, await initResource(program, resource, name, inputs)];
 }
 
-async function initResource(program: Program<GotAMin>, resource, name: string, inputs: anchor.web3.Keypair[]) {
+async function initResource(program: Program<GotAMin>, resource, name: string, inputs: [anchor.web3.Keypair, Number][]) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
-  let publicKeyInputs = inputs.map(kp => kp.publicKey);
+  let publicKeyInputs = [];
+  let amountInputs = [];
+  inputs.forEach(tuple => {
+    publicKeyInputs.push(tuple[0].publicKey);
+    amountInputs.push(new anchor.BN(tuple[1].toFixed()));
+  });
 
   await program.methods
-    .initResource(name, publicKeyInputs)
+    .initResource(name, publicKeyInputs, amountInputs)
     .accounts({
       resource: resource.publicKey,
       owner: programProvider.wallet.publicKey,
