@@ -1,7 +1,8 @@
 import * as anchor from "@project-serum/anchor";
 //import { PublicKey, Keypair } from "@solana/web3.js";
-import { expect } from 'chai';
-import { Program } from "@project-serum/anchor";
+import { assert, expect } from 'chai';
+import { assertion, promise } from 'chai-as-promised';
+import { AnchorError, Program } from "@project-serum/anchor";
 import { GotAMin } from "../target/types/got_a_min";
 import { publicKey } from "@project-serum/anchor/dist/cjs/utils";
 
@@ -64,21 +65,42 @@ describe("got_a_min", () => {
 
   it("Produce resource B with input A fails when A is empty", async () => {
     let [resourceA, _1] = await createResource(program, 'A', []);
-    let [producerA, _2] = await createProducer(program, resourceA, 1);
     let [resourceB, _3] = await createResource(program, 'B', [[resourceA, 1]]);
     let [producerB, _4] = await createProducer(program, resourceB, 2);
-    let a = await produce(program, producerA, resourceA);
-    expect(a.amount.toNumber()).to.equal(1);
+
+    // await expect(stuff(program, producerB, resourceB, resourceA)).should.be.rejectedWith("I AM THE EXPECTED ERROR");
+    try {
+      await stuff(program, producerB, resourceB, resourceA);
+      
+      assert(false, "Expected to fail");
+    } catch(e) {
+      assertAnchorError(e, "InputResourceAmountTooLow");
+    }
+
+  });
+
+  it("Produce 1 resource B from 2 A", async () => {
+    let [resourceA, _1] = await createResource(program, 'A', []);
+    let [producerA, _2] = await createProducer(program, resourceA, 2);
+    let [resourceB, _3] = await createResource(program, 'B', [[resourceA, 2]]);
+    let [producerB, _4] = await createProducer(program, resourceB, 1);
+    await produce(program, producerA, resourceA);
 
     let result = await stuff(program, producerB, resourceB, resourceA);
 
     expect(result.name).to.equal('B');
-    expect(result.amount.toNumber()).to.equal(2);
+    expect(result.amount.toNumber()).to.equal(1);
     let resResult = await program.account.resource.fetch(resourceA.publicKey);
     expect(resResult.amount.toNumber()).to.equal(0);    
   });
 
 });
+
+function assertAnchorError(error: any, errorName: String) {
+  expect(error).to.be.instanceOf(AnchorError);
+  let anchorError: AnchorError = error;
+  expect(anchorError.error.errorCode.code).to.equal(errorName);
+}
 
 async function createResource(program: Program<GotAMin>, name: string, inputs) {
   const resource = anchor.web3.Keypair.generate();
