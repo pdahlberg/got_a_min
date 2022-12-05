@@ -40,7 +40,7 @@ pub mod got_a_min {
         Ok(())
     }
 
-    pub fn produce(ctx: Context<ProduceResource>, ) -> Result<()> {
+    pub fn produce(ctx: Context<ProduceResource>) -> Result<()> {
         let producer = &ctx.accounts.producer;
         let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
 

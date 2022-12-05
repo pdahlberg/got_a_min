@@ -72,7 +72,7 @@ describe("got_a_min", () => {
     let result = await stuff(program, producerB, resourceB, resourceA);
 
     expect(result.name).to.equal('B');
-    expect(result.amount.toNumber()).to.equal(0);
+    expect(result.amount.toNumber()).to.equal(2);
     let resResult = await program.account.resource.fetch(resourceA.publicKey);
     expect(resResult.amount.toNumber()).to.equal(0);    
   });
