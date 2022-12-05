@@ -62,10 +62,12 @@ describe("got_a_min", () => {
   });
 
   it("Produce resource B with input A fails when A is empty", async () => {
-    let [resourceA, _] = await createResource(program, 'A', []);
-    let [producerA, __] = await createProducer(program, resourceA, 1);
-    let [resourceB, ___] = await createResource(program, 'B', [resourceA]);
-    let [producerB, ____] = await createProducer(program, resourceB, 2);
+    let [resourceA, _1] = await createResource(program, 'A', []);
+    let [producerA, _2] = await createProducer(program, resourceA, 1);
+    let [resourceB, _3] = await createResource(program, 'B', [resourceA]);
+    let [producerB, _4] = await createProducer(program, resourceB, 2);
+    let a = await produce(program, producerA, resourceA);
+    expect(a.amount.toNumber()).to.equal(1);
 
     let result = await stuff(program, producerB, resourceB, resourceA);
 
@@ -129,24 +131,23 @@ async function produce(program: Program<GotAMin>, producer, resource, inputResou
     .accounts({
       producer: producer.publicKey,
       resource: resource.publicKey,
-      
     })
     .rpc();
 
   return await program.account.resource.fetch(resource.publicKey);
 }
 
-async function stuff(program: Program<GotAMin>, producer, resource1, resource2) {
+async function stuff(program: Program<GotAMin>, producer, resourceToProduce, resourceInput) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
     .stuff()
     .accounts({
       producer: producer.publicKey,
-      resource1: resource1.publicKey,
-      resource2: resource2.publicKey,      
+      resourceToProduce: resourceToProduce.publicKey,
+      resourceInput: resourceInput.publicKey,      
     })
     .rpc();
 
-  return await program.account.resource.fetch(resource1.publicKey);
+  return await program.account.resource.fetch(resourceToProduce.publicKey);
 }

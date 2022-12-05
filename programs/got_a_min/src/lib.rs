@@ -4,12 +4,11 @@ declare_id!("5kdCwKP8D1ciS9xyc3zRp1PaUcyD2yiBFkgBr8u3jn3K");
 
 #[error_code]
 pub enum ValidationError {
-    #[msg("Resource has too many inputs defined.")]
-    ResourceInputMax,
-    #[msg("Missing resource account.")]
-    MissingResource,
-    #[msg("Trying stuff out and failing quite deliberately.")]
-    ExperimentalError,
+    #[msg("Resource has too many inputs defined.")]                             ResourceInputMax,
+    #[msg("Missing resource account.")]                                         MissingResource,
+    #[msg("Input resource not supplied to production.")]                        InputResourceNotSupplied,
+    #[msg("Input resource amount is too low.")]                                 InputResourceAmountTooLow,
+    #[msg("Trying stuff out and failing quite deliberately.")]                  ExperimentalError,
 }
 
 #[program]
@@ -63,13 +62,15 @@ pub mod got_a_min {
 
     pub fn stuff(ctx: Context<Stuff>, ) -> Result<()> {
         let producer = &ctx.accounts.producer;
-        let resource1: &mut Account<Resource> = &mut ctx.accounts.resource1;
-        let resource2: &mut Account<Resource> = &mut ctx.accounts.resource2;
+        let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
+        let resource_input: &mut Account<Resource> = &mut ctx.accounts.resource_input;
 
-        resource1.amount = 0;
-        resource2.amount = 0;
+        let input_exists = resource_to_produce.input.iter().any(|input| input.key().eq(&resource_input.key()));
+        require!(input_exists, ValidationError::InputResourceNotSupplied);
+        require!(resource_input.amount >= 1, ValidationError::InputResourceAmountTooLow);
 
-        //require!(false, ValidationError::ExperimentalError);
+        resource_to_produce.amount += producer.production_rate;
+        resource_input.amount -= 1;
 
         Ok(())
     }
@@ -106,9 +107,9 @@ pub struct Stuff<'info> {
     #[account(mut)]
     pub producer: Account<'info, Producer>,
     #[account(mut)]
-    pub resource1: Account<'info, Resource>,
+    pub resource_to_produce: Account<'info, Resource>,
     #[account(mut)]
-    pub resource2: Account<'info, Resource>,
+    pub resource_input: Account<'info, Resource>,
 }
 
 #[account]
