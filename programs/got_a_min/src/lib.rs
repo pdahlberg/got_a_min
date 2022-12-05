@@ -54,7 +54,7 @@ pub mod got_a_min {
         Ok(())
     }
 
-    pub fn stuff(ctx: Context<Stuff>, ) -> Result<()> {
+    pub fn produce_with_input(ctx: Context<ProduceResourceWithInput>, ) -> Result<()> {
         let producer = &ctx.accounts.producer;
         let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
         let resource_input: &mut Account<Resource> = &mut ctx.accounts.resource_input;
@@ -100,7 +100,7 @@ pub struct ProduceResource<'info> {
 }
 
 #[derive(Accounts)]
-pub struct Stuff<'info> {
+pub struct ProduceResourceWithInput<'info> {
     #[account(mut)]
     pub producer: Account<'info, Producer>,
     #[account(mut)]

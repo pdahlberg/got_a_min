@@ -169,7 +169,7 @@ async function stuff(program: Program<GotAMin>, producer, resourceToProduce, res
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
-    .stuff()
+    .produceWithInput()
     .accounts({
       producer: producer.publicKey,
       resourceToProduce: resourceToProduce.publicKey,
