@@ -8,6 +8,8 @@ pub enum ValidationError {
     ResourceInputMax,
     #[msg("Missing resource account.")]
     MissingResource,
+    #[msg("Trying stuff out and failing quite deliberately.")]
+    ExperimentalError,
 }
 
 #[program]
@@ -58,6 +60,12 @@ pub mod got_a_min {
 
         Ok(())
     }
+
+    pub fn stuff(ctx: Context<Stuff>, ) -> Result<()> {
+        require!(false, ValidationError::ExperimentalError);
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -84,6 +92,16 @@ pub struct ProduceResource<'info> {
     pub producer: Account<'info, Producer>,
     #[account(mut)]
     pub resource: Account<'info, Resource>,
+}
+
+#[derive(Accounts)]
+pub struct Stuff<'info> {
+    #[account(mut)]
+    pub producer: Account<'info, Producer>,
+    #[account(mut)]
+    pub resource1: Account<'info, Resource>,
+    #[account(mut)]
+    pub resource2: Account<'info, Resource>,
 }
 
 #[account]

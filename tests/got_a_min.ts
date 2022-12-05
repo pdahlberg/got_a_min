@@ -62,16 +62,17 @@ describe("got_a_min", () => {
   });
 
   it("Produce resource B with input A fails when A is empty", async () => {
-    let [resourceA, resourceAView] = await createResource(program, 'A', []);
+    let [resourceA, _] = await createResource(program, 'A', []);
     let [producerA, __] = await createProducer(program, resourceA, 1);
     let [resourceB, ___] = await createResource(program, 'B', [resourceA]);
     let [producerB, ____] = await createProducer(program, resourceB, 2);
 
-    let result = await produce(program, producerB, resourceB, [resourceA]);
+    let result = await stuff(program, producerB, resourceB, resourceA);
 
     expect(result.name).to.equal('B');
     expect(result.amount.toNumber()).to.equal(0);
-    expect(resourceAView.amount.toNumber()).to.equal(0);    
+    let resResult = await program.account.resource.fetch(resourceA.publicKey);
+    expect(resResult.amount.toNumber()).to.equal(0);    
   });
 
 });
@@ -123,9 +124,6 @@ async function initProducer(program: Program<GotAMin>, producer, resource, produ
 async function produce(program: Program<GotAMin>, producer, resource, inputResources = []) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
-  let remainingAccounts = inputResources
-    .map(kp => ({ pubkey: kp.publicKey, isWritable: true, isSigner: false }));
-
   await program.methods
     .produce()
     .accounts({
@@ -133,8 +131,22 @@ async function produce(program: Program<GotAMin>, producer, resource, inputResou
       resource: resource.publicKey,
       
     })
-    .remainingAccounts(remainingAccounts) //([{pubkey: inputResources.publicKey, isWritable: true, isSigner: false},])
     .rpc();
 
   return await program.account.resource.fetch(resource.publicKey);
+}
+
+async function stuff(program: Program<GotAMin>, producer, resource1, resource2) {
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  await program.methods
+    .stuff()
+    .accounts({
+      producer: producer.publicKey,
+      resource1: resource1.publicKey,
+      resource2: resource2.publicKey,      
+    })
+    .rpc();
+
+  return await program.account.resource.fetch(resource1.publicKey);
 }
