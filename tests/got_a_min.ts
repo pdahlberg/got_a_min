@@ -45,6 +45,18 @@ describe("got_a_min", () => {
     expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
   });
 
+  it("Init storage", async () => {
+    const storage = anchor.web3.Keypair.generate();
+    const resource = anchor.web3.Keypair.generate();
+    await initResource(program, resource, "A", []);
+
+    let result = await initStorage(program, storage, resource);
+    
+    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(result.amount.toNumber()).to.equal(0);
+    expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
+  });
+
   it("Produce 1 of resource A", async () => {
     let [resource, _] = await createResource(program, 'A', []);
     let [producer, __] = await createProducer(program, resource, 1);
@@ -171,6 +183,27 @@ async function initProducer(program: Program<GotAMin>, producer, resource, produ
     .rpc();
     
     return await program.account.producer.fetch(producer.publicKey);
+}
+
+async function createStorage(program: Program<GotAMin>, resource) {
+  const storage: anchor.web3.Keypair = anchor.web3.Keypair.generate();
+  return [storage, await initStorage(program, storage, resource)];
+}
+
+async function initStorage(program: Program<GotAMin>, storage, resource: KP) {
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  await program.methods
+    .initStorage(resource.publicKey)
+    .accounts({
+      storage: storage.publicKey,
+      owner: programProvider.wallet.publicKey,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    })
+    .signers(storage)
+    .rpc();
+    
+  return await program.account.storage.fetch(storage.publicKey);
 }
 
 async function produce_without_input(program: Program<GotAMin>, producer, resource, inputResources = []) {

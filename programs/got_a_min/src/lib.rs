@@ -45,6 +45,17 @@ pub mod got_a_min {
         Ok(())
     }
 
+    pub fn init_storage(ctx: Context<InitStorage>, resource_id: Pubkey) -> Result<()> {
+        let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
+        let owner: &Signer = &ctx.accounts.owner;
+
+        storage.owner = *owner.key;
+        storage.resource_id = resource_id;
+        storage.amount = 0;
+
+        Ok(())
+    }
+
     pub fn produce(ctx: Context<ProduceResource>) -> Result<()> {
         let producer = &ctx.accounts.producer;
         let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
@@ -120,6 +131,15 @@ pub struct InitProducer<'info> {
 }
 
 #[derive(Accounts)]
+pub struct InitStorage<'info> {
+    #[account(init, payer = owner, space = Storage::LEN)]
+    pub storage: Account<'info, Storage>,
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 pub struct ProduceResource<'info> {
     #[account(mut)]
     pub producer: Account<'info, Producer>,
@@ -180,6 +200,20 @@ impl Resource {
         + NAME_LENGTH 
         + INPUT_LENGTH
         + INPUT_AMOUNT_LENGTH;          
+}
+
+#[account]
+pub struct Storage {
+    pub owner: Pubkey,
+    pub resource_id: Pubkey,
+    pub amount: i64,
+}
+
+impl Storage {
+    const LEN: usize = DISCRIMINATOR_LENGTH
+        + PUBLIC_KEY_LENGTH  // owner
+        + PUBLIC_KEY_LENGTH  // resource_id
+        + AMOUNT_LENGTH;
 }
 
 const DISCRIMINATOR_LENGTH: usize = 8;
