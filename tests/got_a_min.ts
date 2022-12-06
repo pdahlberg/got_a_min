@@ -135,17 +135,17 @@ describe("got_a_min", () => {
   });
 
   it("Storage full", async () => {
-    /*let [resource, _] = await createResource(program, 'A', []);
-    let [producer, __] = await createProducer(program, resource, 1);
+    let [resource, _1] = await createResource(program, 'A', []);
+    let [producer, _2] = await createProducer(program, resource, 10);
+    let [storage, _3] = await createStorage(program, resource);
 
     try {
-      await produce_with_1_input(program, producerB, resourceB, resourceA);
+      await produce_without_input(program, producer, storage, resource);
       
       assert(false, "Expected to fail");
     } catch(e) {
-      assertAnchorError(e, "InputResourceAmountTooLow");
-    }*/
-    assert(false, "N/A");
+      assertAnchorError(e, "StorageFull");
+    }
   });
 
 
