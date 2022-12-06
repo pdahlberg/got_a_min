@@ -8,6 +8,8 @@ pub enum ValidationError {
     #[msg("Missing resource input amount.")]                                    MissingResourceInputAmount,
     #[msg("Missing resource account.")]                                         MissingResource,
     #[msg("Input resource not supplied to production.")]                        InputResourceNotSupplied,
+    #[msg("Input resource 1 not supplied to production.")]                      InputResource1NotSupplied,
+    #[msg("Input resource 2 not supplied to production.")]                      InputResource2NotSupplied,
     #[msg("Input resource amount is too low.")]                                 InputResourceAmountTooLow,
     #[msg("Trying stuff out and failing quite deliberately.")]                  ExperimentalError,
 }
@@ -78,15 +80,22 @@ pub mod got_a_min {
         let resource_input_1: &mut Account<Resource> = &mut ctx.accounts.resource_input_1;
         let resource_input_2: &mut Account<Resource> = &mut ctx.accounts.resource_input_2;
 
-        //let input_exists = resource_to_produce.input.iter().position(|input| input.key().eq(&resource_input.key()));
-        //require!(input_exists.is_some(), ValidationError::InputResourceNotSupplied);
+        let input_pos_1 = resource_to_produce.input.iter().position(|input| input.key().eq(&resource_input_1.key()));
+        require!(input_pos_1.is_some(), ValidationError::InputResource1NotSupplied);
+        let input_pos_2 = resource_to_produce.input.iter().position(|input| input.key().eq(&resource_input_2.key()));
+        require!(input_pos_2.is_some(), ValidationError::InputResource2NotSupplied);
 
-        //let index = input_exists.unwrap();
-        //let input_amount = resource_to_produce.input_amount[index];
-        //require!(resource_input_1.amount >= input_amount, ValidationError::InputResourceAmountTooLow);
+        let index_1 = input_pos_1.unwrap();
+        let input_1_amount = resource_to_produce.input_amount[index_1];
+        require!(resource_input_1.amount >= input_1_amount, ValidationError::InputResourceAmountTooLow);
 
-        //resource_to_produce.amount += producer.production_rate;
-        //resource_input_1.amount -= input_amount;
+        let index_2 = input_pos_2.unwrap();
+        let input_2_amount = resource_to_produce.input_amount[index_2];
+        require!(resource_input_2.amount >= input_2_amount, ValidationError::InputResourceAmountTooLow);
+
+        resource_to_produce.amount += producer.production_rate;
+        resource_input_1.amount -= input_1_amount;
+        resource_input_2.amount -= input_2_amount;
 
         Ok(())
     }

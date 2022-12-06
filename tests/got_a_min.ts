@@ -14,7 +14,7 @@ describe("got_a_min", () => {
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
 
-  /*it("Init resource", async () => {
+  it("Init resource", async () => {
     const resource = anchor.web3.Keypair.generate();
 
     let result = await initResource(program, resource, "A", []);
@@ -49,7 +49,7 @@ describe("got_a_min", () => {
     let [resource, _] = await createResource(program, 'A', []);
     let [producer, __] = await createProducer(program, resource, 1);
 
-    let result = await produce(program, producer, resource);
+    let result = await produce_without_input(program, producer, resource);
 
     expect(result.name).to.equal('A');
     expect(result.amount.toNumber()).to.equal(1);
@@ -59,7 +59,7 @@ describe("got_a_min", () => {
     let [resource, _] = await createResource(program, 'B', []);
     let [producer, __] = await createProducer(program, resource, 2);
 
-    let result = await produce(program, producer, resource);
+    let result = await produce_without_input(program, producer, resource);
 
     expect(result.name).to.equal('B');
     expect(result.amount.toNumber()).to.equal(2);
@@ -72,14 +72,14 @@ describe("got_a_min", () => {
 
     // await expect(stuff(program, producerB, resourceB, resourceA)).should.be.rejectedWith("I AM THE EXPECTED ERROR");
     try {
-      await stuff(program, producerB, resourceB, resourceA);
+      await produce_with_1_input(program, producerB, resourceB, resourceA);
       
       assert(false, "Expected to fail");
     } catch(e) {
       assertAnchorError(e, "InputResourceAmountTooLow");
     }
 
-  });*/
+  });
 
   it("Produce 1 resource B from 2 A", async () => {
     let [resourceA, _1] = await createResource(program, 'A', []) as [KP, any];
@@ -89,11 +89,11 @@ describe("got_a_min", () => {
     await produce_without_input(program, producerA, resourceA);
 
     let result = await produce_with_1_input(program, producerB, resourceB, resourceA);
+    let inputResult = await program.account.resource.fetch(resourceA.publicKey);
 
     expect(result.name).to.equal('B');
     expect(result.amount.toNumber()).to.equal(1);
-    let resResult = await program.account.resource.fetch(resourceA.publicKey);
-    expect(resResult.amount.toNumber()).to.equal(0);    
+    expect(inputResult.amount.toNumber()).to.equal(0);    
   });
 
   it("Produce 1 resource C from 1 A + 1 B", async () => {
@@ -107,13 +107,13 @@ describe("got_a_min", () => {
     await produce_without_input(program, producerB, resourceB);
 
     let result = await produce_with_2_inputs(program, producerC, resourceC, resourceA, resourceB);
+    let inputAResult = await program.account.resource.fetch(resourceA.publicKey);
+    let inputBResult = await program.account.resource.fetch(resourceB.publicKey);
 
     expect(result.name).to.equal('C');
-    expect(result.amount.toNumber()).to.equal(1);
-    let aResult = await program.account.resource.fetch(resourceA.publicKey);
-    expect(aResult.amount.toNumber()).to.equal(0);    
-    let bResult = await program.account.resource.fetch(resourceB.publicKey);
-    expect(bResult.amount.toNumber()).to.equal(0);
+    expect(result.amount.toNumber(), "Resource C should be produced").to.equal(1);
+    expect(inputAResult.amount.toNumber(), "Input A should be consumed").to.equal(0);    
+    expect(inputBResult.amount.toNumber(), "Input B should be consumed").to.equal(0);
   });
 
 });
@@ -138,8 +138,6 @@ async function initResource(program: Program<GotAMin>, resource, name: string, i
     publicKeyInputs.push(tuple[0].publicKey);
     amountInputs.push(new anchor.BN(tuple[1].toFixed()));
   });
-
-  console.log("inputs", publicKeyInputs, ", ", amountInputs);
 
   await program.methods
     .initResource(name, publicKeyInputs, amountInputs)
