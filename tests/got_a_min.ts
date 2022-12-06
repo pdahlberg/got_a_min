@@ -193,7 +193,7 @@ async function produce_with_1_input(program: Program<GotAMin>, producer, resourc
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
-    .produceWithInput()
+    .produceWithOneInput()
     .accounts({
       producer: producer.publicKey,
       resourceToProduce: resourceToProduce.publicKey,
@@ -208,7 +208,7 @@ async function produce_with_2_inputs(program: Program<GotAMin>, producer, resour
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
-    .produceWithInputs()
+    .produceWithTwoInputs()
     .accounts({
       producer: producer.publicKey,
       resourceToProduce: resourceToProduce.publicKey,

@@ -54,7 +54,7 @@ pub mod got_a_min {
         Ok(())
     }
 
-    pub fn produce_with_input(ctx: Context<ProduceResourceWith1Input>) -> Result<()> {
+    pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result<()> {
         let producer = &ctx.accounts.producer;
         let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
         let resource_input: &mut Account<Resource> = &mut ctx.accounts.resource_input;
@@ -72,7 +72,7 @@ pub mod got_a_min {
         Ok(())
     }
 
-    pub fn produce_with_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Result<()> {
+    pub fn produce_with_two_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Result<()> {
         let producer = &ctx.accounts.producer;
         let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
         let resource_input_1: &mut Account<Resource> = &mut ctx.accounts.resource_input_1;
