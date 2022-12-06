@@ -7,10 +7,10 @@ pub enum ValidationError {
     #[msg("Resource has too many inputs defined.")]                             ResourceInputMax,
     #[msg("Missing resource input amount.")]                                    MissingResourceInputAmount,
     #[msg("Missing resource account.")]                                         MissingResource,
-    #[msg("Input resource not supplied to production.")]                        InputResourceNotSupplied,
+    #[msg("Input storage not supplied to production.")]                         InputStorageNotSupplied,
     #[msg("Input resource 1 not supplied to production.")]                      InputResource1NotSupplied,
     #[msg("Input resource 2 not supplied to production.")]                      InputResource2NotSupplied,
-    #[msg("Input resource amount is too low.")]                                 InputResourceAmountTooLow,
+    #[msg("Input storage amount is too low.")]                                  InputStorageAmountTooLow,
     #[msg("Trying stuff out and failing quite deliberately.")]                  ExperimentalError,
 }
 
@@ -23,7 +23,6 @@ pub mod got_a_min {
         let owner: &Signer = &ctx.accounts.owner;
 
         resource.owner = *owner.key;
-        resource.amount = 0;
         resource.name = name;
         resource.input = inputs;
         resource.input_amount = input_amounts;
@@ -58,11 +57,12 @@ pub mod got_a_min {
 
     pub fn produce(ctx: Context<ProduceResource>) -> Result<()> {
         let producer = &ctx.accounts.producer;
-        let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
-
-        resource.amount += producer.production_rate;
+        let resource = &ctx.accounts.resource;
+        let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
 
         require!(resource.input.is_empty(), ValidationError::ResourceInputMax);
+
+        storage.amount += producer.production_rate;
 
         Ok(())
     }
@@ -70,17 +70,18 @@ pub mod got_a_min {
     pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result<()> {
         let producer = &ctx.accounts.producer;
         let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
-        let resource_input: &mut Account<Resource> = &mut ctx.accounts.resource_input;
+        let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
+        let storage_input: &mut Account<Storage> = &mut ctx.accounts.storage_input;
 
-        let input_exists = resource_to_produce.input.iter().position(|input| input.key().eq(&resource_input.key()));
-        require!(input_exists.is_some(), ValidationError::InputResourceNotSupplied);
+        let input_exists = resource_to_produce.input.iter().position(|input| input.key().eq(&storage_input.resource_id));
+        require!(input_exists.is_some(), ValidationError::InputStorageNotSupplied);
 
         let index = input_exists.unwrap();
-        let input_amount = resource_to_produce.input_amount[index];
-        require!(resource_input.amount >= input_amount, ValidationError::InputResourceAmountTooLow);
+        let required_input_amount = resource_to_produce.input_amount[index];
+        require!(storage_input.amount >= required_input_amount, ValidationError::InputStorageAmountTooLow);
 
-        resource_to_produce.amount += producer.production_rate;
-        resource_input.amount -= input_amount;
+        storage.amount += producer.production_rate;
+        storage_input.amount -= required_input_amount;
 
         Ok(())
     }
@@ -98,15 +99,15 @@ pub mod got_a_min {
 
         let index_1 = input_pos_1.unwrap();
         let input_1_amount = resource_to_produce.input_amount[index_1];
-        require!(resource_input_1.amount >= input_1_amount, ValidationError::InputResourceAmountTooLow);
+        //require!(resource_input_1.amount >= input_1_amount, ValidationError::InputResourceAmountTooLow);
 
-        let index_2 = input_pos_2.unwrap();
-        let input_2_amount = resource_to_produce.input_amount[index_2];
-        require!(resource_input_2.amount >= input_2_amount, ValidationError::InputResourceAmountTooLow);
+        //let index_2 = input_pos_2.unwrap();
+        //let input_2_amount = resource_to_produce.input_amount[index_2];
+        //require!(resource_input_2.amount >= input_2_amount, ValidationError::InputResourceAmountTooLow);
 
-        resource_to_produce.amount += producer.production_rate;
-        resource_input_1.amount -= input_1_amount;
-        resource_input_2.amount -= input_2_amount;
+        //resource_to_produce.amount += producer.production_rate;
+        //resource_input_1.amount -= input_1_amount;
+        //resource_input_2.amount -= input_2_amount;
 
         Ok(())
     }
@@ -145,6 +146,8 @@ pub struct ProduceResource<'info> {
     pub producer: Account<'info, Producer>,
     #[account(mut)]
     pub resource: Account<'info, Resource>,
+    #[account(mut)]
+    pub storage: Account<'info, Storage>,
 }
 
 #[derive(Accounts)]
@@ -154,7 +157,9 @@ pub struct ProduceResourceWith1Input<'info> {
     #[account(mut)]
     pub resource_to_produce: Account<'info, Resource>,
     #[account(mut)]
-    pub resource_input: Account<'info, Resource>,
+    pub storage: Account<'info, Storage>,
+    #[account(mut)]
+    pub storage_input: Account<'info, Storage>,
 }
 
 #[derive(Accounts)]
@@ -167,6 +172,8 @@ pub struct ProduceResourceWith2Inputs<'info> {
     pub resource_input_1: Account<'info, Resource>,
     #[account(mut)]
     pub resource_input_2: Account<'info, Resource>,
+    #[account(mut)]
+    pub storage: Account<'info, Storage>,
 }
 
 #[account]
@@ -187,7 +194,6 @@ impl Producer {
 #[account]
 pub struct Resource {
     pub owner: Pubkey,
-    pub amount: i64,
     pub name: String,
     pub input: Vec<Pubkey>,
     pub input_amount: Vec<i64>,
@@ -196,7 +202,6 @@ pub struct Resource {
 impl Resource {
     const LEN: usize = DISCRIMINATOR_LENGTH
         + PUBLIC_KEY_LENGTH
-        + AMOUNT_LENGTH
         + NAME_LENGTH 
         + INPUT_LENGTH
         + INPUT_AMOUNT_LENGTH;          

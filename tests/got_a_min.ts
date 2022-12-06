@@ -20,7 +20,6 @@ describe("got_a_min", () => {
     let result = await initResource(program, resource, "A", []);
     
     expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
-    expect(result.amount.toNumber()).to.equal(0);
   });
 
   it("Init resource with input", async () => {
@@ -30,7 +29,6 @@ describe("got_a_min", () => {
     let result = await initResource(program, resource, "B", [[resourceA as KP, 1]]);
     
     expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
-    expect(result.amount.toNumber()).to.equal(0);
   });
 
   it("Init producer", async () => {
@@ -58,33 +56,52 @@ describe("got_a_min", () => {
   });
 
   it("Produce 1 of resource A", async () => {
-    let [resource, _] = await createResource(program, 'A', []);
-    let [producer, __] = await createProducer(program, resource, 1);
+    let [resource, _1] = await createResource(program, 'A', []);
+    let [producer, _2] = await createProducer(program, resource, 1);
+    let [storage, _3] = await createStorage(program, resource);
 
-    let result = await produce_without_input(program, producer, resource);
+    let result = await produce_without_input(program, producer, storage, resource);
 
-    expect(result.name).to.equal('A');
+    expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
     expect(result.amount.toNumber()).to.equal(1);
   });
 
   it("Produce 2 of resource B", async () => {
-    let [resource, _] = await createResource(program, 'B', []);
-    let [producer, __] = await createProducer(program, resource, 2);
+    let [resource, _1] = await createResource(program, 'B', []) as [KP, any];
+    let [producer, _2] = await createProducer(program, resource, 2);
+    let [storage, _3] = await createStorage(program, resource);
 
-    let result = await produce_without_input(program, producer, resource);
+    let result = await produce_without_input(program, producer, storage, resource);
 
-    expect(result.name).to.equal('B');
     expect(result.amount.toNumber()).to.equal(2);
+  });
+
+  it("Produce 1 resource B from 2 A", async () => {
+    let [resourceA, _1] = await createResource(program, 'A', []);
+    let [producerA, _2] = await createProducer(program, resourceA, 2);
+    let [storageA, _3] = await createStorage(program, resourceA);
+    let [resourceB, _4] = await createResource(program, 'B', [[resourceA, 2]]);
+    let [producerB, _5] = await createProducer(program, resourceB, 1);
+    let [storageB, _6] = await createStorage(program, resourceB);
+    await produce_without_input(program, producerA, storageA, resourceA);
+
+    let result = await produce_with_1_input(program, producerB, storageB, resourceB, storageA);
+    let inputResult = await program.account.storage.fetch(storageA.publicKey);
+
+    expect(result.resourceId.toBase58()).to.equal(resourceB.publicKey.toBase58());
+    expect(result.amount.toNumber()).to.equal(1);
+    expect(inputResult.amount.toNumber()).to.equal(0);    
   });
 
   it("Produce resource B with input A fails when A is empty", async () => {
     let [resourceA, _1] = await createResource(program, 'A', []);
     let [resourceB, _3] = await createResource(program, 'B', [[resourceA, 1]]);
     let [producerB, _4] = await createProducer(program, resourceB, 2);
+    let [storage, _5] = await createStorage(program, resourceB);
 
     // await expect(stuff(program, producerB, resourceB, resourceA)).should.be.rejectedWith("I AM THE EXPECTED ERROR");
     try {
-      await produce_with_1_input(program, producerB, resourceB, resourceA);
+      await produce_with_1_input(program, producerB, storage, resourceB, resourceA);
       
       assert(false, "Expected to fail");
     } catch(e) {
@@ -93,32 +110,20 @@ describe("got_a_min", () => {
 
   });
 
-  it("Produce 1 resource B from 2 A", async () => {
-    let [resourceA, _1] = await createResource(program, 'A', []) as [KP, any];
-    let [producerA, _2] = await createProducer(program, resourceA, 2);
-    let [resourceB, _3] = await createResource(program, 'B', [[resourceA, 2]]);
-    let [producerB, _4] = await createProducer(program, resourceB, 1);
-    await produce_without_input(program, producerA, resourceA);
-
-    let result = await produce_with_1_input(program, producerB, resourceB, resourceA);
-    let inputResult = await program.account.resource.fetch(resourceA.publicKey);
-
-    expect(result.name).to.equal('B');
-    expect(result.amount.toNumber()).to.equal(1);
-    expect(inputResult.amount.toNumber()).to.equal(0);    
-  });
-
   it("Produce 1 resource C from 1 A + 1 B", async () => {
     let [resourceA, _1] = await createResource(program, 'A', []) as [KP, any];
     let [producerA, _2] = await createProducer(program, resourceA, 1);
-    let [resourceB, _3] = await createResource(program, 'B', []) as [KP, any];
-    let [producerB, _4] = await createProducer(program, resourceB, 1);
-    let [resourceC, _5] = await createResource(program, 'C', [[resourceA, 1], [resourceB, 1]]);
-    let [producerC, _6] = await createProducer(program, resourceC, 1);
-    await produce_without_input(program, producerA, resourceA);
-    await produce_without_input(program, producerB, resourceB);
+    let [storageA, _3] = await createStorage(program, resourceA);
+    let [resourceB, _4] = await createResource(program, 'B', []) as [KP, any];
+    let [producerB, _5] = await createProducer(program, resourceB, 1);
+    let [storageB, _6] = await createStorage(program, resourceB);
+    let [resourceC, _7] = await createResource(program, 'C', [[resourceA, 1], [resourceB, 1]]);
+    let [producerC, _8] = await createProducer(program, resourceC, 1);
+    let [storageC, _9] = await createStorage(program, resourceB);
+    await produce_without_input(program, producerA, storageA, resourceA);
+    await produce_without_input(program, producerB, storageB, resourceB);
 
-    let result = await produce_with_2_inputs(program, producerC, resourceC, resourceA, resourceB);
+    let result = await produce_with_2_inputs(program, producerC, storageC, resourceC, resourceA, resourceB);
     let inputAResult = await program.account.resource.fetch(resourceA.publicKey);
     let inputBResult = await program.account.resource.fetch(resourceB.publicKey);
 
@@ -128,6 +133,21 @@ describe("got_a_min", () => {
     expect(inputBResult.amount.toNumber(), "Input B should be consumed").to.equal(0);
   });
 
+  it("Storage full", async () => {
+    /*let [resource, _] = await createResource(program, 'A', []);
+    let [producer, __] = await createProducer(program, resource, 1);
+
+    try {
+      await produce_with_1_input(program, producerB, resourceB, resourceA);
+      
+      assert(false, "Expected to fail");
+    } catch(e) {
+      assertAnchorError(e, "InputResourceAmountTooLow");
+    }*/
+    assert(false, "N/A");
+  });
+
+
 });
 
 function assertAnchorError(error: any, errorName: String) {
@@ -136,7 +156,7 @@ function assertAnchorError(error: any, errorName: String) {
   expect(anchorError.error.errorCode.code).to.equal(errorName);
 }
 
-async function createResource(program: Program<GotAMin>, name: string, inputs) {
+async function createResource(program: Program<GotAMin>, name: string, inputs):  Promise<[KP, any]> {
   const resource: anchor.web3.Keypair = anchor.web3.Keypair.generate();
   return [resource, await initResource(program, resource, name, inputs)];
 }
@@ -185,8 +205,8 @@ async function initProducer(program: Program<GotAMin>, producer, resource, produ
     return await program.account.producer.fetch(producer.publicKey);
 }
 
-async function createStorage(program: Program<GotAMin>, resource) {
-  const storage: anchor.web3.Keypair = anchor.web3.Keypair.generate();
+async function createStorage(program: Program<GotAMin>, resource: KP): Promise<[KP, any]> {
+  const storage: KP = anchor.web3.Keypair.generate();
   return [storage, await initStorage(program, storage, resource)];
 }
 
@@ -206,47 +226,50 @@ async function initStorage(program: Program<GotAMin>, storage, resource: KP) {
   return await program.account.storage.fetch(storage.publicKey);
 }
 
-async function produce_without_input(program: Program<GotAMin>, producer, resource, inputResources = []) {
+async function produce_without_input(program: Program<GotAMin>, producer, storage, resource, inputResources = []) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
     .produce()
     .accounts({
       producer: producer.publicKey,
+      storage: storage.publicKey,
       resource: resource.publicKey,
     })
     .rpc();
 
-  return await program.account.resource.fetch(resource.publicKey);
+  return await program.account.storage.fetch(storage.publicKey);
 }
 
-async function produce_with_1_input(program: Program<GotAMin>, producer, resourceToProduce, resourceInput) {
+async function produce_with_1_input(program: Program<GotAMin>, producer, storage, resourceToProduce, storageInput) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
     .produceWithOneInput()
     .accounts({
       producer: producer.publicKey,
+      storage: storage.publicKey,
       resourceToProduce: resourceToProduce.publicKey,
-      resourceInput: resourceInput.publicKey,      
+      storageInput: storageInput.publicKey,      
     })
     .rpc();
 
-  return await program.account.resource.fetch(resourceToProduce.publicKey);
+  return await program.account.storage.fetch(storage.publicKey);
 }
 
-async function produce_with_2_inputs(program: Program<GotAMin>, producer, resourceToProduce, resourceInput1, resourceInput2) {
+async function produce_with_2_inputs(program: Program<GotAMin>, producer, storage, resourceToProduce, resourceInput1, resourceInput2) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
     .produceWithTwoInputs()
     .accounts({
       producer: producer.publicKey,
+      storage: storage.publicKey,
       resourceToProduce: resourceToProduce.publicKey,
       resourceInput1: resourceInput1.publicKey,
       resourceInput2: resourceInput2.publicKey,
     })
     .rpc();
 
-  return await program.account.resource.fetch(resourceToProduce.publicKey);
+  return await program.account.storage.fetch(storage.publicKey);
 }
