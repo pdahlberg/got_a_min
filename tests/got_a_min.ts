@@ -95,13 +95,14 @@ describe("got_a_min", () => {
 
   it("Produce resource B with input A fails when A is empty", async () => {
     let [resourceA, _1] = await createResource(program, 'A', []);
+    let [storageA, _2] = await createStorage(program, resourceA);
     let [resourceB, _3] = await createResource(program, 'B', [[resourceA, 1]]);
     let [producerB, _4] = await createProducer(program, resourceB, 2);
     let [storageB, _5] = await createStorage(program, resourceB);
 
     // await expect(stuff(program, producerB, resourceB, resourceA)).should.be.rejectedWith("I AM THE EXPECTED ERROR");
     try {
-      await produce_with_1_input(program, producerB, storageB, resourceB, resourceA);
+      await produce_with_1_input(program, producerB, storageB, resourceB, storageA);
       
       assert(false, "Expected to fail");
     } catch(e) {
