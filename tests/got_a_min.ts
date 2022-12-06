@@ -6,13 +6,15 @@ import { AnchorError, Program } from "@project-serum/anchor";
 import { GotAMin } from "../target/types/got_a_min";
 import { publicKey } from "@project-serum/anchor/dist/cjs/utils";
 
+type KP = anchor.web3.Keypair;
+
 describe("got_a_min", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
 
-  it("Init resource", async () => {
+  /*it("Init resource", async () => {
     const resource = anchor.web3.Keypair.generate();
 
     let result = await initResource(program, resource, "A", []);
@@ -25,7 +27,7 @@ describe("got_a_min", () => {
     const resource = anchor.web3.Keypair.generate();
     let [resourceA, _] = await createResource(program, "A", []);
 
-    let result = await initResource(program, resource, "B", [[resourceA, 1]]);
+    let result = await initResource(program, resource, "B", [[resourceA as KP, 1]]);
     
     expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
     expect(result.amount.toNumber()).to.equal(0);
@@ -77,21 +79,41 @@ describe("got_a_min", () => {
       assertAnchorError(e, "InputResourceAmountTooLow");
     }
 
-  });
+  });*/
 
   it("Produce 1 resource B from 2 A", async () => {
-    let [resourceA, _1] = await createResource(program, 'A', []);
+    let [resourceA, _1] = await createResource(program, 'A', []) as [KP, any];
     let [producerA, _2] = await createProducer(program, resourceA, 2);
     let [resourceB, _3] = await createResource(program, 'B', [[resourceA, 2]]);
     let [producerB, _4] = await createProducer(program, resourceB, 1);
-    await produce(program, producerA, resourceA);
+    await produce_without_input(program, producerA, resourceA);
 
-    let result = await stuff(program, producerB, resourceB, resourceA);
+    let result = await produce_with_1_input(program, producerB, resourceB, resourceA);
 
     expect(result.name).to.equal('B');
     expect(result.amount.toNumber()).to.equal(1);
     let resResult = await program.account.resource.fetch(resourceA.publicKey);
     expect(resResult.amount.toNumber()).to.equal(0);    
+  });
+
+  it("Produce 1 resource C from 1 A + 1 B", async () => {
+    let [resourceA, _1] = await createResource(program, 'A', []) as [KP, any];
+    let [producerA, _2] = await createProducer(program, resourceA, 1);
+    let [resourceB, _3] = await createResource(program, 'B', []) as [KP, any];
+    let [producerB, _4] = await createProducer(program, resourceB, 1);
+    let [resourceC, _5] = await createResource(program, 'C', [[resourceA, 1], [resourceB, 1]]);
+    let [producerC, _6] = await createProducer(program, resourceC, 1);
+    await produce_without_input(program, producerA, resourceA);
+    await produce_without_input(program, producerB, resourceB);
+
+    let result = await produce_with_2_inputs(program, producerC, resourceC, resourceA, resourceB);
+
+    expect(result.name).to.equal('C');
+    expect(result.amount.toNumber()).to.equal(1);
+    let aResult = await program.account.resource.fetch(resourceA.publicKey);
+    expect(aResult.amount.toNumber()).to.equal(0);    
+    let bResult = await program.account.resource.fetch(resourceB.publicKey);
+    expect(bResult.amount.toNumber()).to.equal(0);
   });
 
 });
@@ -103,7 +125,7 @@ function assertAnchorError(error: any, errorName: String) {
 }
 
 async function createResource(program: Program<GotAMin>, name: string, inputs) {
-  const resource = anchor.web3.Keypair.generate();
+  const resource: anchor.web3.Keypair = anchor.web3.Keypair.generate();
   return [resource, await initResource(program, resource, name, inputs)];
 }
 
@@ -117,6 +139,8 @@ async function initResource(program: Program<GotAMin>, resource, name: string, i
     amountInputs.push(new anchor.BN(tuple[1].toFixed()));
   });
 
+  console.log("inputs", publicKeyInputs, ", ", amountInputs);
+
   await program.methods
     .initResource(name, publicKeyInputs, amountInputs)
     .accounts({
@@ -127,7 +151,7 @@ async function initResource(program: Program<GotAMin>, resource, name: string, i
     .signers(resource)
     .rpc();
     
-    return await program.account.resource.fetch(resource.publicKey);
+  return await program.account.resource.fetch(resource.publicKey);
 }
 
 async function createProducer(program: Program<GotAMin>, resource, productionRate) {
@@ -151,7 +175,7 @@ async function initProducer(program: Program<GotAMin>, producer, resource, produ
     return await program.account.producer.fetch(producer.publicKey);
 }
 
-async function produce(program: Program<GotAMin>, producer, resource, inputResources = []) {
+async function produce_without_input(program: Program<GotAMin>, producer, resource, inputResources = []) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
@@ -165,7 +189,7 @@ async function produce(program: Program<GotAMin>, producer, resource, inputResou
   return await program.account.resource.fetch(resource.publicKey);
 }
 
-async function stuff(program: Program<GotAMin>, producer, resourceToProduce, resourceInput) {
+async function produce_with_1_input(program: Program<GotAMin>, producer, resourceToProduce, resourceInput) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
@@ -174,6 +198,22 @@ async function stuff(program: Program<GotAMin>, producer, resourceToProduce, res
       producer: producer.publicKey,
       resourceToProduce: resourceToProduce.publicKey,
       resourceInput: resourceInput.publicKey,      
+    })
+    .rpc();
+
+  return await program.account.resource.fetch(resourceToProduce.publicKey);
+}
+
+async function produce_with_2_inputs(program: Program<GotAMin>, producer, resourceToProduce, resourceInput1, resourceInput2) {
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  await program.methods
+    .produceWithInputs()
+    .accounts({
+      producer: producer.publicKey,
+      resourceToProduce: resourceToProduce.publicKey,
+      resourceInput1: resourceInput1.publicKey,
+      resourceInput2: resourceInput2.publicKey,
     })
     .rpc();
 

@@ -54,7 +54,7 @@ pub mod got_a_min {
         Ok(())
     }
 
-    pub fn produce_with_input(ctx: Context<ProduceResourceWithInput>, ) -> Result<()> {
+    pub fn produce_with_input(ctx: Context<ProduceResourceWith1Input>) -> Result<()> {
         let producer = &ctx.accounts.producer;
         let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
         let resource_input: &mut Account<Resource> = &mut ctx.accounts.resource_input;
@@ -68,6 +68,25 @@ pub mod got_a_min {
 
         resource_to_produce.amount += producer.production_rate;
         resource_input.amount -= input_amount;
+
+        Ok(())
+    }
+
+    pub fn produce_with_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Result<()> {
+        let producer = &ctx.accounts.producer;
+        let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
+        let resource_input_1: &mut Account<Resource> = &mut ctx.accounts.resource_input_1;
+        let resource_input_2: &mut Account<Resource> = &mut ctx.accounts.resource_input_2;
+
+        //let input_exists = resource_to_produce.input.iter().position(|input| input.key().eq(&resource_input.key()));
+        //require!(input_exists.is_some(), ValidationError::InputResourceNotSupplied);
+
+        //let index = input_exists.unwrap();
+        //let input_amount = resource_to_produce.input_amount[index];
+        //require!(resource_input_1.amount >= input_amount, ValidationError::InputResourceAmountTooLow);
+
+        //resource_to_produce.amount += producer.production_rate;
+        //resource_input_1.amount -= input_amount;
 
         Ok(())
     }
@@ -100,13 +119,25 @@ pub struct ProduceResource<'info> {
 }
 
 #[derive(Accounts)]
-pub struct ProduceResourceWithInput<'info> {
+pub struct ProduceResourceWith1Input<'info> {
     #[account(mut)]
     pub producer: Account<'info, Producer>,
     #[account(mut)]
     pub resource_to_produce: Account<'info, Resource>,
     #[account(mut)]
     pub resource_input: Account<'info, Resource>,
+}
+
+#[derive(Accounts)]
+pub struct ProduceResourceWith2Inputs<'info> {
+    #[account(mut)]
+    pub producer: Account<'info, Producer>,
+    #[account(mut)]
+    pub resource_to_produce: Account<'info, Resource>,
+    #[account(mut)]
+    pub resource_input_1: Account<'info, Resource>,
+    #[account(mut)]
+    pub resource_input_2: Account<'info, Resource>,
 }
 
 #[account]
@@ -135,9 +166,11 @@ pub struct Resource {
 
 impl Resource {
     const LEN: usize = DISCRIMINATOR_LENGTH
-        + PUBLIC_KEY_LENGTH // owner
-        + AMOUNT_LENGTH 
-        + NAME_LENGTH;
+        + PUBLIC_KEY_LENGTH
+        + AMOUNT_LENGTH
+        + NAME_LENGTH 
+        + INPUT_LENGTH
+        + INPUT_AMOUNT_LENGTH;          
 }
 
 const DISCRIMINATOR_LENGTH: usize = 8;
@@ -147,3 +180,4 @@ const AMOUNT_LENGTH: usize = 8;
 const NAME_LENGTH: usize = 16 * 4;
 const INPUT_MAX_SIZE: usize = 2;
 const INPUT_LENGTH: usize = PUBLIC_KEY_LENGTH * INPUT_MAX_SIZE;
+const INPUT_AMOUNT_LENGTH: usize = 8 * INPUT_MAX_SIZE;
