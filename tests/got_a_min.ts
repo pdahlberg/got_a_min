@@ -97,15 +97,15 @@ describe("got_a_min", () => {
     let [resourceA, _1] = await createResource(program, 'A', []);
     let [resourceB, _3] = await createResource(program, 'B', [[resourceA, 1]]);
     let [producerB, _4] = await createProducer(program, resourceB, 2);
-    let [storage, _5] = await createStorage(program, resourceB);
+    let [storageB, _5] = await createStorage(program, resourceB);
 
     // await expect(stuff(program, producerB, resourceB, resourceA)).should.be.rejectedWith("I AM THE EXPECTED ERROR");
     try {
-      await produce_with_1_input(program, producerB, storage, resourceB, resourceA);
+      await produce_with_1_input(program, producerB, storageB, resourceB, resourceA);
       
       assert(false, "Expected to fail");
     } catch(e) {
-      assertAnchorError(e, "InputResourceAmountTooLow");
+      assertAnchorError(e, "InputStorageAmountTooLow");
     }
 
   });
@@ -119,15 +119,15 @@ describe("got_a_min", () => {
     let [storageB, _6] = await createStorage(program, resourceB);
     let [resourceC, _7] = await createResource(program, 'C', [[resourceA, 1], [resourceB, 1]]);
     let [producerC, _8] = await createProducer(program, resourceC, 1);
-    let [storageC, _9] = await createStorage(program, resourceB);
+    let [storageC, _9] = await createStorage(program, resourceC);
     await produce_without_input(program, producerA, storageA, resourceA);
     await produce_without_input(program, producerB, storageB, resourceB);
 
-    let result = await produce_with_2_inputs(program, producerC, storageC, resourceC, resourceA, resourceB);
-    let inputAResult = await program.account.resource.fetch(resourceA.publicKey);
-    let inputBResult = await program.account.resource.fetch(resourceB.publicKey);
+    let result = await produce_with_2_inputs(program, producerC, storageC, resourceC, storageA, storageB);
+    let inputAResult = await program.account.storage.fetch(storageA.publicKey);
+    let inputBResult = await program.account.storage.fetch(storageB.publicKey);
 
-    expect(result.name).to.equal('C');
+    expect(result.resourceId.toBase58()).to.equal(resourceC.publicKey.toBase58());
     expect(result.amount.toNumber(), "Resource C should be produced").to.equal(1);
     expect(inputAResult.amount.toNumber(), "Input A should be consumed").to.equal(0);    
     expect(inputBResult.amount.toNumber(), "Input B should be consumed").to.equal(0);
@@ -257,7 +257,7 @@ async function produce_with_1_input(program: Program<GotAMin>, producer, storage
   return await program.account.storage.fetch(storage.publicKey);
 }
 
-async function produce_with_2_inputs(program: Program<GotAMin>, producer, storage, resourceToProduce, resourceInput1, resourceInput2) {
+async function produce_with_2_inputs(program: Program<GotAMin>, producer, storage, resourceToProduce, storageInput1, storageInput2) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
@@ -266,8 +266,8 @@ async function produce_with_2_inputs(program: Program<GotAMin>, producer, storag
       producer: producer.publicKey,
       storage: storage.publicKey,
       resourceToProduce: resourceToProduce.publicKey,
-      resourceInput1: resourceInput1.publicKey,
-      resourceInput2: resourceInput2.publicKey,
+      storageInput1: storageInput1.publicKey,
+      storageInput2: storageInput2.publicKey,
     })
     .rpc();
 

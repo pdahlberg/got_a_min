@@ -8,8 +8,8 @@ pub enum ValidationError {
     #[msg("Missing resource input amount.")]                                    MissingResourceInputAmount,
     #[msg("Missing resource account.")]                                         MissingResource,
     #[msg("Input storage not supplied to production.")]                         InputStorageNotSupplied,
-    #[msg("Input resource 1 not supplied to production.")]                      InputResource1NotSupplied,
-    #[msg("Input resource 2 not supplied to production.")]                      InputResource2NotSupplied,
+    #[msg("Input storage 1 not supplied to production.")]                       InputStorage1NotSupplied,
+    #[msg("Input storage 2 not supplied to production.")]                       InputStorage2NotSupplied,
     #[msg("Input storage amount is too low.")]                                  InputStorageAmountTooLow,
     #[msg("Trying stuff out and failing quite deliberately.")]                  ExperimentalError,
 }
@@ -73,6 +73,8 @@ pub mod got_a_min {
         let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
         let storage_input: &mut Account<Storage> = &mut ctx.accounts.storage_input;
 
+        require!(resource_to_produce.key().eq(&storage.resource_id), ValidationError::InputStorageNotSupplied);
+
         let input_exists = resource_to_produce.input.iter().position(|input| input.key().eq(&storage_input.resource_id));
         require!(input_exists.is_some(), ValidationError::InputStorageNotSupplied);
 
@@ -89,25 +91,26 @@ pub mod got_a_min {
     pub fn produce_with_two_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Result<()> {
         let producer = &ctx.accounts.producer;
         let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
-        let resource_input_1: &mut Account<Resource> = &mut ctx.accounts.resource_input_1;
-        let resource_input_2: &mut Account<Resource> = &mut ctx.accounts.resource_input_2;
+        let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
+        let storage_input_1: &mut Account<Storage> = &mut ctx.accounts.storage_input_1;
+        let storage_input_2: &mut Account<Storage> = &mut ctx.accounts.storage_input_2;
 
-        let input_pos_1 = resource_to_produce.input.iter().position(|input| input.key().eq(&resource_input_1.key()));
-        require!(input_pos_1.is_some(), ValidationError::InputResource1NotSupplied);
-        let input_pos_2 = resource_to_produce.input.iter().position(|input| input.key().eq(&resource_input_2.key()));
-        require!(input_pos_2.is_some(), ValidationError::InputResource2NotSupplied);
+        let input_pos_1 = resource_to_produce.input.iter().position(|input| input.key().eq(&storage_input_1.resource_id));
+        require!(input_pos_1.is_some(), ValidationError::InputStorage1NotSupplied);
+        let input_pos_2 = resource_to_produce.input.iter().position(|input| input.key().eq(&storage_input_2.resource_id));
+        require!(input_pos_2.is_some(), ValidationError::InputStorage2NotSupplied);
 
         let index_1 = input_pos_1.unwrap();
         let input_1_amount = resource_to_produce.input_amount[index_1];
-        //require!(resource_input_1.amount >= input_1_amount, ValidationError::InputResourceAmountTooLow);
+        require!(storage_input_1.amount >= input_1_amount, ValidationError::InputStorageAmountTooLow);
 
-        //let index_2 = input_pos_2.unwrap();
-        //let input_2_amount = resource_to_produce.input_amount[index_2];
-        //require!(resource_input_2.amount >= input_2_amount, ValidationError::InputResourceAmountTooLow);
+        let index_2 = input_pos_2.unwrap();
+        let input_2_amount = resource_to_produce.input_amount[index_2];
+        require!(storage_input_2.amount >= input_2_amount, ValidationError::InputStorageAmountTooLow);
 
-        //resource_to_produce.amount += producer.production_rate;
-        //resource_input_1.amount -= input_1_amount;
-        //resource_input_2.amount -= input_2_amount;
+        storage.amount += producer.production_rate;
+        storage_input_1.amount -= input_1_amount;
+        storage_input_2.amount -= input_2_amount;
 
         Ok(())
     }
@@ -169,11 +172,11 @@ pub struct ProduceResourceWith2Inputs<'info> {
     #[account(mut)]
     pub resource_to_produce: Account<'info, Resource>,
     #[account(mut)]
-    pub resource_input_1: Account<'info, Resource>,
-    #[account(mut)]
-    pub resource_input_2: Account<'info, Resource>,
-    #[account(mut)]
     pub storage: Account<'info, Storage>,
+    #[account(mut)]
+    pub storage_input_1: Account<'info, Storage>,
+    #[account(mut)]
+    pub storage_input_2: Account<'info, Storage>,
 }
 
 #[account]
