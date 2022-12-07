@@ -11,6 +11,7 @@ pub enum ValidationError {
     #[msg("Input storage 1 not supplied to production.")]                       InputStorage1NotSupplied,
     #[msg("Input storage 2 not supplied to production.")]                       InputStorage2NotSupplied,
     #[msg("Input storage amount is too low.")]                                  InputStorageAmountTooLow,
+    #[msg("Storage is full.")]                                                  StorageFull,
     #[msg("Trying stuff out and failing quite deliberately.")]                  ExperimentalError,
 }
 
@@ -44,25 +45,27 @@ pub mod got_a_min {
         Ok(())
     }
 
-    pub fn init_storage(ctx: Context<InitStorage>, resource_id: Pubkey) -> Result<()> {
+    pub fn init_storage(ctx: Context<InitStorage>, resource_id: Pubkey, capacity: i64) -> Result<()> {
         let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
         let owner: &Signer = &ctx.accounts.owner;
 
         storage.owner = *owner.key;
         storage.resource_id = resource_id;
         storage.amount = 0;
+        storage.capacity = capacity;
 
         Ok(())
     }
 
-    pub fn produce(ctx: Context<ProduceResource>) -> Result<()> {
+    pub fn produce_without_input(ctx: Context<ProduceResource>) -> Result<()> {
         let producer = &ctx.accounts.producer;
         let resource = &ctx.accounts.resource;
         let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
 
-        require!(resource.input.is_empty(), ValidationError::ResourceInputMax);
-
         storage.amount += producer.production_rate;
+
+        require!(resource.input.is_empty(), ValidationError::ResourceInputMax);
+        require!(storage.amount <= storage.capacity, ValidationError::StorageFull);
 
         Ok(())
     }
@@ -84,6 +87,8 @@ pub mod got_a_min {
 
         storage.amount += producer.production_rate;
         storage_input.amount -= required_input_amount;
+
+        require!(storage.amount <= storage.capacity, ValidationError::StorageFull);
 
         Ok(())
     }
@@ -111,6 +116,8 @@ pub mod got_a_min {
         storage.amount += producer.production_rate;
         storage_input_1.amount -= input_1_amount;
         storage_input_2.amount -= input_2_amount;
+
+        require!(storage.amount <= storage.capacity, ValidationError::StorageFull);
 
         Ok(())
     }
@@ -215,20 +222,23 @@ pub struct Storage {
     pub owner: Pubkey,
     pub resource_id: Pubkey,
     pub amount: i64,
+    pub capacity: i64,
 }
 
 impl Storage {
     const LEN: usize = DISCRIMINATOR_LENGTH
         + PUBLIC_KEY_LENGTH  // owner
         + PUBLIC_KEY_LENGTH  // resource_id
-        + AMOUNT_LENGTH;
+        + AMOUNT_LENGTH
+        + CAPACITY_LENGTH;
 }
 
-const DISCRIMINATOR_LENGTH: usize = 8;
-const PUBLIC_KEY_LENGTH: usize = 32;
-const PRODUCTION_RATE_LENGTH: usize = 8;
 const AMOUNT_LENGTH: usize = 8;
-const NAME_LENGTH: usize = 16 * 4;
-const INPUT_MAX_SIZE: usize = 2;
-const INPUT_LENGTH: usize = PUBLIC_KEY_LENGTH * INPUT_MAX_SIZE;
+const CAPACITY_LENGTH: usize = 8;
+const DISCRIMINATOR_LENGTH: usize = 8;
 const INPUT_AMOUNT_LENGTH: usize = 8 * INPUT_MAX_SIZE;
+const INPUT_LENGTH: usize = PUBLIC_KEY_LENGTH * INPUT_MAX_SIZE;
+const INPUT_MAX_SIZE: usize = 2;
+const NAME_LENGTH: usize = 16 * 4;
+const PRODUCTION_RATE_LENGTH: usize = 8;
+const PUBLIC_KEY_LENGTH: usize = 32;
