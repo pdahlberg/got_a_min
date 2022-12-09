@@ -80,37 +80,51 @@ describe("got_a_min", () => {
     expect(storageResult2.amount.toNumber(), "storage amount").to.equal(producerProdRate);
   });
 
-  /*
   it("Produce 2 of resource B", async () => {
+    let producerProdRate = 2;
     let [resource, _1] = await createResource(program, 'B', []) as [KP, any];
-    let [producer, _2] = await createProducer(program, resource, 2);
+    let [producer, _2] = await createProducer(program, resource, producerProdRate);
     let [storage, _3] = await createStorage(program, resource, 2);
 
-    let result = await produce_without_input(program, producer, storage, resource);
+    let storageResult = await produce_without_input(program, producer, storage, resource);
+    let producerResult = await program.account.producer.fetch(producer.publicKey);
 
-    expect(result.amount.toNumber()).to.equal(2);
+    expect(storageResult.amount.toNumber(), "storage amount").to.equal(0);
+
+    // Production is done after delay
+    await new Promise(f => setTimeout(f, 5001)); // todo: delay 5+ seconds... 
+    let storageResult2 = await produce_without_input(program, producer, storage, resource);
+    let producerResult2 = await program.account.producer.fetch(producer.publicKey);
+
+    expect(producerResult2.awaitingUnits.toNumber(), "producer awaitingUnits").to.equal(producerProdRate);
+    expect(storageResult2.amount.toNumber(), "storage amount").to.equal(producerProdRate);
   });
 
   it("Produce 1 resource B from 2 A", async () => {
     let producerBProdRate = 1;
     let [resourceA, _1] = await createResource(program, 'A', []);
-    let [producerA, _2] = await createProducer(program, resourceA, 2);
+    let [producerA, _2] = await createProducer(program, resourceA, 2, 0);
     let [storageA, _3] = await createStorage(program, resourceA, 5);
     let [resourceB, _4] = await createResource(program, 'B', [[resourceA, 2]]);
     let [producerB, _5] = await createProducer(program, resourceB, producerBProdRate);
     let [storageB, _6] = await createStorage(program, resourceB, 5);
     await produce_without_input(program, producerA, storageA, resourceA);
 
-    let result = await produce_with_1_input(program, producerB, storageB, resourceB, storageA);
+    let storageBResult = await produce_with_1_input(program, producerB, storageB, resourceB, storageA);
     let producerBResult = await program.account.producer.fetch(producerB.publicKey);
-    let inputResult = await program.account.storage.fetch(storageA.publicKey);
+    let inputAResult = await program.account.storage.fetch(storageA.publicKey);
 
     expect(producerBResult.awaitingUnits.toNumber()).to.equal(producerBProdRate);
-    expect(result.resourceId.toBase58()).to.equal(resourceB.publicKey.toBase58());
-    expect(result.amount.toNumber()).to.equal(1);
-    expect(inputResult.amount.toNumber()).to.equal(0);    
+    expect(storageBResult.resourceId.toBase58()).to.equal(resourceB.publicKey.toBase58());
+    expect(storageBResult.amount.toNumber()).to.equal(0);
+    expect(inputAResult.amount.toNumber()).to.equal(0);    
+
+    // Production is done after delay
+    await new Promise(f => setTimeout(f, 5001)); // todo: delay 5+ seconds... 
+    let storageBResult2 = await produce_without_input(program, producerB, storageB, resourceB);
+    let producerBResult2 = await program.account.producer.fetch(producerB.publicKey);
   });
-*/
+
 
   it("Produce resource B with input A fails when A is empty", async () => {
     let [resourceA, _1] = await createResource(program, 'A', []);
@@ -205,15 +219,15 @@ async function initResource(program: Program<GotAMin>, resource, name: string, i
   return await program.account.resource.fetch(resource.publicKey);
 }
 
-async function createProducer(program: Program<GotAMin>, resource, productionRate): Promise<[KP, any]> {
+async function createProducer(program: Program<GotAMin>, resource, productionRate, productionTime = 5): Promise<[KP, any]> {
   const producer = anchor.web3.Keypair.generate();
-  return [producer, await initProducer(program, producer, resource, productionRate)];
+  return [producer, await initProducer(program, producer, resource, productionRate, productionTime)];
 }
 
-async function initProducer(program: Program<GotAMin>, producer, resource, productionRate) {
+async function initProducer(program: Program<GotAMin>, producer, resource, productionRate, productionTime = 5) {
   const programProvider = program.provider as anchor.AnchorProvider;
   const prodRateBN = new anchor.BN(productionRate);
-  const prodTimeBN = new anchor.BN(5);
+  const prodTimeBN = new anchor.BN(productionTime);
 
   await program.methods
     .initProducer(resource.publicKey, prodRateBN, prodTimeBN)
