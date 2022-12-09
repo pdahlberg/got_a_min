@@ -14,7 +14,8 @@ describe("got_a_min", () => {
   anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
-
+  
+  /*
   it("Init resource", async () => {
     const resource = anchor.web3.Keypair.generate();
 
@@ -67,7 +68,7 @@ describe("got_a_min", () => {
     let storageResult = await produce_without_input(program, producer, storage, resource);
     let producerResult = await program.account.producer.fetch(producer.publicKey);
 
-    expect(producerResult.awaitingUnits.toNumber(), "producer awaitingUnits").to.equal(producerProdRate);
+    expect(producerResult.awaitingUnits.toNumber(), "1) producer awaitingUnits").to.equal(producerProdRate);
     expect(storageResult.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
     expect(storageResult.amount.toNumber(), "storage amount").to.equal(0);
 
@@ -76,7 +77,7 @@ describe("got_a_min", () => {
     let storageResult2 = await produce_without_input(program, producer, storage, resource);
     let producerResult2 = await program.account.producer.fetch(producer.publicKey);
 
-    expect(producerResult2.awaitingUnits.toNumber(), "producer awaitingUnits").to.equal(producerProdRate);
+    expect(producerResult2.awaitingUnits.toNumber(), "2) producer awaitingUnits").to.equal(producerProdRate);
     expect(storageResult2.amount.toNumber(), "storage amount").to.equal(producerProdRate);
   });
 
@@ -99,6 +100,7 @@ describe("got_a_min", () => {
     expect(producerResult2.awaitingUnits.toNumber(), "producer awaitingUnits").to.equal(producerProdRate);
     expect(storageResult2.amount.toNumber(), "storage amount").to.equal(producerProdRate);
   });
+  */
 
   it("Produce 1 resource B from 2 A", async () => {
     let producerBProdRate = 1;
@@ -106,7 +108,7 @@ describe("got_a_min", () => {
     let [producerA, _2] = await createProducer(program, resourceA, 2, 0);
     let [storageA, _3] = await createStorage(program, resourceA, 5);
     let [resourceB, _4] = await createResource(program, 'B', [[resourceA, 2]]);
-    let [producerB, _5] = await createProducer(program, resourceB, producerBProdRate);
+    let [producerB, _5] = await createProducer(program, resourceB, producerBProdRate, 0);
     let [storageB, _6] = await createStorage(program, resourceB, 5);
     await produce_without_input(program, producerA, storageA, resourceA);
 

@@ -44,11 +44,12 @@ pub fn produce_without_input(ctx: Context<ProduceResource>) -> Result<()> {
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let current_timestamp = Clock::get()?.unix_timestamp;       // 15
 
+    producer.awaiting_units += producer.production_rate;
+
     if producer.awaiting_units > 0 {
         move_awaiting(producer, storage, current_timestamp);
     }
 
-    producer.awaiting_units += producer.production_rate;
     producer.claimed_at = current_timestamp;
 
     require!(resource.input.is_empty(), ValidationError::ResourceInputMax);
@@ -58,10 +59,11 @@ pub fn produce_without_input(ctx: Context<ProduceResource>) -> Result<()> {
 }
 
 pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result<()> {
-    let producer = &ctx.accounts.producer;
+    let producer = &mut ctx.accounts.producer;
     let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let storage_input: &mut Account<Storage> = &mut ctx.accounts.storage_input;
+    let current_timestamp = Clock::get()?.unix_timestamp;       // 15
 
     require!(resource_to_produce.key().eq(&storage.resource_id), ValidationError::InputStorageNotSupplied);
 
@@ -72,8 +74,15 @@ pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result
     let required_input_amount = resource_to_produce.input_amount[index];
     require!(storage_input.amount >= required_input_amount, ValidationError::InputStorageAmountTooLow);
 
-    storage.amount += producer.production_rate;
+
     storage_input.amount -= required_input_amount;
+    producer.awaiting_units += producer.production_rate;
+
+    if producer.awaiting_units > 0 {
+        move_awaiting(producer, storage, current_timestamp);
+    }
+
+    producer.claimed_at = current_timestamp;
 
     require!(storage.amount <= storage.capacity, ValidationError::StorageFull);
 
@@ -81,11 +90,12 @@ pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result
 }
 
 pub fn produce_with_two_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Result<()> {
-    let producer = &ctx.accounts.producer;
+    let producer = &mut ctx.accounts.producer;
     let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let storage_input_1: &mut Account<Storage> = &mut ctx.accounts.storage_input_1;
     let storage_input_2: &mut Account<Storage> = &mut ctx.accounts.storage_input_2;
+    let current_timestamp = Clock::get()?.unix_timestamp;       // 15
 
     let input_pos_1 = resource_to_produce.input.iter().position(|input| input.key().eq(&storage_input_1.resource_id));
     require!(input_pos_1.is_some(), ValidationError::InputStorage1NotSupplied);
@@ -100,9 +110,15 @@ pub fn produce_with_two_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Resu
     let input_2_amount = resource_to_produce.input_amount[index_2];
     require!(storage_input_2.amount >= input_2_amount, ValidationError::InputStorageAmountTooLow);
 
-    storage.amount += producer.production_rate;
     storage_input_1.amount -= input_1_amount;
     storage_input_2.amount -= input_2_amount;
+    producer.awaiting_units += producer.production_rate;
+
+    if producer.awaiting_units > 0 {
+        move_awaiting(producer, storage, current_timestamp);
+    }
+
+    producer.claimed_at = current_timestamp;
 
     require!(storage.amount <= storage.capacity, ValidationError::StorageFull);
 
