@@ -1,37 +1,20 @@
 use anchor_lang::prelude::*;
+use errors::ValidationError;
+use state::Resource;
+use instructions::*;
+
+pub mod errors;
+pub mod state;
+pub mod instructions;
 
 declare_id!("5kdCwKP8D1ciS9xyc3zRp1PaUcyD2yiBFkgBr8u3jn3K");
-
-#[error_code]
-pub enum ValidationError {
-    #[msg("Resource has too many inputs defined.")]                             ResourceInputMax,
-    #[msg("Missing resource input amount.")]                                    MissingResourceInputAmount,
-    #[msg("Missing resource account.")]                                         MissingResource,
-    #[msg("Input storage not supplied to production.")]                         InputStorageNotSupplied,
-    #[msg("Input storage 1 not supplied to production.")]                       InputStorage1NotSupplied,
-    #[msg("Input storage 2 not supplied to production.")]                       InputStorage2NotSupplied,
-    #[msg("Input storage amount is too low.")]                                  InputStorageAmountTooLow,
-    #[msg("Storage is full.")]                                                  StorageFull,
-    #[msg("Trying stuff out and failing quite deliberately.")]                  ExperimentalError,
-}
 
 #[program]
 pub mod got_a_min {
     use super::*;
 
     pub fn init_resource(ctx: Context<InitResource>, name: String, inputs: Vec<Pubkey>, input_amounts: Vec<i64>) -> Result<()> {
-        let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
-        let owner: &Signer = &ctx.accounts.owner;
-
-        resource.owner = *owner.key;
-        resource.name = name;
-        resource.input = inputs;
-        resource.input_amount = input_amounts;
-
-        require!(resource.input.len() <= INPUT_MAX_SIZE, ValidationError::ResourceInputMax);
-        require!(resource.input.len() == resource.input_amount.len(), ValidationError::MissingResourceInputAmount);
-
-        Ok(())
+        instructions::init_resource(ctx, name, inputs, input_amounts)
     }
 
     pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, production_rate: i64, production_time: i64) -> Result<()> {
@@ -149,15 +132,6 @@ pub mod got_a_min {
 }
 
 #[derive(Accounts)]
-pub struct InitResource<'info> {
-    #[account(init, payer = owner, space = Resource::LEN)]
-    pub resource: Account<'info, Resource>,
-    #[account(mut)]
-    pub owner: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
 pub struct InitProducer<'info> {
     #[account(init, payer = owner, space = Producer::LEN)]
     pub producer: Account<'info, Producer>,
@@ -229,22 +203,6 @@ impl Producer {
         + PRODUCTION_TIME_LENGTH
         + AWAITING_UNITS_LENGTH
         + CLAIMED_AT_LENGTH;
-}
-
-#[account]
-pub struct Resource {
-    pub owner: Pubkey,
-    pub name: String,
-    pub input: Vec<Pubkey>,
-    pub input_amount: Vec<i64>,
-}
-
-impl Resource {
-    const LEN: usize = DISCRIMINATOR_LENGTH
-        + PUBLIC_KEY_LENGTH
-        + NAME_LENGTH 
-        + INPUT_LENGTH
-        + INPUT_AMOUNT_LENGTH;          
 }
 
 #[account]
