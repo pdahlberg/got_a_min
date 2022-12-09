@@ -34,13 +34,15 @@ pub mod got_a_min {
         Ok(())
     }
 
-    pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, production_rate: i64) -> Result<()> {
+    pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, production_rate: i64, production_time: i64) -> Result<()> {
         let producer: &mut Account<Producer> = &mut ctx.accounts.producer;
         let owner: &Signer = &ctx.accounts.owner;
 
         producer.owner = *owner.key;
         producer.resource_id = resource_id;
         producer.production_rate = production_rate;
+        producer.production_time = production_time;
+        producer.awaiting_units = 0;
 
         Ok(())
     }
@@ -190,7 +192,9 @@ pub struct ProduceResourceWith2Inputs<'info> {
 pub struct Producer {
     pub owner: Pubkey,
     pub resource_id: Pubkey,
-    pub production_rate: i64,
+    pub production_rate: i64,   // Produce this many units per [production_time]. 
+    pub production_time: i64,   
+    pub awaiting_units: i64,    // This amount can be claimed after waiting [production_time] * [awaiting_units] seconds.
 }
 
 impl Producer {
@@ -198,7 +202,8 @@ impl Producer {
         + PUBLIC_KEY_LENGTH  // owner
         + PUBLIC_KEY_LENGTH  // resource_id
         + PRODUCTION_RATE_LENGTH
-        + INPUT_LENGTH;
+        + PRODUCTION_TIME_LENGTH
+        + AWAITING_UNITS_LENGTH;
 }
 
 #[account]
@@ -234,6 +239,7 @@ impl Storage {
 }
 
 const AMOUNT_LENGTH: usize = 8;
+const AWAITING_UNITS_LENGTH: usize = 8;
 const CAPACITY_LENGTH: usize = 8;
 const DISCRIMINATOR_LENGTH: usize = 8;
 const INPUT_AMOUNT_LENGTH: usize = 8 * INPUT_MAX_SIZE;
@@ -241,4 +247,5 @@ const INPUT_LENGTH: usize = PUBLIC_KEY_LENGTH * INPUT_MAX_SIZE;
 const INPUT_MAX_SIZE: usize = 2;
 const NAME_LENGTH: usize = 16 * 4;
 const PRODUCTION_RATE_LENGTH: usize = 8;
+const PRODUCTION_TIME_LENGTH: usize = 8;
 const PUBLIC_KEY_LENGTH: usize = 32;

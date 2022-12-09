@@ -193,9 +193,11 @@ async function createProducer(program: Program<GotAMin>, resource, productionRat
 
 async function initProducer(program: Program<GotAMin>, producer, resource, productionRate) {
   const programProvider = program.provider as anchor.AnchorProvider;
+  const prodRateBN = new anchor.BN(productionRate);
+  const prodTimeBN = new anchor.BN(10);
 
   await program.methods
-    .initProducer(resource.publicKey, new anchor.BN(productionRate))
+    .initProducer(resource.publicKey, prodRateBN, prodTimeBN)
     .accounts({
       producer: producer.publicKey,
       owner: programProvider.wallet.publicKey,
