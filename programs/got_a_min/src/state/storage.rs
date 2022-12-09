@@ -17,14 +17,6 @@ impl Storage {
 }
 
 const AMOUNT_LENGTH: usize = 8;
-const AWAITING_UNITS_LENGTH: usize = 8;
 const CAPACITY_LENGTH: usize = 8;
-const CLAIMED_AT_LENGTH: usize = 8;
 const DISCRIMINATOR_LENGTH: usize = 8;
-const INPUT_AMOUNT_LENGTH: usize = 8 * INPUT_MAX_SIZE;
-const INPUT_LENGTH: usize = PUBLIC_KEY_LENGTH * INPUT_MAX_SIZE;
-const INPUT_MAX_SIZE: usize = 2;
-const NAME_LENGTH: usize = 16 * 4;
-const PRODUCTION_RATE_LENGTH: usize = 8;
-const PRODUCTION_TIME_LENGTH: usize = 8;
 const PUBLIC_KEY_LENGTH: usize = 32;

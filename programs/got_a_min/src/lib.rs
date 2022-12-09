@@ -12,7 +12,7 @@ pub mod got_a_min {
     use super::*;
 
     pub fn init_resource(ctx: Context<InitResource>, name: String, inputs: Vec<Pubkey>, input_amounts: Vec<i64>) -> Result<()> {
-        instructions::init_resource(ctx, name, inputs, input_amounts)
+        resource::init_resource(ctx, name, inputs, input_amounts)
     }
 
     pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, production_rate: i64, production_time: i64) -> Result<()> {

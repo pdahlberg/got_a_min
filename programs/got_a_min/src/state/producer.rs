@@ -21,7 +21,6 @@ impl Producer {
 }
 
 const AWAITING_UNITS_LENGTH: usize = 8;
-const CAPACITY_LENGTH: usize = 8;
 const CLAIMED_AT_LENGTH: usize = 8;
 const DISCRIMINATOR_LENGTH: usize = 8;
 const PRODUCTION_RATE_LENGTH: usize = 8;
