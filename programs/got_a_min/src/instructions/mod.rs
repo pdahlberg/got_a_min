@@ -1,8 +1,8 @@
 pub use resource::*;
-pub use production::*;
+pub use producer::*;
 pub use storage::*;
 
 pub mod resource;
-pub mod production;
+pub mod producer;
 pub mod storage;
 

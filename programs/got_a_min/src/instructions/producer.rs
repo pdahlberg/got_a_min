@@ -19,15 +19,9 @@ pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, production
     Ok(())
 }
 
-pub fn produce_without_input(ctx: Context<ProduceResource>) -> Result<()> {
-    let producer = &mut ctx.accounts.producer;
-    let resource = &ctx.accounts.resource;
-    let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
-    let current_timestamp = Clock::get()?.unix_timestamp;       // 15
-    let previous_claim_at = producer.claimed_at;                // 10
-
-    if producer.awaiting_units > 0 {
+fn move_awaiting(producer: &mut Account<Producer>, storage: &mut Account<Storage>, current_timestamp: i64) {
         // claim any units "done" waiting
+        let previous_claim_at = producer.claimed_at;                // 10
         let diff_time = current_timestamp - previous_claim_at; // => 5
         let prod_slots_during_diff_time = diff_time / producer.production_time;
         let prod_during_diff_time = prod_slots_during_diff_time * producer.production_rate;
@@ -42,6 +36,16 @@ pub fn produce_without_input(ctx: Context<ProduceResource>) -> Result<()> {
         };
         storage.amount += withdraw_awaiting_within_capacity;
         producer.awaiting_units -= withdraw_awaiting_within_capacity;
+}
+
+pub fn produce_without_input(ctx: Context<ProduceResource>) -> Result<()> {
+    let producer = &mut ctx.accounts.producer;
+    let resource = &ctx.accounts.resource;
+    let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
+    let current_timestamp = Clock::get()?.unix_timestamp;       // 15
+
+    if producer.awaiting_units > 0 {
+        move_awaiting(producer, storage, current_timestamp);
     }
 
     producer.awaiting_units += producer.production_rate;
