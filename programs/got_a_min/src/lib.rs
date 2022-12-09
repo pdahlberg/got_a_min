@@ -37,12 +37,14 @@ pub mod got_a_min {
     pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, production_rate: i64, production_time: i64) -> Result<()> {
         let producer: &mut Account<Producer> = &mut ctx.accounts.producer;
         let owner: &Signer = &ctx.accounts.owner;
+        let clock = Clock::get()?;
 
         producer.owner = *owner.key;
         producer.resource_id = resource_id;
         producer.production_rate = production_rate;
         producer.production_time = production_time;
         producer.awaiting_units = 0;
+        producer.claimed_at = clock.unix_timestamp;
 
         Ok(())
     }
@@ -60,11 +62,32 @@ pub mod got_a_min {
     }
 
     pub fn produce_without_input(ctx: Context<ProduceResource>) -> Result<()> {
-        let producer = &ctx.accounts.producer;
+        let producer = &mut ctx.accounts.producer;
         let resource = &ctx.accounts.resource;
         let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
+        let current_timestamp = Clock::get()?.unix_timestamp;       // 15
+        let previous_claim_at = producer.claimed_at;                // 10
 
-        storage.amount += producer.production_rate;
+        if producer.awaiting_units > 0 {
+            // claim any units "done" waiting
+            let diff_time = current_timestamp - previous_claim_at; // => 5
+            let prod_slots_during_diff_time = diff_time / producer.production_time;
+            let prod_during_diff_time = prod_slots_during_diff_time * producer.production_rate;
+            let withdraw_awaiting = match producer.awaiting_units >= prod_during_diff_time {
+                true => prod_during_diff_time,
+                false => producer.awaiting_units,
+            };
+            let available_capacity = storage.capacity - storage.amount;
+            let withdraw_awaiting_within_capacity = match available_capacity > withdraw_awaiting {
+                true => withdraw_awaiting,
+                false => available_capacity,
+            };
+            storage.amount += withdraw_awaiting_within_capacity;
+            producer.awaiting_units -= withdraw_awaiting_within_capacity;
+        }
+
+        producer.awaiting_units += producer.production_rate;
+        producer.claimed_at = current_timestamp;
 
         require!(resource.input.is_empty(), ValidationError::ResourceInputMax);
         require!(storage.amount <= storage.capacity, ValidationError::StorageFull);
@@ -195,6 +218,7 @@ pub struct Producer {
     pub production_rate: i64,   // Produce this many units per [production_time]. 
     pub production_time: i64,   
     pub awaiting_units: i64,    // This amount can be claimed after waiting [production_time] * [awaiting_units] seconds.
+    pub claimed_at: i64,
 }
 
 impl Producer {
@@ -203,7 +227,8 @@ impl Producer {
         + PUBLIC_KEY_LENGTH  // resource_id
         + PRODUCTION_RATE_LENGTH
         + PRODUCTION_TIME_LENGTH
-        + AWAITING_UNITS_LENGTH;
+        + AWAITING_UNITS_LENGTH
+        + CLAIMED_AT_LENGTH;
 }
 
 #[account]
@@ -241,6 +266,7 @@ impl Storage {
 const AMOUNT_LENGTH: usize = 8;
 const AWAITING_UNITS_LENGTH: usize = 8;
 const CAPACITY_LENGTH: usize = 8;
+const CLAIMED_AT_LENGTH: usize = 8;
 const DISCRIMINATOR_LENGTH: usize = 8;
 const INPUT_AMOUNT_LENGTH: usize = 8 * INPUT_MAX_SIZE;
 const INPUT_LENGTH: usize = PUBLIC_KEY_LENGTH * INPUT_MAX_SIZE;
