@@ -21,19 +21,27 @@ pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, production
 
 fn move_awaiting(producer: &mut Account<Producer>, storage: &mut Account<Storage>, current_timestamp: i64) {
         // claim any units "done" waiting
-        let previous_claim_at = producer.claimed_at;                // 10
-        let diff_time = current_timestamp - previous_claim_at; // => 5
-        let prod_slots_during_diff_time = diff_time / producer.production_time;
-        let prod_during_diff_time = prod_slots_during_diff_time * producer.production_rate;
-        let withdraw_awaiting = match producer.awaiting_units >= prod_during_diff_time {
-            true => prod_during_diff_time,
-            false => producer.awaiting_units,
+        let withdraw_awaiting = match producer.production_time == 0 {
+            true => producer.awaiting_units,
+            false => {
+                let previous_claim_at = producer.claimed_at;                // 10
+                let diff_time = current_timestamp - previous_claim_at; // => 5
+                let prod_slots_during_diff_time = diff_time / producer.production_time;
+                let prod_during_diff_time = prod_slots_during_diff_time * producer.production_rate;
+                let withdraw_awaiting = match producer.awaiting_units >= prod_during_diff_time {
+                    true => prod_during_diff_time,
+                    false => producer.awaiting_units,
+                };
+                withdraw_awaiting
+            }
         };
+
         let available_capacity = storage.capacity - storage.amount;
         let withdraw_awaiting_within_capacity = match available_capacity > withdraw_awaiting {
             true => withdraw_awaiting,
             false => available_capacity,
         };
+        
         storage.amount += withdraw_awaiting_within_capacity;
         producer.awaiting_units -= withdraw_awaiting_within_capacity;
 }
@@ -64,7 +72,7 @@ pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let storage_input: &mut Account<Storage> = &mut ctx.accounts.storage_input;
     let current_timestamp = Clock::get()?.unix_timestamp;       // 15
-
+ 
     require!(resource_to_produce.key().eq(&storage.resource_id), ValidationError::InputStorageNotSupplied);
 
     let input_exists = resource_to_produce.input.iter().position(|input| input.key().eq(&storage_input.resource_id));

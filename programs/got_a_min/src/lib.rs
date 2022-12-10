@@ -29,6 +29,7 @@ pub mod got_a_min {
 
     pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result<()> {
         producer::produce_with_one_input(ctx)
+        //Ok(())
     }
 
     pub fn produce_with_two_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Result<()> {
