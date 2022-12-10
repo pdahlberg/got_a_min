@@ -107,7 +107,7 @@ describe("got_a_min", () => {
     let [producerA, _2] = await createProducer(program, resourceA, 5, 0);
     let [storageA, _3] = await createStorage(program, resourceA, 5);
     let [resourceB, _4] = await createResource(program, 'B', [[resourceA, 2]]);
-    let [producerB, _5] = await createProducer(program, resourceB, producerBProdRate, 0);
+    let [producerB, _5] = await createProducer(program, resourceB, producerBProdRate, 5);
     let [storageB, _6] = await createStorage(program, resourceB, 5);
     
     let storageAResult = await produce_without_input(program, producerA, storageA, resourceA);
