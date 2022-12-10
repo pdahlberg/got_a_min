@@ -81,7 +81,7 @@ describe("got_a_min", () => {
     expect(storageResult2.amount.toNumber(), "storage amount").to.equal(producerProdRate);
   });
 
-  /*it("Produce 2 of resource B", async () => {
+  it("Produce 2 of resource B", async () => {
     let producerProdRate = 2;
     let [resource, _1] = await createResource(program, 'B', []) as [KP, any];
     let [producer, _2] = await createProducer(program, resource, producerProdRate);
@@ -99,7 +99,7 @@ describe("got_a_min", () => {
 
     expect(producerResult2.awaitingUnits.toNumber(), "producer awaitingUnits").to.equal(producerProdRate);
     expect(storageResult2.amount.toNumber(), "storage amount").to.equal(producerProdRate);
-  });*/
+  });
 
   it("Produce 1 resource B from 2 A", async () => {
     let producerBProdRate = 1;
@@ -119,7 +119,6 @@ describe("got_a_min", () => {
     let inputAResult = await program.account.storage.fetch(storageA.publicKey);
 
     expect(producerBResult.awaitingUnits.toNumber(), "producerBResult.awaitingUnits").to.equal(producerBProdRate);
-    expect(storageBResult.resourceId.toBase58(), "storageBResult.resourceId").to.equal(resourceB.publicKey.toBase58());
     expect(storageBResult.amount.toNumber(), "storageBResult.amount").to.equal(0);
     expect(inputAResult.amount.toNumber(), "inputAResult.amount").to.equal(3);    
 
@@ -151,30 +150,31 @@ describe("got_a_min", () => {
 
   });
 
-/*
   it("Produce 1 resource C from 1 A + 1 B", async () => {
-    let [resourceA, _1] = await createResource(program, 'A', []) as [KP, any];
-    let [producerA, _2] = await createProducer(program, resourceA, 1);
+    let producerCProdRate = 2;
+    let [resourceA, _1] = await createResource(program, 'A', []);
+    let [producerA, _2] = await createProducer(program, resourceA, 1, 0);
     let [storageA, _3] = await createStorage(program, resourceA, 1);
-    let [resourceB, _4] = await createResource(program, 'B', []) as [KP, any];
-    let [producerB, _5] = await createProducer(program, resourceB, 1);
+    let [resourceB, _4] = await createResource(program, 'B', []);
+    let [producerB, _5] = await createProducer(program, resourceB, 1, 0);
     let [storageB, _6] = await createStorage(program, resourceB, 1);
     let [resourceC, _7] = await createResource(program, 'C', [[resourceA, 1], [resourceB, 1]]);
-    let [producerC, _8] = await createProducer(program, resourceC, 1);
-    let [storageC, _9] = await createStorage(program, resourceC, 1);
+    let [producerC, _8] = await createProducer(program, resourceC, producerCProdRate, 0);
+    let [storageC, _9] = await createStorage(program, resourceC, 2);
     await produce_without_input(program, producerA, storageA, resourceA);
     await produce_without_input(program, producerB, storageB, resourceB);
 
-    let result = await produce_with_2_inputs(program, producerC, storageC, resourceC, storageA, storageB);
+    let storageCResult = await produce_with_2_inputs(program, producerC, storageC, resourceC, storageA, storageB);
+    let producerCResult = await program.account.producer.fetch(producerC.publicKey);
     let inputAResult = await program.account.storage.fetch(storageA.publicKey);
     let inputBResult = await program.account.storage.fetch(storageB.publicKey);
 
-    expect(result.resourceId.toBase58()).to.equal(resourceC.publicKey.toBase58());
-    expect(result.amount.toNumber(), "Resource C should be produced").to.equal(1);
-    expect(inputAResult.amount.toNumber(), "Input A should be consumed").to.equal(0);    
-    expect(inputBResult.amount.toNumber(), "Input B should be consumed").to.equal(0);
+    expect(producerCResult.awaitingUnits.toNumber(), "producerCResult.awaitingUnits").to.equal(0);
+    expect(storageCResult.amount.toNumber(), "storageCResult.amount").to.equal(2);
+    expect(inputAResult.amount.toNumber(), "inputAResult.amount").to.equal(0);    
+    expect(inputBResult.amount.toNumber(), "inputBResult.amount").to.equal(0);    
   });
-
+/*
   it("Storage full", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
     let [producer, _2] = await createProducer(program, resource, 10);

@@ -41,7 +41,7 @@ fn move_awaiting(producer: &mut Account<Producer>, storage: &mut Account<Storage
             true => withdraw_awaiting,
             false => available_capacity,
         };
-        
+
         storage.amount += withdraw_awaiting_within_capacity;
         producer.awaiting_units -= withdraw_awaiting_within_capacity;
 }
@@ -103,7 +103,7 @@ pub fn produce_with_two_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Resu
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let storage_input_1: &mut Account<Storage> = &mut ctx.accounts.storage_input_1;
     let storage_input_2: &mut Account<Storage> = &mut ctx.accounts.storage_input_2;
-    let current_timestamp = Clock::get()?.unix_timestamp;       // 15
+    let current_timestamp = Clock::get()?.unix_timestamp; 
 
     let input_pos_1 = resource_to_produce.input.iter().position(|input| input.key().eq(&storage_input_1.resource_id));
     require!(input_pos_1.is_some(), ValidationError::InputStorage1NotSupplied);
