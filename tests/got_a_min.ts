@@ -107,7 +107,7 @@ describe("got_a_min", () => {
     let [producerA, _2] = await createProducer(program, resourceA, 5, 0);
     let [storageA, _3] = await createStorage(program, resourceA, 5);
     let [resourceB, _4] = await createResource(program, 'B', [[resourceA, 2]]);
-    let [producerB, _5] = await createProducer(program, resourceB, producerBProdRate, 1);
+    let [producerB, _5] = await createProducer(program, resourceB, producerBProdRate, 0);
     let [storageB, _6] = await createStorage(program, resourceB, 5);
     
     let storageAResult = await produce_without_input(program, producerA, storageA, resourceA);
@@ -118,17 +118,11 @@ describe("got_a_min", () => {
     let producerBResult = await program.account.producer.fetch(producerB.publicKey);
     let inputAResult = await program.account.storage.fetch(storageA.publicKey);
 
-    expect(producerBResult.awaitingUnits.toNumber()).to.equal(producerBProdRate);
-    expect(storageBResult.resourceId.toBase58()).to.equal(resourceB.publicKey.toBase58());
-    expect(storageBResult.amount.toNumber()).to.equal(0);
-    expect(inputAResult.amount.toNumber()).to.equal(3);    
+    expect(producerBResult.awaitingUnits.toNumber(), "producerBResult.awaitingUnits").to.equal(0);
+    expect(storageBResult.resourceId.toBase58(), "storageBResult.resourceId").to.equal(resourceB.publicKey.toBase58());
+    expect(storageBResult.amount.toNumber(), "storageBResult.amount").to.equal(1);
+    expect(inputAResult.amount.toNumber(), "inputAResult.amount").to.equal(3);    
 
-    // Production is done after delay
-    await new Promise(f => setTimeout(f, 5001)); // todo: delay 5+ seconds... 
-    let storageBResult2 = await produce_with_1_input(program, producerB, storageB, resourceB, storageA);
-    let producerBResult2 = await program.account.producer.fetch(producerB.publicKey);
-    expect(producerBResult2.awaitingUnits.toNumber()).to.equal(0);
-    expect(storageBResult2.amount.toNumber()).to.equal(1);
   });
 
 
