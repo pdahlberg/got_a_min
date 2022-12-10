@@ -95,6 +95,20 @@ it("Produce 1 of resource A without delay", async () => {
   expect(storageResult.amount.toNumber(), "storage amount").to.equal(1);
 });
 
+it("Produce 2 of resource A without delay and Storage below full capacity", async () => {
+  let producerProdRate = 5;
+  let [resource, _1] = await createResource(program, 'A', []);
+  let [producer, _2] = await createProducer(program, resource, producerProdRate, 0);
+  let [storage, _3] = await createStorage(program, resource, 3);
+
+  // Production in progress
+  let storageResult = await produce_without_input(program, producer, storage, resource);
+  let producerResult = await program.account.producer.fetch(producer.publicKey);
+
+  expect(producerResult.awaitingUnits.toNumber(), "producerResult.awaitingUnits").to.equal(2);
+  expect(storageResult.amount.toNumber(), "storage amount").to.equal(3);
+});
+
 it("Produce 2 of resource B", async () => {
     let producerProdRate = 2;
     let [resource, _1] = await createResource(program, 'B', []) as [KP, any];
