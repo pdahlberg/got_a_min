@@ -118,11 +118,18 @@ describe("got_a_min", () => {
     let producerBResult = await program.account.producer.fetch(producerB.publicKey);
     let inputAResult = await program.account.storage.fetch(storageA.publicKey);
 
-    expect(producerBResult.awaitingUnits.toNumber(), "producerBResult.awaitingUnits").to.equal(0);
+    expect(producerBResult.awaitingUnits.toNumber(), "producerBResult.awaitingUnits").to.equal(producerBProdRate);
     expect(storageBResult.resourceId.toBase58(), "storageBResult.resourceId").to.equal(resourceB.publicKey.toBase58());
-    expect(storageBResult.amount.toNumber(), "storageBResult.amount").to.equal(1);
+    expect(storageBResult.amount.toNumber(), "storageBResult.amount").to.equal(0);
     expect(inputAResult.amount.toNumber(), "inputAResult.amount").to.equal(3);    
 
+    // Production is done after delay
+    await new Promise(f => setTimeout(f, 5001)); // todo: delay 5+ seconds... 
+    let storageBResult2 = await produce_with_1_input(program, producerB, storageB, resourceB, storageA);
+    let producerBResult2 = await program.account.producer.fetch(producerB.publicKey);
+
+    expect(producerBResult2.awaitingUnits.toNumber(), "producerBResult2.awaitingUnits").to.equal(producerBProdRate);
+    expect(storageBResult2.amount.toNumber(), "storageBResult2.amount").to.equal(1);    
   });
 
 
