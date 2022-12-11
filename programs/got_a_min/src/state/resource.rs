@@ -20,5 +20,5 @@ const DISCRIMINATOR_LENGTH: usize = 8;
 const INPUT_AMOUNT_LENGTH: usize = 8 * INPUT_MAX_SIZE;
 const INPUT_LENGTH: usize = PUBLIC_KEY_LENGTH * INPUT_MAX_SIZE;
 pub const INPUT_MAX_SIZE: usize = 2;
-const NAME_LENGTH: usize = 16 * 4;
+pub const NAME_LENGTH: usize = 16 * 4;
 const PUBLIC_KEY_LENGTH: usize = 32;

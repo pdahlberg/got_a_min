@@ -10,5 +10,6 @@ pub enum ValidationError {
     #[msg("Input storage 2 not supplied to production.")]                       InputStorage2NotSupplied,
     #[msg("Input storage amount is too low.")]                                  InputStorageAmountTooLow,
     #[msg("Storage is full.")]                                                  StorageFull,
+    #[msg("Name too long.")]                                                    NameTooLong,
     #[msg("Trying stuff out and failing quite deliberately.")]                  ExperimentalError,
 }
