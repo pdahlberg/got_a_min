@@ -202,7 +202,15 @@ it("Produce 2 of resource B", async () => {
     expect(inputAResult.amount.toNumber(), "inputAResult.amount").to.equal(0);    
     expect(inputBResult.amount.toNumber(), "inputBResult.amount").to.equal(0);    
   });
-/*
+
+});
+
+describe("Storage tests", () => {
+  // Configure the client to use the local cluster.
+  anchor.setProvider(anchor.AnchorProvider.env());
+  const program = anchor.workspace.GotAMin as Program<GotAMin>;
+  const programProvider = program.provider as anchor.AnchorProvider;
+
   it("Storage full", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
     let [producer, _2] = await createProducer(program, resource, 10);
@@ -216,8 +224,13 @@ it("Produce 2 of resource B", async () => {
       assertAnchorError(e, "StorageFull");
     }
   });
-*/
+});
 
+describe("Location", () => {
+  // Configure the client to use the local cluster.
+  anchor.setProvider(anchor.AnchorProvider.env());
+  const program = anchor.workspace.GotAMin as Program<GotAMin>;
+  const programProvider = program.provider as anchor.AnchorProvider;
 });
 
 function assertAnchorError(error: any, errorName: String) {

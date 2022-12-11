@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 pub struct Storage {
     pub owner: Pubkey,
     pub resource_id: Pubkey,
+    pub location_id: Pubkey,
     pub amount: i64,
     pub capacity: i64,
 }
@@ -12,6 +13,7 @@ impl Storage {
     pub const LEN: usize = DISCRIMINATOR_LENGTH
         + PUBLIC_KEY_LENGTH  // owner
         + PUBLIC_KEY_LENGTH  // resource_id
+        + PUBLIC_KEY_LENGTH  // location_id
         + AMOUNT_LENGTH
         + CAPACITY_LENGTH;
 }
