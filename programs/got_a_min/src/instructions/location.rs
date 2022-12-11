@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use crate::state::location::*;
 use crate::errors::ValidationError;
 
-pub fn init_location(ctx: Context<InitLocation>, name: String, position: i64, capacity: i64) -> Result<()> {
+pub fn init(ctx: Context<InitLocation>, name: String, position: i64, capacity: i64) -> Result<()> {
     let location: &mut Account<Location> = &mut ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
 

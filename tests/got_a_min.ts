@@ -45,18 +45,6 @@ describe("got_a_min", () => {
     expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
   });
 
-  it("Init storage", async () => {
-    const storage = anchor.web3.Keypair.generate();
-    const resource = anchor.web3.Keypair.generate();
-    await initResource(program, resource, "A", []);
-
-    let result = await initStorage(program, storage, resource, 5);
-    
-    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
-    expect(result.amount.toNumber()).to.equal(0);
-    expect(result.capacity.toNumber()).to.equal(5);
-    expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
-  });
 */
 it("Produce 1 of resource A with delay", async () => {
   let producerProdRate = 1;
@@ -205,11 +193,24 @@ it("Produce 2 of resource B", async () => {
 
 });
 
-describe("Storage tests", () => {
+describe("/Storage", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
+
+  it("Init storage", async () => {
+    const storage = anchor.web3.Keypair.generate();
+    const resource = anchor.web3.Keypair.generate();
+    await initResource(program, resource, "A", []);
+
+    let result = await initStorage(program, storage, resource, 5);
+    
+    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(result.amount.toNumber()).to.equal(0);
+    expect(result.capacity.toNumber()).to.equal(5);
+    expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
+  });
 
   it("Storage full", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
@@ -226,11 +227,22 @@ describe("Storage tests", () => {
   });
 });
 
-describe("Location", () => {
+describe("/Location", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
+
+  it("Init location", async () => {
+    const location = anchor.web3.Keypair.generate();
+
+    let result = await initLocation(program, location);
+    
+    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(result.position.toNumber()).to.equal(0);
+    expect(result.capacity.toNumber()).to.equal(5);
+    expect(result.name).to.equal('loc');
+  });
 });
 
 function assertAnchorError(error: any, errorName: String) {
@@ -309,6 +321,27 @@ async function initStorage(program: Program<GotAMin>, storage, resource: KP, cap
     .rpc();
     
   return await program.account.storage.fetch(storage.publicKey);
+}
+
+async function createLocation(program: Program<GotAMin>, name: string, position: number, capacity: number):  Promise<[KP, any]> {
+  const location: anchor.web3.Keypair = anchor.web3.Keypair.generate();
+  return [location, await initLocation(program, location, name, position, capacity)];
+}
+
+async function initLocation(program: Program<GotAMin>, location, name: string, position: number, capacity: number) {
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  await program.methods
+    .initLocation(name, new anchor.BN(position), new anchor.BN(capacity))
+    .accounts({
+      location: location.publicKey,
+      owner: programProvider.wallet.publicKey,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    })
+    .signers(location)
+    .rpc();
+    
+  return await program.account.location.fetch(location.publicKey);
 }
 
 async function produce_without_input(program: Program<GotAMin>, producer, storage, resource, inputResources = []) {
