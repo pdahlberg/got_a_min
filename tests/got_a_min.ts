@@ -15,7 +15,6 @@ describe("got_a_min", () => {
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
   
-  /*
   it("Init resource", async () => {
     const resource = anchor.web3.Keypair.generate();
 
@@ -45,59 +44,58 @@ describe("got_a_min", () => {
     expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
   });
 
-*/
-it("Produce 1 of resource A with delay", async () => {
-  let producerProdRate = 1;
-  let [resource, _1] = await createResource(program, 'A', []);
-  let [producer, _2] = await createProducer(program, resource, producerProdRate);
-  let [storage, _3] = await createStorage(program, resource, 1);
+  it("Produce 1 of resource A with delay", async () => {
+    let producerProdRate = 1;
+    let [resource, _1] = await createResource(program, 'A', []);
+    let [producer, _2] = await createProducer(program, resource, producerProdRate);
+    let [storage, _3] = await createStorage(program, resource, 1);
 
-  // Production in progress
-  let storageResult = await produce_without_input(program, producer, storage, resource);
-  let producerResult = await program.account.producer.fetch(producer.publicKey);
+    // Production in progress
+    let storageResult = await produce_without_input(program, producer, storage, resource);
+    let producerResult = await program.account.producer.fetch(producer.publicKey);
 
-  expect(producerResult.awaitingUnits.toNumber(), "1) producer awaitingUnits").to.equal(producerProdRate);
-  expect(storageResult.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
-  expect(storageResult.amount.toNumber(), "storage amount").to.equal(0);
+    expect(producerResult.awaitingUnits.toNumber(), "1) producer awaitingUnits").to.equal(producerProdRate);
+    expect(storageResult.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
+    expect(storageResult.amount.toNumber(), "storage amount").to.equal(0);
 
-  // Production is done after delay
-  await new Promise(f => setTimeout(f, 5001)); // todo: delay 5+ seconds... 
-  let storageResult2 = await produce_without_input(program, producer, storage, resource);
-  let producerResult2 = await program.account.producer.fetch(producer.publicKey);
+    // Production is done after delay
+    await new Promise(f => setTimeout(f, 5001)); // todo: delay 5+ seconds... 
+    let storageResult2 = await produce_without_input(program, producer, storage, resource);
+    let producerResult2 = await program.account.producer.fetch(producer.publicKey);
 
-  expect(producerResult2.awaitingUnits.toNumber(), "2) producer awaitingUnits").to.equal(producerProdRate);
-  expect(storageResult2.amount.toNumber(), "storage amount").to.equal(producerProdRate);
-});
+    expect(producerResult2.awaitingUnits.toNumber(), "2) producer awaitingUnits").to.equal(producerProdRate);
+    expect(storageResult2.amount.toNumber(), "storage amount").to.equal(producerProdRate);
+  });
 
-it("Produce 1 of resource A without delay", async () => {
-  let producerProdRate = 1;
-  let [resource, _1] = await createResource(program, 'A', []);
-  let [producer, _2] = await createProducer(program, resource, producerProdRate, 0);
-  let [storage, _3] = await createStorage(program, resource, 1);
+  it("Produce 1 of resource A without delay", async () => {
+    let producerProdRate = 1;
+    let [resource, _1] = await createResource(program, 'A', []);
+    let [producer, _2] = await createProducer(program, resource, producerProdRate, 0);
+    let [storage, _3] = await createStorage(program, resource, 1);
 
-  // Production in progress
-  let storageResult = await produce_without_input(program, producer, storage, resource);
-  let producerResult = await program.account.producer.fetch(producer.publicKey);
+    // Production in progress
+    let storageResult = await produce_without_input(program, producer, storage, resource);
+    let producerResult = await program.account.producer.fetch(producer.publicKey);
 
-  expect(producerResult.awaitingUnits.toNumber(), "producerResult.awaitingUnits").to.equal(0);
-  expect(storageResult.amount.toNumber(), "storage amount").to.equal(1);
-});
+    expect(producerResult.awaitingUnits.toNumber(), "producerResult.awaitingUnits").to.equal(0);
+    expect(storageResult.amount.toNumber(), "storage amount").to.equal(1);
+  });
 
-it("Produce 2 of resource A without delay and Storage below full capacity", async () => {
-  let producerProdRate = 5;
-  let [resource, _1] = await createResource(program, 'A', []);
-  let [producer, _2] = await createProducer(program, resource, producerProdRate, 0);
-  let [storage, _3] = await createStorage(program, resource, 3);
+  it("Produce 2 of resource A without delay and Storage below full capacity", async () => {
+    let producerProdRate = 5;
+    let [resource, _1] = await createResource(program, 'A', []);
+    let [producer, _2] = await createProducer(program, resource, producerProdRate, 0);
+    let [storage, _3] = await createStorage(program, resource, 3);
 
-  // Production in progress
-  let storageResult = await produce_without_input(program, producer, storage, resource);
-  let producerResult = await program.account.producer.fetch(producer.publicKey);
+    // Production in progress
+    let storageResult = await produce_without_input(program, producer, storage, resource);
+    let producerResult = await program.account.producer.fetch(producer.publicKey);
 
-  expect(producerResult.awaitingUnits.toNumber(), "producerResult.awaitingUnits").to.equal(2);
-  expect(storageResult.amount.toNumber(), "storage amount").to.equal(3);
-});
+    expect(producerResult.awaitingUnits.toNumber(), "producerResult.awaitingUnits").to.equal(2);
+    expect(storageResult.amount.toNumber(), "storage amount").to.equal(3);
+  });
 
-it("Produce 2 of resource B", async () => {
+  it("Produce 2 of resource B", async () => {
     let producerProdRate = 2;
     let [resource, _1] = await createResource(program, 'B', []) as [KP, any];
     let [producer, _2] = await createProducer(program, resource, producerProdRate);
@@ -274,12 +272,12 @@ describe("/Location", () => {
   it("Init location", async () => {
     const location = anchor.web3.Keypair.generate();
 
-    let result = await initLocation(program, location, "name", 1, 1);
+    let result = await initLocation(program, location, 'name', 0, 5);
     
     expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
     expect(result.position.toNumber()).to.equal(0);
     expect(result.capacity.toNumber()).to.equal(5);
-    expect(result.name).to.equal('loc');
+    expect(result.name).to.equal('name');
   });
 });
 
@@ -440,7 +438,5 @@ async function move_between_storage(program: Program<GotAMin>, storageFrom, stor
       storageTo: storageTo.publicKey,
     })
     .rpc();
-
-  return await program.account.storage.fetch(storage.publicKey);
 }
 
