@@ -13,5 +13,6 @@ pub enum ValidationError {
     #[msg("Storage is full.")]                                                  StorageFull,
     #[msg("Not enough in storage.")]                                            StorageAmountTooLow,
     #[msg("Name too long.")]                                                    NameTooLong,
+    #[msg("Locations are different.")]                                          DifferentLocations,
     #[msg("Trying stuff out and failing quite deliberately.")]                  ExperimentalError,
 }

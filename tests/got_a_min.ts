@@ -9,6 +9,8 @@ import { SystemAccountsCoder } from "@project-serum/anchor/dist/cjs/coder/system
 
 type KP = anchor.web3.Keypair;
 
+const DEFAULT_LOCATION = anchor.web3.Keypair.generate();
+
 describe("got_a_min", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
@@ -279,12 +281,34 @@ describe("/Location", () => {
     expect(result.capacity.toNumber()).to.equal(5);
     expect(result.name).to.equal('name');
   });
+
+  it("Move between Storage in different locations", async () => {
+    let [resource, _1] = await createResource(program, 'A', []);
+    let locationA = await createLocation(program, 'locA', 0, 10);
+    let [producerA, _2] = await createProducer(program, resource, 10, 0);
+    let [storageAFrom, _3] = await createStorage(program, resource, 10, locationA);
+    let locationB = await createLocation(program, 'locB', 1, 10);
+    let [storageBTo, _6] = await createStorage(program, resource, 100, locationB);
+    await produce_without_input(program, producerA, storageAFrom, resource);
+
+    try {
+      await move_between_storage(program, storageAFrom, storageBTo, 1);
+
+      assert(false, "Expected to fail");
+    } catch(e) {
+      assertAnchorError(e, "DifferentLocations");
+    }
+  });  
 });
 
 function assertAnchorError(error: any, errorName: String) {
-  expect(error, "Expected to be of type AnchorError").to.be.instanceOf(AnchorError);
-  let anchorError: AnchorError = error;
-  expect(anchorError.error.errorCode.code).to.equal(errorName);
+  if(error instanceof AnchorError) {
+    expect(error, "Expected to be of type AnchorError").to.be.instanceOf(AnchorError);
+    let anchorError: AnchorError = error;
+    expect(anchorError.error.errorCode.code).to.equal(errorName);  
+  } else {
+    throw error;
+  }
 }
 
 async function createResource(program: Program<GotAMin>, name: string, inputs):  Promise<[KP, any]> {
@@ -338,16 +362,16 @@ async function initProducer(program: Program<GotAMin>, producer, resource, produ
     return await program.account.producer.fetch(producer.publicKey);
 }
 
-async function createStorage(program: Program<GotAMin>, resource: KP, capacity: number): Promise<[KP, any]> {
+async function createStorage(program: Program<GotAMin>, resource: KP, capacity: number, location: KP = DEFAULT_LOCATION): Promise<[KP, any]> {
   const storage: KP = anchor.web3.Keypair.generate();
-  return [storage, await initStorage(program, storage, resource, capacity)];
+  return [storage, await initStorage(program, storage, resource, capacity, location)];
 }
 
-async function initStorage(program: Program<GotAMin>, storage, resource: KP, capacity: number) {
+async function initStorage(program: Program<GotAMin>, storage, resource: KP, capacity: number, location: KP = DEFAULT_LOCATION) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
-    .initStorage(resource.publicKey, new anchor.BN(capacity))
+    .initStorage(resource.publicKey, location.publicKey, new anchor.BN(capacity))
     .accounts({
       storage: storage.publicKey,
       owner: programProvider.wallet.publicKey,
@@ -359,9 +383,10 @@ async function initStorage(program: Program<GotAMin>, storage, resource: KP, cap
   return await program.account.storage.fetch(storage.publicKey);
 }
 
-async function createLocation(program: Program<GotAMin>, name: string, position: number, capacity: number):  Promise<[KP, any]> {
+async function createLocation(program: Program<GotAMin>, name: string, position: number, capacity: number):  Promise<KP> {
   const location: anchor.web3.Keypair = anchor.web3.Keypair.generate();
-  return [location, await initLocation(program, location, name, position, capacity)];
+  await initLocation(program, location, name, position, capacity);
+  return location;
 }
 
 async function initLocation(program: Program<GotAMin>, location, name: string, position: number, capacity: number) {
