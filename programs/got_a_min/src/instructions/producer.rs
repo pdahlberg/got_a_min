@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 use crate::state::producer::*;
 use crate::state::resource::*;
-use crate::state::storage;
 use crate::state::storage::*;
 use crate::errors::ValidationError;
 
