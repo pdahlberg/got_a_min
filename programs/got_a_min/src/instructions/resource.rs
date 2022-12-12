@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use crate::state::resource::*;
 use crate::errors::ValidationError;
 
-pub fn init_resource(ctx: Context<InitResource>, name: String, inputs: Vec<Pubkey>, input_amounts: Vec<i64>) -> Result<()> {
+pub fn init(ctx: Context<InitResource>, name: String, inputs: Vec<Pubkey>, input_amounts: Vec<i64>) -> Result<()> {
     let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
     let owner: &Signer = &ctx.accounts.owner;
 
@@ -11,6 +11,7 @@ pub fn init_resource(ctx: Context<InitResource>, name: String, inputs: Vec<Pubke
     resource.input = inputs;
     resource.input_amount = input_amounts;
 
+    require!(resource.name.len() <= NAME_LENGTH, ValidationError::NameTooLong);
     require!(resource.input.len() <= INPUT_MAX_SIZE, ValidationError::ResourceInputMax);
     require!(resource.input.len() == resource.input_amount.len(), ValidationError::MissingResourceInputAmount);
 

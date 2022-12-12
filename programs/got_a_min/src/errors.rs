@@ -3,6 +3,7 @@ use anchor_lang::error_code;
 #[error_code]
 pub enum ValidationError {
     #[msg("Resource has too many inputs defined.")]                             ResourceInputMax,
+    #[msg("Resource types doesn't match.")]                                     ResourceNotMatching,
     #[msg("Missing resource input amount.")]                                    MissingResourceInputAmount,
     #[msg("Missing resource account.")]                                         MissingResource,
     #[msg("Input storage not supplied to production.")]                         InputStorageNotSupplied,
@@ -10,5 +11,8 @@ pub enum ValidationError {
     #[msg("Input storage 2 not supplied to production.")]                       InputStorage2NotSupplied,
     #[msg("Input storage amount is too low.")]                                  InputStorageAmountTooLow,
     #[msg("Storage is full.")]                                                  StorageFull,
+    #[msg("Not enough in storage.")]                                            StorageAmountTooLow,
+    #[msg("Name too long.")]                                                    NameTooLong,
+    #[msg("Locations are different.")]                                          DifferentLocations,
     #[msg("Trying stuff out and failing quite deliberately.")]                  ExperimentalError,
 }
