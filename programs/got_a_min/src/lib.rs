@@ -15,8 +15,8 @@ pub mod got_a_min {
         location::init(ctx, name, position, capacity)
     }
 
-    pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, production_rate: i64, production_time: i64) -> Result<()> {
-        producer::init(ctx, resource_id, production_rate, production_time)
+    pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, location_id: Pubkey, production_rate: i64, production_time: i64) -> Result<()> {
+        producer::init(ctx, resource_id, location_id, production_rate, production_time)
     }
 
     pub fn init_resource(ctx: Context<InitResource>, name: String, inputs: Vec<Pubkey>, input_amounts: Vec<i64>) -> Result<()> {

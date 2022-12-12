@@ -285,7 +285,7 @@ describe("/Location", () => {
   it("Move between Storage in different locations", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
     let locationA = await createLocation(program, 'locA', 0, 10);
-    let [producerA, _2] = await createProducer(program, resource, 10, 0);
+    let [producerA, _2] = await createProducer(program, resource, 10, 0, locationA);
     let [storageAFrom, _3] = await createStorage(program, resource, 10, locationA);
     let locationB = await createLocation(program, 'locB', 1, 10);
     let [storageBTo, _6] = await createStorage(program, resource, 100, locationB);
@@ -293,6 +293,21 @@ describe("/Location", () => {
 
     try {
       await move_between_storage(program, storageAFrom, storageBTo, 1);
+
+      assert(false, "Expected to fail");
+    } catch(e) {
+      assertAnchorError(e, "DifferentLocations");
+    }
+  });
+
+  it("Producer and Storage in different locations", async () => {
+    let [resource, _1] = await createResource(program, 'A', []);
+    let location = await createLocation(program, 'locA', 0, 10);
+    let [producer, _2] = await createProducer(program, resource, 10, 0);
+    let [storage, _3] = await createStorage(program, resource, 10, location);
+
+    try {
+      await produce_without_input(program, producer, storage, resource);
 
       assert(false, "Expected to fail");
     } catch(e) {
@@ -339,18 +354,18 @@ async function initResource(program: Program<GotAMin>, resource, name: string, i
   return await program.account.resource.fetch(resource.publicKey);
 }
 
-async function createProducer(program: Program<GotAMin>, resource, productionRate, productionTime = 5): Promise<[KP, any]> {
+async function createProducer(program: Program<GotAMin>, resource, productionRate, productionTime = 5, location = DEFAULT_LOCATION): Promise<[KP, any]> {
   const producer = anchor.web3.Keypair.generate();
-  return [producer, await initProducer(program, producer, resource, productionRate, productionTime)];
+  return [producer, await initProducer(program, producer, resource, productionRate, productionTime, location)];
 }
 
-async function initProducer(program: Program<GotAMin>, producer, resource, productionRate, productionTime = 5) {
+async function initProducer(program: Program<GotAMin>, producer, resource, productionRate, productionTime = 5, location = DEFAULT_LOCATION) {
   const programProvider = program.provider as anchor.AnchorProvider;
   const prodRateBN = new anchor.BN(productionRate);
   const prodTimeBN = new anchor.BN(productionTime);
 
   await program.methods
-    .initProducer(resource.publicKey, prodRateBN, prodTimeBN)
+    .initProducer(resource.publicKey, location.publicKey, prodRateBN, prodTimeBN)
     .accounts({
       producer: producer.publicKey,
       owner: programProvider.wallet.publicKey,

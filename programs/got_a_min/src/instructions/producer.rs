@@ -4,13 +4,14 @@ use crate::state::resource::*;
 use crate::state::storage::*;
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitProducer>, resource_id: Pubkey, production_rate: i64, production_time: i64) -> Result<()> {
+pub fn init(ctx: Context<InitProducer>, resource_id: Pubkey, location_id: Pubkey, production_rate: i64, production_time: i64) -> Result<()> {
     let producer: &mut Account<Producer> = &mut ctx.accounts.producer;
     let owner: &Signer = &ctx.accounts.owner;
     let clock = Clock::get()?;
 
     producer.owner = *owner.key;
     producer.resource_id = resource_id;
+    producer.location_id = location_id;
     producer.production_rate = production_rate;
     producer.production_time = production_time;
     producer.awaiting_units = 0;
@@ -21,6 +22,8 @@ pub fn init(ctx: Context<InitProducer>, resource_id: Pubkey, production_rate: i6
 
 // claim any units "done" waiting
 fn move_awaiting(producer: &mut Account<Producer>, storage: &mut Account<Storage>, current_timestamp: i64) -> Result<()> {
+    require!(producer.location_id == storage.location_id, ValidationError::DifferentLocations);
+
     let withdraw_awaiting = match producer.production_time == 0 {
         true => producer.awaiting_units,
         false => {
