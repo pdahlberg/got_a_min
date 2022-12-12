@@ -1,10 +1,11 @@
 use anchor_lang::prelude::*;
 use crate::state::producer::*;
 use crate::state::resource::*;
+use crate::state::storage;
 use crate::state::storage::*;
 use crate::errors::ValidationError;
 
-pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, production_rate: i64, production_time: i64) -> Result<()> {
+pub fn init(ctx: Context<InitProducer>, resource_id: Pubkey, production_rate: i64, production_time: i64) -> Result<()> {
     let producer: &mut Account<Producer> = &mut ctx.accounts.producer;
     let owner: &Signer = &ctx.accounts.owner;
     let clock = Clock::get()?;
@@ -19,49 +20,50 @@ pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, production
     Ok(())
 }
 
-fn move_awaiting(producer: &mut Account<Producer>, storage: &mut Account<Storage>, current_timestamp: i64) {
-        // claim any units "done" waiting
-        let withdraw_awaiting = match producer.production_time == 0 {
-            true => producer.awaiting_units,
-            false => {
-                let previous_claim_at = producer.claimed_at;                // 10
-                let diff_time = current_timestamp - previous_claim_at; // => 5
-                let prod_slots_during_diff_time = diff_time / producer.production_time;
-                let prod_during_diff_time = prod_slots_during_diff_time * producer.production_rate;
-                let withdraw_awaiting = match producer.awaiting_units >= prod_during_diff_time {
-                    true => prod_during_diff_time,
-                    false => producer.awaiting_units,
-                };
-                withdraw_awaiting
-            }
-        };
+// claim any units "done" waiting
+fn move_awaiting(producer: &mut Account<Producer>, storage: &mut Account<Storage>, current_timestamp: i64) -> Result<()> {
+    let withdraw_awaiting = match producer.production_time == 0 {
+        true => producer.awaiting_units,
+        false => {
+            let previous_claim_at = producer.claimed_at;
+            let diff_time = current_timestamp - previous_claim_at;
+            let prod_slots_during_diff_time = diff_time / producer.production_time;
+            let prod_during_diff_time = prod_slots_during_diff_time * producer.production_rate;
+            let withdraw_awaiting = match producer.awaiting_units >= prod_during_diff_time {
+                true => prod_during_diff_time,
+                false => producer.awaiting_units,
+            };
+            withdraw_awaiting
+        }
+    };
 
-        let available_capacity = storage.capacity - storage.amount;
-        let withdraw_awaiting_within_capacity = match available_capacity > withdraw_awaiting {
-            true => withdraw_awaiting,
-            false => available_capacity,
-        };
+    let available_capacity = storage.capacity - storage.amount;
+    let withdraw_awaiting_within_capacity = match available_capacity > withdraw_awaiting {
+        true => withdraw_awaiting,
+        false => available_capacity,
+    };
 
-        storage.amount += withdraw_awaiting_within_capacity;
-        producer.awaiting_units -= withdraw_awaiting_within_capacity;
+    storage.add(withdraw_awaiting_within_capacity)?;
+    producer.awaiting_units -= withdraw_awaiting_within_capacity;
+
+    Ok(())
 }
 
 pub fn produce_without_input(ctx: Context<ProduceResource>) -> Result<()> {
     let producer = &mut ctx.accounts.producer;
     let resource = &ctx.accounts.resource;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
-    let current_timestamp = Clock::get()?.unix_timestamp;       // 15
+    let current_timestamp = Clock::get()?.unix_timestamp;
 
     producer.awaiting_units += producer.production_rate;
 
     if producer.awaiting_units > 0 {
-        move_awaiting(producer, storage, current_timestamp);
+        move_awaiting(producer, storage, current_timestamp)?;
     }
 
     producer.claimed_at = current_timestamp;
 
     require!(resource.input.is_empty(), ValidationError::ResourceInputMax);
-    require!(storage.amount <= storage.capacity, ValidationError::StorageFull);
 
     Ok(())
 }
@@ -87,12 +89,10 @@ pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result
     producer.awaiting_units += producer.production_rate;
 
     if producer.awaiting_units > 0 {
-        move_awaiting(producer, storage, current_timestamp);
+        move_awaiting(producer, storage, current_timestamp)?;
     }
 
     producer.claimed_at = current_timestamp;
-
-    require!(storage.amount <= storage.capacity, ValidationError::StorageFull);
 
     Ok(())
 }
@@ -123,12 +123,10 @@ pub fn produce_with_two_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Resu
     producer.awaiting_units += producer.production_rate;
 
     if producer.awaiting_units > 0 {
-        move_awaiting(producer, storage, current_timestamp);
+        move_awaiting(producer, storage, current_timestamp)?;
     }
 
     producer.claimed_at = current_timestamp;
-
-    require!(storage.amount <= storage.capacity, ValidationError::StorageFull);
 
     Ok(())
 }

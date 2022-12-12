@@ -214,17 +214,55 @@ describe("/Storage", () => {
 
   it("Storage full", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
-    let [producer, _2] = await createProducer(program, resource, 10);
-    let [storage, _3] = await createStorage(program, resource, 1);
+    let [producer, _2] = await createProducer(program, resource, 10, 0);
+    let [storageFrom, _3] = await createStorage(program, resource, 10);
+    let [storageTo, _4] = await createStorage(program, resource, 3);
+    await produce_without_input(program, producer, storageFrom, resource);
 
     try {
-      await produce_without_input(program, producer, storage, resource);
-      
+      await move_between_storage(program, storageFrom, storageTo, 5);
+
       assert(false, "Expected to fail");
     } catch(e) {
       assertAnchorError(e, "StorageFull");
     }
   });
+
+  it("Storage with amount too low", async () => {
+    let [resource, _1] = await createResource(program, 'A', []);
+    let [producer, _2] = await createProducer(program, resource, 10, 0);
+    let [storageFrom, _3] = await createStorage(program, resource, 10);
+    let [storageTo, _4] = await createStorage(program, resource, 100);
+    await produce_without_input(program, producer, storageFrom, resource);
+
+    try {
+      await move_between_storage(program, storageFrom, storageTo, 25);
+
+      assert(false, "Expected to fail");
+    } catch(e) {
+      assertAnchorError(e, "StorageAmountTooLow");
+    }
+  });
+    
+  it("Move between Storage with different resources", async () => {
+    let [resourceA, _1] = await createResource(program, 'A', []);
+    let [producerA, _2] = await createProducer(program, resourceA, 10, 0);
+    let [storageAFrom, _3] = await createStorage(program, resourceA, 10);
+    let [resourceB, _4] = await createResource(program, 'B', []);
+    let [producerB, _5] = await createProducer(program, resourceB, 10, 0);
+    let [storageBTo, _6] = await createStorage(program, resourceB, 100);
+    await produce_without_input(program, producerA, storageAFrom, resourceA);
+    await produce_without_input(program, producerB, storageBTo, resourceB);
+
+    try {
+      await move_between_storage(program, storageAFrom, storageBTo, 1);
+
+      assert(false, "Expected to fail");
+    } catch(e) {
+      assertAnchorError(e, "ResourceNotMatching");
+    }
+  });
+    
 });
 
 describe("/Location", () => {
@@ -236,7 +274,7 @@ describe("/Location", () => {
   it("Init location", async () => {
     const location = anchor.web3.Keypair.generate();
 
-    let result = await initLocation(program, location);
+    let result = await initLocation(program, location, "name", 1, 1);
     
     expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
     expect(result.position.toNumber()).to.equal(0);
@@ -246,7 +284,7 @@ describe("/Location", () => {
 });
 
 function assertAnchorError(error: any, errorName: String) {
-  expect(error).to.be.instanceOf(AnchorError);
+  expect(error, "Expected to be of type AnchorError").to.be.instanceOf(AnchorError);
   let anchorError: AnchorError = error;
   expect(anchorError.error.errorCode.code).to.equal(errorName);
 }
@@ -344,7 +382,7 @@ async function initLocation(program: Program<GotAMin>, location, name: string, p
   return await program.account.location.fetch(location.publicKey);
 }
 
-async function produce_without_input(program: Program<GotAMin>, producer, storage, resource, inputResources = []) {
+async function produce_without_input(program: Program<GotAMin>, producer, storage, resource) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
@@ -391,3 +429,18 @@ async function produce_with_2_inputs(program: Program<GotAMin>, producer, storag
 
   return await program.account.storage.fetch(storage.publicKey);
 }
+
+async function move_between_storage(program: Program<GotAMin>, storageFrom, storageTo, amount: number) {
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  await program.methods
+    .moveBetweenStorage(new anchor.BN(amount))
+    .accounts({
+      storageFrom: storageFrom.publicKey,
+      storageTo: storageTo.publicKey,
+    })
+    .rpc();
+
+  return await program.account.storage.fetch(storage.publicKey);
+}
+

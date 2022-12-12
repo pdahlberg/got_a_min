@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+use crate::errors::ValidationError;
+
 #[account]
 pub struct Storage {
     pub owner: Pubkey,
@@ -15,7 +17,25 @@ impl Storage {
         + PUBLIC_KEY_LENGTH  // resource_id
         + PUBLIC_KEY_LENGTH  // location_id
         + AMOUNT_LENGTH
-        + CAPACITY_LENGTH;
+        + CAPACITY_LENGTH
+    ;
+
+    pub fn add(&mut self, amount: i64) -> Result<()> {
+        self.amount += amount;
+        
+        require!(self.amount <= self.capacity, ValidationError::StorageFull);
+    
+        Ok(())
+    }
+
+    pub fn remove(&mut self, amount: i64) -> Result<()> {
+        self.amount -= amount;
+        
+        require!(self.amount >= 0, ValidationError::StorageAmountTooLow);
+
+        Ok(())
+    }
+        
 }
 
 const AMOUNT_LENGTH: usize = 8;

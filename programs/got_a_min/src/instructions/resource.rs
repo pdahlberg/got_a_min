@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use crate::state::resource::*;
 use crate::errors::ValidationError;
 
-pub fn init_resource(ctx: Context<InitResource>, name: String, inputs: Vec<Pubkey>, input_amounts: Vec<i64>) -> Result<()> {
+pub fn init(ctx: Context<InitResource>, name: String, inputs: Vec<Pubkey>, input_amounts: Vec<i64>) -> Result<()> {
     let resource: &mut Account<Resource> = &mut ctx.accounts.resource;
     let owner: &Signer = &ctx.accounts.owner;
 
