@@ -357,8 +357,8 @@ describe("/Location", () => {
     let location2Result = await program.account.location.fetch(location2.publicKey);
 
     expect(storageResult.locationId.toBase58()).equal(location2.publicKey.toBase58());
-    expect(location1Result.occupiedSpace).equal(0);
-    expect(location2Result.occupiedSpace).equal(1);
+    expect(location1Result.occupiedSpace.toNumber()).equal(0);
+    expect(location2Result.occupiedSpace.toNumber()).equal(1);
   });  
 });
 

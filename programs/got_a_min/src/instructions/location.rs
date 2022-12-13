@@ -17,7 +17,9 @@ pub fn init(ctx: Context<InitLocation>, name: String, position: i64, capacity: i
     Ok(())
 }
 
-pub fn register_move(from_location: &mut Account<Location>, to_location: &mut Account<Location>) -> Result<()> {
+pub fn register_move(from_location: &mut Account<Location>, to_location: &mut Account<Location>, size: i64) -> Result<()> {
+    from_location.occupied_space -= size;
+    to_location.occupied_space += size;
 
     require!(from_location.occupied_space >= 0, ValidationError::ExperimentalError);
     require!(to_location.occupied_space <= to_location.capacity, ValidationError::LocationFull);

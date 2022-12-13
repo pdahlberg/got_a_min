@@ -56,7 +56,8 @@ pub fn move_to_location(ctx: Context<MoveStorage>) -> Result<()> {
     let to_location: &mut Account<Location> = &mut ctx.accounts.to_location;
     let _owner: &Signer = &ctx.accounts.owner;
 
-    location::register_move(from_location, to_location)
+    storage.location_id = to_location.key();
+    location::register_move(from_location, to_location, 1)
 }
 
 #[derive(Accounts)]
