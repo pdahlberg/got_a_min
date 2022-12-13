@@ -23,8 +23,8 @@ pub mod got_a_min {
         resource::init(ctx, name, inputs, input_amounts)
     }
 
-    pub fn init_storage(ctx: Context<InitStorage>, resource_id: Pubkey, location_id: Pubkey, capacity: i64) -> Result<()> {
-        storage::init(ctx, resource_id, location_id, capacity)
+    pub fn init_storage(ctx: Context<InitStorage>, resource_id: Pubkey, capacity: i64) -> Result<()> {
+        storage::init(ctx, resource_id, capacity)
     }
 
     pub fn move_between_storage(ctx: Context<MoveBetweenStorage>, amount: i64) -> Result<()> {

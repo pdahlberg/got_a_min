@@ -2,6 +2,8 @@ use anchor_lang::prelude::*;
 
 use crate::errors::ValidationError;
 
+use super::location;
+
 #[account]
 pub struct Storage {
     pub owner: Pubkey,
@@ -36,6 +38,12 @@ impl Storage {
         Ok(())
     }
         
+}
+
+impl location::InLocation for Storage {
+    fn size(&self) -> i64 {
+        1
+    }
 }
 
 const AMOUNT_LENGTH: usize = 8;

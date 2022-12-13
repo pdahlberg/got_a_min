@@ -432,9 +432,10 @@ async function initStorage(program: Program<GotAMin>, storage, resource: KP, cap
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
-    .initStorage(resource.publicKey, location.publicKey, new anchor.BN(capacity))
+    .initStorage(resource.publicKey, new anchor.BN(capacity))
     .accounts({
       storage: storage.publicKey,
+      location: location.publicKey,
       owner: programProvider.wallet.publicKey,
       systemProgram: anchor.web3.SystemProgram.programId,
     })

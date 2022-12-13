@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+use crate::errors::ValidationError;
+
 #[account]
 pub struct Location {
     pub owner: Pubkey,
@@ -15,7 +17,26 @@ impl Location {
         + OCCUPIED_SPACE_LENGTH
         + CAPACITY_LENGTH
         + NAME_LENGTH
-        + POSITION_LENGTH;
+        + POSITION_LENGTH
+    ;
+
+    pub fn add(&mut self, size: i64) -> Result<()> {
+        self.occupied_space += size;
+        require!(self.occupied_space <= self.capacity, ValidationError::LocationFull);
+        Ok(())    
+    }
+
+    pub fn remove(&mut self, size: i64) -> Result<()> {
+        self.occupied_space -= size;
+        require!(self.occupied_space >= 0, ValidationError::ExperimentalError);
+        Ok(())    
+    }
+}
+
+pub trait InLocation {
+    fn size(&self) -> i64 {
+        1
+    }
 }
 
 const CAPACITY_LENGTH: usize = 8;
