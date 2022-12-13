@@ -314,6 +314,21 @@ describe("/Location", () => {
       assertAnchorError(e, "DifferentLocations");
     }
   });  
+
+  it("Move static Storage fails", async () => {
+    let [resource, _1] = await createResource(program, 'A', []);
+    let location1 = await createLocation(program, 'loc1', 0, 10);
+    let [storage, _3] = await createStorage(program, resource, 10, location1);
+    let location2 = await createLocation(program, 'loc2', 1, 10);
+
+    try {
+      await move_storage(program, storage, location1, location2);
+
+      assert(false, "Expected to fail");
+    } catch(e) {
+      assertAnchorError(e, "StorageTypeNotMovable");
+    }
+  });  
 });
 
 function assertAnchorError(error: any, errorName: String) {
@@ -476,6 +491,19 @@ async function move_between_storage(program: Program<GotAMin>, storageFrom, stor
     .accounts({
       storageFrom: storageFrom.publicKey,
       storageTo: storageTo.publicKey,
+    })
+    .rpc();
+}
+
+async function move_storage(program: Program<GotAMin>, storage, fromLocation, toLocation) {
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  await program.methods
+    .moveStorage()
+    .accounts({
+      storage: storage.publicKey,
+      fromLocation: fromLocation.publicKey,
+      toLocation: toLocation.publicKey,
     })
     .rpc();
 }

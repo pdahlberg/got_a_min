@@ -31,6 +31,10 @@ pub mod got_a_min {
         storage::move_between(ctx, amount)
     }
 
+    pub fn move_storage(ctx: Context<MoveStorage>) -> Result<()> {
+        storage::move_to_location(ctx)
+    }
+
     pub fn produce_without_input(ctx: Context<ProduceResource>) -> Result<()> {
         producer::produce_without_input(ctx)
     }

@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::state::storage::*;
+use crate::state::{storage::*, Location};
 use crate::errors::ValidationError;
 
 pub fn init(ctx: Context<InitStorage>, resource_id: Pubkey, location_id: Pubkey, capacity: i64) -> Result<()> {
@@ -45,6 +45,31 @@ pub struct MoveBetweenStorage<'info> {
     pub storage_from: Account<'info, Storage>,
     #[account(mut)]
     pub storage_to: Account<'info, Storage>,
+    #[account(mut)]
+    pub owner: Signer<'info>,
+}
+
+pub fn move_to_location(ctx: Context<MoveStorage>) -> Result<()> {
+    let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
+    let from_location: &mut Account<Location> = &mut ctx.accounts.from_location;
+    let to_location: &mut Account<Location> = &mut ctx.accounts.to_location;
+    let _owner: &Signer = &ctx.accounts.owner;
+
+    
+    require!(from_location.occupied >= 0, ValidationError::ExperimentalError);
+    require!(to_location.occupied <= to_location.capacity, ValidationError::LocationFull);
+
+    Ok(())
+}
+
+#[derive(Accounts)]
+pub struct MoveStorage<'info> {
+    #[account(mut)]
+    pub storage: Account<'info, Storage>,
+    #[account(mut)]
+    pub from_location: Account<'info, Location>,
+    #[account(mut)]
+    pub to_location: Account<'info, Location>,
     #[account(mut)]
     pub owner: Signer<'info>,
 }

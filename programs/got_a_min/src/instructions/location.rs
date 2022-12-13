@@ -9,6 +9,7 @@ pub fn init(ctx: Context<InitLocation>, name: String, position: i64, capacity: i
     location.owner = *owner.key;
     location.name = name;
     location.position = position;
+    location.occupied = 0;
     location.capacity = capacity;
 
     require!(location.name.len() <= NAME_LENGTH, ValidationError::NameTooLong);
