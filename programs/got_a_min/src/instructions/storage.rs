@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::state::{storage::*, Location};
+use crate::instructions::location;
 use crate::errors::ValidationError;
 
 pub fn init(ctx: Context<InitStorage>, resource_id: Pubkey, location_id: Pubkey, capacity: i64) -> Result<()> {
@@ -55,11 +56,7 @@ pub fn move_to_location(ctx: Context<MoveStorage>) -> Result<()> {
     let to_location: &mut Account<Location> = &mut ctx.accounts.to_location;
     let _owner: &Signer = &ctx.accounts.owner;
 
-    
-    require!(from_location.occupied >= 0, ValidationError::ExperimentalError);
-    require!(to_location.occupied <= to_location.capacity, ValidationError::LocationFull);
-
-    Ok(())
+    location::register_move(from_location, to_location)
 }
 
 #[derive(Accounts)]

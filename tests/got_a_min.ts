@@ -329,6 +329,37 @@ describe("/Location", () => {
       assertAnchorError(e, "StorageTypeNotMovable");
     }
   });  
+
+  it("Move Storage to full Location fails", async () => {
+    let [resource, _1] = await createResource(program, 'A', []);
+    let location1 = await createLocation(program, 'loc1', 0, 10);
+    let [storage, _3] = await createStorage(program, resource, 10, location1);
+    let location2 = await createLocation(program, 'loc2', 1, 0);
+
+    try {
+      await move_storage(program, storage, location1, location2);
+
+      assert(false, "Expected to fail");
+    } catch(e) {
+      assertAnchorError(e, "LocationFull");
+    }
+  });
+
+  it("Move Storage to new Location", async () => {
+    let [resource, _1] = await createResource(program, 'A', []);
+    let location1 = await createLocation(program, 'loc1', 0, 10);
+    let [storage, _3] = await createStorage(program, resource, 10, location1);
+    let location2 = await createLocation(program, 'loc2', 1, 10);
+
+    await move_storage(program, storage, location1, location2);
+    let storageResult = await program.account.storage.fetch(storage.publicKey);
+    let location1Result = await program.account.location.fetch(location1.publicKey);
+    let location2Result = await program.account.location.fetch(location2.publicKey);
+
+    expect(storageResult.locationId.toBase58()).equal(location2.publicKey.toBase58());
+    expect(location1Result.occupiedSpace).equal(0);
+    expect(location2Result.occupiedSpace).equal(1);
+  });  
 });
 
 function assertAnchorError(error: any, errorName: String) {

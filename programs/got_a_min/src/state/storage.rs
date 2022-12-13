@@ -2,6 +2,8 @@ use anchor_lang::prelude::*;
 
 use crate::errors::ValidationError;
 
+use super::location;
+
 #[account]
 pub struct Storage {
     pub owner: Pubkey,
