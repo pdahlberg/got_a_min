@@ -333,7 +333,7 @@ describe("/Location", () => {
   it("Move Storage to full Location fails", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
     let location1 = await createLocation(program, 'loc1', 0, 10);
-    let [storage, _3] = await createStorage(program, resource, 10, location1);
+    let [storage, _3] = await createStorage(program, resource, 10, location1, {movable:{}});
     let location2 = await createLocation(program, 'loc2', 1, 0);
 
     try {
@@ -348,7 +348,7 @@ describe("/Location", () => {
   it("Move Storage to new Location", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
     let location1 = await createLocation(program, 'loc1', 0, 10);
-    let [storage, _3] = await createStorage(program, resource, 10, location1);
+    let [storage, _3] = await createStorage(program, resource, 10, location1, {movable:{}});
     let location2 = await createLocation(program, 'loc2', 1, 10);
 
     await move_storage(program, storage, location1, location2);
@@ -423,16 +423,18 @@ async function initProducer(program: Program<GotAMin>, producer, resource, produ
     return await program.account.producer.fetch(producer.publicKey);
 }
 
-async function createStorage(program: Program<GotAMin>, resource: KP, capacity: number, location: KP = DEFAULT_LOCATION): Promise<[KP, any]> {
+async function createStorage(program: Program<GotAMin>, resource: KP, capacity: number, location: KP = DEFAULT_LOCATION, mobilityType: MobilityType = {fixed:{}}): Promise<[KP, any]> {
   const storage: KP = anchor.web3.Keypair.generate();
-  return [storage, await initStorage(program, storage, resource, capacity, location)];
+  return [storage, await initStorage(program, storage, resource, capacity, location, mobilityType)];
 }
 
-async function initStorage(program: Program<GotAMin>, storage, resource: KP, capacity: number, location: KP = DEFAULT_LOCATION) {
+type MobilityType = {fixed:{}} | {movable:{}};
+
+async function initStorage(program: Program<GotAMin>, storage, resource: KP, capacity: number, location: KP = DEFAULT_LOCATION, mobilityType: MobilityType = {fixed:{}}) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
-    .initStorage(resource.publicKey, new anchor.BN(capacity))
+    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType)
     .accounts({
       storage: storage.publicKey,
       location: location.publicKey,

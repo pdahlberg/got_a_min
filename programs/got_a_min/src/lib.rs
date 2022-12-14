@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use instructions::*;
+use state::MobilityType;
 
 pub mod errors;
 pub mod state;
@@ -9,6 +10,8 @@ declare_id!("5kdCwKP8D1ciS9xyc3zRp1PaUcyD2yiBFkgBr8u3jn3K");
 
 #[program]
 pub mod got_a_min {
+    use crate::state::MobilityType;
+
     use super::*;
 
     pub fn init_location(ctx: Context<InitLocation>, name: String, position: i64, capacity: i64) -> Result<()> {
@@ -23,8 +26,8 @@ pub mod got_a_min {
         resource::init(ctx, name, inputs, input_amounts)
     }
 
-    pub fn init_storage(ctx: Context<InitStorage>, resource_id: Pubkey, capacity: i64) -> Result<()> {
-        storage::init(ctx, resource_id, capacity)
+    pub fn init_storage(ctx: Context<InitStorage>, resource_id: Pubkey, capacity: i64, mobility_type: MobilityType) -> Result<()> {
+        storage::init(ctx, resource_id, capacity, mobility_type)
     }
 
     pub fn move_between_storage(ctx: Context<MoveBetweenStorage>, amount: i64) -> Result<()> {
