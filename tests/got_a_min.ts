@@ -11,11 +11,12 @@ type KP = anchor.web3.Keypair;
 
 const DEFAULT_LOCATION = anchor.web3.Keypair.generate();
 
-describe("got_a_min", () => {
+describe("got_a_min", async () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
+  await initDefaultLocation(program);
   
   it("Init resource", async () => {
     const resource = anchor.web3.Keypair.generate();
@@ -451,6 +452,10 @@ async function createLocation(program: Program<GotAMin>, name: string, position:
   const location: anchor.web3.Keypair = anchor.web3.Keypair.generate();
   await initLocation(program, location, name, position, capacity);
   return location;
+}
+
+async function initDefaultLocation(program: Program<GotAMin>) {
+  return initLocation(program, DEFAULT_LOCATION, 'default', 999, 999);
 }
 
 async function initLocation(program: Program<GotAMin>, location, name: string, position: number, capacity: number) {
