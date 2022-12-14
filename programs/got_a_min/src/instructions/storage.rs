@@ -31,15 +31,15 @@ pub struct InitStorage<'info> {
 }
 
 pub fn move_between(ctx: Context<MoveBetweenStorage>, amount: i64) -> Result<()> {
-    let storage_from: &mut Account<Storage> = &mut ctx.accounts.storage_from;
-    let storage_to: &mut Account<Storage> = &mut ctx.accounts.storage_to;
+    let from_storage: &mut Account<Storage> = &mut ctx.accounts.storage_from;
+    let to_storage: &mut Account<Storage> = &mut ctx.accounts.storage_to;
     let _owner: &Signer = &ctx.accounts.owner;
 
-    storage_from.remove(amount)?;
-    storage_to.add(amount)?;
+    from_storage.remove(amount)?;
+    to_storage.add(amount, from_storage.location_id)?;
     
-    require!(storage_from.resource_id == storage_to.resource_id, ValidationError::ResourceNotMatching);
-    require!(storage_from.location_id == storage_to.location_id, ValidationError::DifferentLocations);
+    require!(from_storage.resource_id == to_storage.resource_id, ValidationError::ResourceNotMatching);
+    require!(from_storage.location_id == to_storage.location_id, ValidationError::DifferentLocations);
 
     Ok(())
 }

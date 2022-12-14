@@ -22,11 +22,11 @@ impl Storage {
         + MOBILITY_TYPE_LENGTH
     ;
 
-    pub fn add(&mut self, amount: i64) -> Result<()> {
+    pub fn add(&mut self, amount: i64, from_location_id: Pubkey) -> Result<()> {
         self.amount += amount;
         
         require!(self.amount <= self.capacity, ValidationError::StorageFull);
-        require!(false, ValidationError::ExperimentalError); // check location
+        require!(self.location_id == from_location_id, ValidationError::DifferentLocations);
     
         Ok(())
     }
