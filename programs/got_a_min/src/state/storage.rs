@@ -9,6 +9,7 @@ pub struct Storage {
     pub location_id: Pubkey,
     pub amount: i64,
     pub capacity: i64,
+    pub mobility_type: MobilityType,
 }
 
 impl Storage {
@@ -18,12 +19,14 @@ impl Storage {
         + PUBLIC_KEY_LENGTH  // location_id
         + AMOUNT_LENGTH
         + CAPACITY_LENGTH
+        + MOBILITY_TYPE_LENGTH
     ;
 
-    pub fn add(&mut self, amount: i64) -> Result<()> {
+    pub fn add(&mut self, amount: i64, from_location_id: Pubkey) -> Result<()> {
         self.amount += amount;
         
         require!(self.amount <= self.capacity, ValidationError::StorageFull);
+        require!(self.location_id == from_location_id, ValidationError::DifferentLocations);
     
         Ok(())
     }
@@ -35,10 +38,20 @@ impl Storage {
 
         Ok(())
     }
-        
+    
+    pub fn size(&self) -> i64 {
+        1
+    }
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
+pub enum MobilityType {
+    Fixed,
+    Movable,
 }
 
 const AMOUNT_LENGTH: usize = 8;
 const CAPACITY_LENGTH: usize = 8;
 const DISCRIMINATOR_LENGTH: usize = 8;
+const MOBILITY_TYPE_LENGTH: usize = 1;
 const PUBLIC_KEY_LENGTH: usize = 32;

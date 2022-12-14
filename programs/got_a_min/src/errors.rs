@@ -14,5 +14,7 @@ pub enum ValidationError {
     #[msg("Not enough in storage.")]                                            StorageAmountTooLow,
     #[msg("Name too long.")]                                                    NameTooLong,
     #[msg("Locations are different.")]                                          DifferentLocations,
+    #[msg("Location is full.")]                                                 LocationFull,
+    #[msg("Storage type static cannot be moved.")]                              StorageTypeNotMovable,
     #[msg("Trying stuff out and failing quite deliberately.")]                  ExperimentalError,
 }

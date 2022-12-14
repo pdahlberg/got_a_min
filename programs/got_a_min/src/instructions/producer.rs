@@ -45,7 +45,7 @@ fn move_awaiting(producer: &mut Account<Producer>, storage: &mut Account<Storage
         false => available_capacity,
     };
 
-    storage.add(withdraw_awaiting_within_capacity)?;
+    storage.add(withdraw_awaiting_within_capacity, producer.location_id)?;
     producer.awaiting_units -= withdraw_awaiting_within_capacity;
 
     Ok(())
