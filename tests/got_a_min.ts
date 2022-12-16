@@ -11,7 +11,7 @@ type KP = anchor.web3.Keypair;
 
 const DEFAULT_LOCATION = anchor.web3.Keypair.generate();
 
-describe("got_a_min", async () => {
+describe("/Unknown", async () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
@@ -166,6 +166,15 @@ describe("got_a_min", async () => {
     }
 
   });
+
+});
+
+
+describe("/Production", () => {
+  // Configure the client to use the local cluster.
+  anchor.setProvider(anchor.AnchorProvider.env());
+  const program = anchor.workspace.GotAMin as Program<GotAMin>;
+  const programProvider = program.provider as anchor.AnchorProvider;
 
   it("Produce 1 resource C from 1 A + 1 B", async () => {
     let producerCProdRate = 2;
