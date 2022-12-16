@@ -169,7 +169,6 @@ describe("/Unknown", async () => {
 
 });
 
-
 describe("/Production", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
@@ -199,6 +198,26 @@ describe("/Production", () => {
     expect(storageCResult.amount.toNumber(), "storageCResult.amount").to.equal(2);
     expect(inputAResult.amount.toNumber(), "inputAResult.amount").to.equal(0);    
     expect(inputBResult.amount.toNumber(), "inputBResult.amount").to.equal(0);    
+  });
+
+});
+
+describe("/Transportation", () => {
+  // Configure the client to use the local cluster.
+  anchor.setProvider(anchor.AnchorProvider.env());
+  const program = anchor.workspace.GotAMin as Program<GotAMin>;
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  it("Move movable Storage", async () => {
+    let [resource, _1] = await createResource(program, 'A', []);
+    let location1 = await createLocation(program, 'loc1', 0, 10);
+    let [storage, _3] = await createStorage(program, resource, 10, location1, {movable:{}});
+    let location2 = await createLocation(program, 'loc2', 1, 10);
+
+    await move_storage(program, storage, location1, location2);
+    let result = await program.account.storage.fetch(storage.publicKey);
+
+    expect(result.locationId.toBase58()).to.equal(location2.publicKey.toBase58());
   });
 
 });
