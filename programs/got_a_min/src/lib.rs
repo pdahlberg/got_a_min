@@ -26,12 +26,22 @@ pub mod got_a_min {
         resource::init(ctx, name, inputs, input_amounts)
     }
 
-    pub fn init_storage(ctx: Context<InitStorage>, resource_id: Pubkey, capacity: i64, mobility_type: MobilityType) -> Result<()> {
-        storage::init(ctx, resource_id, capacity, mobility_type)
+    pub fn init_storage(
+        ctx: Context<InitStorage>, 
+        resource_id: Pubkey, 
+        capacity: i64, 
+        mobility_type: MobilityType,
+        movement_speed: i64,
+    ) -> Result<()> {
+        storage::init(ctx, resource_id, capacity, mobility_type, movement_speed)
     }
 
     pub fn move_between_storage(ctx: Context<MoveBetweenStorage>, amount: i64) -> Result<()> {
         storage::move_between(ctx, amount)
+    }
+
+    pub fn update_storage_move_status(ctx: Context<UpdateStorageMoveStatus>) -> Result<()> {
+        storage::update_move_status(ctx)
     }
 
     pub fn move_storage(ctx: Context<MoveStorage>) -> Result<()> {
