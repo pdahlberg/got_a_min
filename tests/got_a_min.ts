@@ -35,6 +35,14 @@ describe("/Unknown", async () => {
     expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
   });
 
+});
+
+describe("/Production", () => {
+  // Configure the client to use the local cluster.
+  anchor.setProvider(anchor.AnchorProvider.env());
+  const program = anchor.workspace.GotAMin as Program<GotAMin>;
+  const programProvider = program.provider as anchor.AnchorProvider;
+
   it("Init producer", async () => {
     const producer = anchor.web3.Keypair.generate();
     const resource = anchor.web3.Keypair.generate();
@@ -148,6 +156,25 @@ describe("/Unknown", async () => {
     expect(storageBResult2.amount.toNumber(), "storageBResult2.amount").to.equal(1);    
   });
 
+  it("Produce 1 resource B from 2 A from a different location fails", async () => {
+    let producerBProdRate = 1;
+    let locationA = await createLocation(program, 'locA', 0, 10);
+    let [resourceA, _1] = await createResource(program, 'A', []);
+    let [producerA, _2] = await createProducer(program, resourceA, 5, 0);
+    let [storageA, _3] = await createStorage(program, resourceA, 5, locationA);
+    let locationB = await createLocation(program, 'locB', 50, 10);
+    let [resourceB, _4] = await createResource(program, 'B', [[resourceA, 2]]);
+    let [producerB, _5] = await createProducer(program, resourceB, producerBProdRate, 5, locationB);
+    let [storageB, _6] = await createStorage(program, resourceB, 5, locationB);    
+
+    try {
+      await produce_with_1_input(program, producerB, storageB, resourceB, storageA);
+    
+      assert(false, "Expected to fail");
+    } catch(e) {
+      assertAnchorError(e, "DifferentLocations");
+    }
+  });
 
   it("Produce resource B with input A fails when A is empty", async () => {
     let [resourceA, _1] = await createResource(program, 'A', []);
@@ -164,16 +191,7 @@ describe("/Unknown", async () => {
     } catch(e) {
       assertAnchorError(e, "InputStorageAmountTooLow");
     }
-
   });
-
-});
-
-describe("/Production", () => {
-  // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.AnchorProvider.env());
-  const program = anchor.workspace.GotAMin as Program<GotAMin>;
-  const programProvider = program.provider as anchor.AnchorProvider;
 
   it("Produce 1 resource C from 1 A + 1 B", async () => {
     let producerCProdRate = 2;
