@@ -11,7 +11,7 @@ type KP = anchor.web3.Keypair;
 
 const DEFAULT_LOCATION = anchor.web3.Keypair.generate();
 
-describe("got_a_min", async () => {
+describe("/Unknown", async () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
@@ -34,6 +34,14 @@ describe("got_a_min", async () => {
     
     expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
   });
+
+});
+
+describe("/Production", () => {
+  // Configure the client to use the local cluster.
+  anchor.setProvider(anchor.AnchorProvider.env());
+  const program = anchor.workspace.GotAMin as Program<GotAMin>;
+  const programProvider = program.provider as anchor.AnchorProvider;
 
   it("Init producer", async () => {
     const producer = anchor.web3.Keypair.generate();
@@ -148,6 +156,25 @@ describe("got_a_min", async () => {
     expect(storageBResult2.amount.toNumber(), "storageBResult2.amount").to.equal(1);    
   });
 
+  it("Produce 1 resource B from 2 A from a different location fails", async () => {
+    let producerBProdRate = 1;
+    let locationA = await createLocation(program, 'locA', 0, 10);
+    let [resourceA, _1] = await createResource(program, 'A', []);
+    let [producerA, _2] = await createProducer(program, resourceA, 5, 0);
+    let [storageA, _3] = await createStorage(program, resourceA, 5, locationA);
+    let locationB = await createLocation(program, 'locB', 50, 10);
+    let [resourceB, _4] = await createResource(program, 'B', [[resourceA, 2]]);
+    let [producerB, _5] = await createProducer(program, resourceB, producerBProdRate, 5, locationB);
+    let [storageB, _6] = await createStorage(program, resourceB, 5, locationB);    
+
+    try {
+      await produce_with_1_input(program, producerB, storageB, resourceB, storageA);
+    
+      assert(false, "Expected to fail");
+    } catch(e) {
+      assertAnchorError(e, "DifferentLocations");
+    }
+  });
 
   it("Produce resource B with input A fails when A is empty", async () => {
     let [resourceA, _1] = await createResource(program, 'A', []);
@@ -164,7 +191,6 @@ describe("got_a_min", async () => {
     } catch(e) {
       assertAnchorError(e, "InputStorageAmountTooLow");
     }
-
   });
 
   it("Produce 1 resource C from 1 A + 1 B", async () => {
@@ -192,6 +218,58 @@ describe("got_a_min", async () => {
     expect(inputBResult.amount.toNumber(), "inputBResult.amount").to.equal(0);    
   });
 
+});
+
+describe("/Transportation", () => {
+  // Configure the client to use the local cluster.
+  anchor.setProvider(anchor.AnchorProvider.env());
+  const program = anchor.workspace.GotAMin as Program<GotAMin>;
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  it("Move movable Storage", async () => {
+    let [resource, _1] = await createResource(program, 'A', []);
+    let location1 = await createLocation(program, 'loc1', 0, 10);
+    let [storage, _3] = await createStorage(program, resource, 10, location1, {movable:{}}, 2);
+    let location2 = await createLocation(program, 'loc2', 2, 10);
+
+    await move_storage(program, storage, location1, location2);
+
+    let result1 = await program.account.storage.fetch(storage.publicKey);
+    expect(result1.locationId.toBase58()).to.equal(location2.publicKey.toBase58());
+    expect(result1.arrivesAt.toNumber()).to.greaterThan(0);
+
+    // Production is done after delay
+    await new Promise(f => setTimeout(f, 5001)); // todo: delay 5+ seconds... 
+
+    await updateStorageMoveStatus(program, storage);
+
+    let result2 = await program.account.storage.fetch(storage.publicKey);
+    expect(result2.locationId.toBase58()).to.equal(location2.publicKey.toBase58());
+    expect(result2.arrivesAt.toNumber()).to.equal(0);
+  });
+
+  it("Add to Storage while moving should fail", async () => {
+    let [resource, _1] = await createResource(program, 'A', []);
+    let location1 = await createLocation(program, 'loc1', 0, 10);
+    let [producer, _2] = await createProducer(program, resource, 10, 0, location1);
+    let [storage, _3] = await createStorage(program, resource, 10, location1, {movable:{}});
+    let location2 = await createLocation(program, 'loc2', 10, 10);
+    await move_storage(program, storage, location1, location2);
+  
+    try {
+      await produce_without_input(program, producer, storage, resource);
+
+      assert(false, "Expected to fail");
+    } catch(e) {
+      assertAnchorError(e, "DifferentLocations");
+    }
+
+    // Production is done after delay
+    await new Promise(f => setTimeout(f, 3001)); // todo: delay 5+ seconds... 
+
+    let result2 = await program.account.storage.fetch(storage.publicKey);
+    expect(result2.locationId.toBase58()).to.equal(location2.publicKey.toBase58());
+  });
 });
 
 describe("/Storage", () => {
@@ -361,6 +439,50 @@ describe("/Location", () => {
     expect(location1Result.occupiedSpace.toNumber()).equal(0);
     expect(location2Result.occupiedSpace.toNumber()).equal(1);
   });  
+
+/*  it("init stuff", async () => {
+    const account = anchor.web3.Keypair.generate();
+    console.log("account: ", account.publicKey.toBase58());
+
+    await program.methods
+    .stuff()
+    .accounts({
+      stuff: account.publicKey,
+      owner: programProvider.wallet.publicKey,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    })
+    .signers([account])
+    .rpc();
+
+    let res = await program.account.stuff.fetch(account.publicKey);
+    expect(res.number.toNumber()).equal(123);
+  });
+
+  it("update stuff", async () => {
+    let key = new anchor.web3.PublicKey("FCHm4Ef3b1aKpBPTk6XkKsQwf8Z3zUhkh6VbZuSrwDi8");
+    console.log("Updating: ", key.toBase58());
+
+    await program.methods
+    .updateStuff(new anchor.BN(999))
+    .accounts({
+      stuff: key,
+    })
+    .signers(key)
+    .rpc();
+
+    let res = await program.account.stuff.fetch(account.publicKey);
+    expect(res.number.toNumber()).equal(123);
+  });
+
+  it("read stuff", async () => {
+    let key = new anchor.web3.PublicKey("FCHm4Ef3b1aKpBPTk6XkKsQwf8Z3zUhkh6VbZuSrwDi8");
+    console.log("Fetching location for: ", key.toBase58());
+
+    let res = await program.account.stuff.fetch(key);
+
+    console.log("stuff: ", res.number.toNumber());
+  });
+  */
 });
 
 function assertAnchorError(error: any, errorName: String) {
@@ -424,18 +546,32 @@ async function initProducer(program: Program<GotAMin>, producer, resource, produ
     return await program.account.producer.fetch(producer.publicKey);
 }
 
-async function createStorage(program: Program<GotAMin>, resource: KP, capacity: number, location: KP = DEFAULT_LOCATION, mobilityType: MobilityType = {fixed:{}}): Promise<[KP, any]> {
+async function createStorage(
+  program: Program<GotAMin>, 
+  resource: KP, 
+  capacity: number, 
+  location: KP = DEFAULT_LOCATION, 
+  mobilityType: MobilityType = {fixed:{}}, 
+  speed: number = 1,
+): Promise<[KP, any]> {
   const storage: KP = anchor.web3.Keypair.generate();
-  return [storage, await initStorage(program, storage, resource, capacity, location, mobilityType)];
+  return [storage, await initStorage(program, storage, resource, capacity, location, mobilityType, speed)];
 }
 
 type MobilityType = {fixed:{}} | {movable:{}};
 
-async function initStorage(program: Program<GotAMin>, storage, resource: KP, capacity: number, location: KP = DEFAULT_LOCATION, mobilityType: MobilityType = {fixed:{}}) {
+async function initStorage(
+  program: Program<GotAMin>, 
+  storage, resource: KP, 
+  capacity: number, 
+  location: KP = DEFAULT_LOCATION, 
+  mobilityType: MobilityType = {fixed:{}}, 
+  speed: number = 1,
+) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
-    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType)
+    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType, new anchor.BN(speed))
     .accounts({
       storage: storage.publicKey,
       location: location.publicKey,
@@ -543,6 +679,17 @@ async function move_storage(program: Program<GotAMin>, storage, fromLocation, to
       storage: storage.publicKey,
       fromLocation: fromLocation.publicKey,
       toLocation: toLocation.publicKey,
+    })
+    .rpc();
+}
+
+async function updateStorageMoveStatus(program: Program<GotAMin>, storage) {
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  await program.methods
+    .updateStorageMoveStatus()
+    .accounts({
+      storage: storage.publicKey,
     })
     .rpc();
 }

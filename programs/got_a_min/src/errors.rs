@@ -16,5 +16,6 @@ pub enum ValidationError {
     #[msg("Locations are different.")]                                          DifferentLocations,
     #[msg("Location is full.")]                                                 LocationFull,
     #[msg("Storage type static cannot be moved.")]                              StorageTypeNotMovable,
+    #[msg("This is not allowed while moving.")]                                 NotAllowedWhileMoving,
     #[msg("Trying stuff out and failing quite deliberately.")]                  ExperimentalError,
 }

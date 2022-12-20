@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use crate::instructions::location;
 use crate::state::producer::*;
 use crate::state::resource::*;
 use crate::state::storage::*;
@@ -78,6 +79,7 @@ pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result
     let current_timestamp = Clock::get()?.unix_timestamp;       // 15
  
     require!(resource_to_produce.key().eq(&storage.resource_id), ValidationError::InputStorageNotSupplied);
+    require!(location::same_location_id(storage.location_id(current_timestamp), storage_input.location_id(current_timestamp)), ValidationError::DifferentLocations);
 
     let input_exists = resource_to_produce.input.iter().position(|input| input.key().eq(&storage_input.resource_id));
     require!(input_exists.is_some(), ValidationError::InputStorageNotSupplied);
@@ -111,6 +113,9 @@ pub fn produce_with_two_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Resu
     require!(input_pos_1.is_some(), ValidationError::InputStorage1NotSupplied);
     let input_pos_2 = resource_to_produce.input.iter().position(|input| input.key().eq(&storage_input_2.resource_id));
     require!(input_pos_2.is_some(), ValidationError::InputStorage2NotSupplied);
+
+    require!(location::same_location_id(storage.location_id(current_timestamp), storage_input_1.location_id(current_timestamp)), ValidationError::DifferentLocations);
+    require!(location::same_location_id(storage.location_id(current_timestamp), storage_input_2.location_id(current_timestamp)), ValidationError::DifferentLocations);
 
     let index_1 = input_pos_1.unwrap();
     let input_1_amount = resource_to_produce.input_amount[index_1];

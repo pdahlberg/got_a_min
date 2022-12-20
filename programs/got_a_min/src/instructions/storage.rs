@@ -4,7 +4,13 @@ use crate::state::{storage::*, Location};
 use crate::instructions::location;
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitStorage>, resource_id: Pubkey, capacity: i64, mobility_type: MobilityType) -> Result<()> {
+pub fn init(
+    ctx: Context<InitStorage>, 
+    resource_id: Pubkey, 
+    capacity: i64, 
+    mobility_type: MobilityType,
+    movement_speed: i64,
+) -> Result<()> {
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let location: &mut Account<Location> = &mut ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
@@ -15,6 +21,8 @@ pub fn init(ctx: Context<InitStorage>, resource_id: Pubkey, capacity: i64, mobil
     storage.amount = 0;
     storage.capacity = capacity;
     storage.mobility_type = mobility_type;
+    storage.movement_speed = movement_speed;
+    storage.arrives_at = 0;
 
     location.add(storage.size())
 }
@@ -59,10 +67,20 @@ pub fn move_to_location(ctx: Context<MoveStorage>) -> Result<()> {
     let from_location: &mut Account<Location> = &mut ctx.accounts.from_location;
     let to_location: &mut Account<Location> = &mut ctx.accounts.to_location;
     let _owner: &Signer = &ctx.accounts.owner;
+    let now = (Clock::get()?).unix_timestamp;
 
     require!(storage.mobility_type == MobilityType::Movable, ValidationError::StorageTypeNotMovable);
+    require!(storage.movement_speed > 0, ValidationError::StorageTypeNotMovable);
+    require!(!storage.is_moving(now), ValidationError::NotAllowedWhileMoving);
 
     storage.location_id = to_location.key();
+    let distance = (to_location.position - from_location.position).abs();
+    let travel_time = distance / storage.movement_speed;
+    storage.arrives_at = match travel_time {
+        0 => 0,
+        _ => now + travel_time,
+    };
+
     location::register_move(from_location, to_location, 1)
 }
 
@@ -74,6 +92,28 @@ pub struct MoveStorage<'info> {
     pub from_location: Account<'info, Location>,
     #[account(mut)]
     pub to_location: Account<'info, Location>,
+    #[account(mut)]
+    pub owner: Signer<'info>,
+}
+
+pub fn update_move_status(ctx: Context<UpdateStorageMoveStatus>) -> Result<()> {
+    let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
+    let now = (Clock::get()?).unix_timestamp;
+
+    require!(storage.mobility_type == MobilityType::Movable, ValidationError::StorageTypeNotMovable);
+    require!(storage.movement_speed > 0, ValidationError::StorageTypeNotMovable);
+    
+    if storage.has_arrived(now) {
+        storage.arrives_at = 0;
+    }
+
+    Ok(())
+}
+
+#[derive(Accounts)]
+pub struct UpdateStorageMoveStatus<'info> {
+    #[account(mut)]
+    pub storage: Account<'info, Storage>,
     #[account(mut)]
     pub owner: Signer<'info>,
 }

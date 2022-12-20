@@ -6,7 +6,9 @@ pub mod errors;
 pub mod state;
 pub mod instructions;
 
-declare_id!("5kdCwKP8D1ciS9xyc3zRp1PaUcyD2yiBFkgBr8u3jn3K");
+// anchor test: declare_id!("5kdCwKP8D1ciS9xyc3zRp1PaUcyD2yiBFkgBr8u3jn3K");
+// local: 
+declare_id!("3113AWybUqHaSKaEmUXnUFwXu4EUp1VDpqQFCvY7oajN");
 
 #[program]
 pub mod got_a_min {
@@ -18,6 +20,14 @@ pub mod got_a_min {
         location::init(ctx, name, position, capacity)
     }
 
+    pub fn stuff(ctx: Context<InitStuff>) -> Result<()> {
+        stuff::init(ctx)
+    }
+
+    pub fn update_stuff(ctx: Context<UpdateStuff>, number: i64) -> Result<()> {
+        stuff::update(ctx, number)
+    }
+
     pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, location_id: Pubkey, production_rate: i64, production_time: i64) -> Result<()> {
         producer::init(ctx, resource_id, location_id, production_rate, production_time)
     }
@@ -26,12 +36,22 @@ pub mod got_a_min {
         resource::init(ctx, name, inputs, input_amounts)
     }
 
-    pub fn init_storage(ctx: Context<InitStorage>, resource_id: Pubkey, capacity: i64, mobility_type: MobilityType) -> Result<()> {
-        storage::init(ctx, resource_id, capacity, mobility_type)
+    pub fn init_storage(
+        ctx: Context<InitStorage>, 
+        resource_id: Pubkey, 
+        capacity: i64, 
+        mobility_type: MobilityType,
+        movement_speed: i64,
+    ) -> Result<()> {
+        storage::init(ctx, resource_id, capacity, mobility_type, movement_speed)
     }
 
     pub fn move_between_storage(ctx: Context<MoveBetweenStorage>, amount: i64) -> Result<()> {
         storage::move_between(ctx, amount)
+    }
+
+    pub fn update_storage_move_status(ctx: Context<UpdateStorageMoveStatus>) -> Result<()> {
+        storage::update_move_status(ctx)
     }
 
     pub fn move_storage(ctx: Context<MoveStorage>) -> Result<()> {
