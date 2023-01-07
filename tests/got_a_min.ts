@@ -1,11 +1,11 @@
-import * as anchor from "@project-serum/anchor";
+import * as anchor from "@coral-xyz/anchor";
 //import { PublicKey, Keypair } from "@solana/web3.js";
 import { assert, expect } from 'chai';
 import { assertion, promise } from 'chai-as-promised';
-import { AnchorError, Program } from "@project-serum/anchor";
+import { AnchorError, Program } from "@coral-xyz/anchor";
 import { GotAMin } from "../target/types/got_a_min";
-import { publicKey } from "@project-serum/anchor/dist/cjs/utils";
-import { SystemAccountsCoder } from "@project-serum/anchor/dist/cjs/coder/system/accounts";
+import { publicKey } from "@coral-xyz/anchor/dist/cjs/utils";
+import { SystemAccountsCoder } from "@coral-xyz/anchor/dist/cjs/coder/system/accounts";
 
 type KP = anchor.web3.Keypair;
 
