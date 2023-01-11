@@ -5,9 +5,9 @@ use crate::instructions::location;
 use crate::errors::ValidationError;
 
 pub fn init(
-    ctx: Context<InitStorage>, 
-    resource_id: Pubkey, 
-    capacity: i64, 
+    ctx: Context<InitStorage>,
+    resource_id: Pubkey,
+    capacity: i64,
     mobility_type: MobilityType,
     movement_speed: i64,
 ) -> Result<()> {

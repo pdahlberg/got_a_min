@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use instructions::*;
-use state::MobilityType;
+use crate::state::MobilityType;
 
 pub mod errors;
 pub mod state;
@@ -12,8 +12,6 @@ declare_id!("3113AWybUqHaSKaEmUXnUFwXu4EUp1VDpqQFCvY7oajN");
 
 #[program]
 pub mod got_a_min {
-    use crate::state::MobilityType;
-
     use super::*;
 
     pub fn init_location(ctx: Context<InitLocation>, name: String, position: i64, capacity: i64) -> Result<()> {
