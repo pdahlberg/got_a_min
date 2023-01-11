@@ -20,6 +20,10 @@ impl Producer {
         + PRODUCTION_TIME_LENGTH
         + AWAITING_UNITS_LENGTH
         + CLAIMED_AT_LENGTH;
+        
+    pub fn size(&self) -> i64 {
+        1
+    }
 }
 
 const AWAITING_UNITS_LENGTH: usize = 8;

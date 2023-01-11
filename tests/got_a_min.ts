@@ -534,9 +534,10 @@ async function initProducer(program: Program<GotAMin>, producer, resource, produ
   const prodTimeBN = new anchor.BN(productionTime);
 
   await program.methods
-    .initProducer(resource.publicKey, location.publicKey, prodRateBN, prodTimeBN)
+    .initProducer(resource.publicKey, prodRateBN, prodTimeBN)
     .accounts({
       producer: producer.publicKey,
+      location: location.publicKey,
       owner: programProvider.wallet.publicKey,
       systemProgram: anchor.web3.SystemProgram.programId,
     })

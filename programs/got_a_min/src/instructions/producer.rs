@@ -1,24 +1,26 @@
 use anchor_lang::prelude::*;
 use crate::instructions::location;
+use crate::state::Location;
 use crate::state::producer::*;
 use crate::state::resource::*;
 use crate::state::storage::*;
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitProducer>, resource_id: Pubkey, location_id: Pubkey, production_rate: i64, production_time: i64) -> Result<()> {
+pub fn init(ctx: Context<InitProducer>, resource_id: Pubkey, production_rate: i64, production_time: i64) -> Result<()> {
     let producer: &mut Account<Producer> = &mut ctx.accounts.producer;
+    let location: &mut Account<Location> = &mut ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
     let clock = Clock::get()?;
 
     producer.owner = *owner.key;
     producer.resource_id = resource_id;
-    producer.location_id = location_id;
+    producer.location_id = location.key();
     producer.production_rate = production_rate;
     producer.production_time = production_time;
     producer.awaiting_units = 0;
     producer.claimed_at = clock.unix_timestamp;
 
-    Ok(())
+    location.add(producer.size())
 }
 
 // claim any units "done" waiting
@@ -142,6 +144,8 @@ pub fn produce_with_two_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Resu
 pub struct InitProducer<'info> {
     #[account(init, payer = owner, space = Producer::LEN)]
     pub producer: Account<'info, Producer>,
+    #[account(mut)]
+    pub location: Account<'info, Location>,
     #[account(mut)]
     pub owner: Signer<'info>,
     pub system_program: Program<'info, System>,
