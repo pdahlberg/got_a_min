@@ -9,14 +9,63 @@ import { SystemAccountsCoder } from "@coral-xyz/anchor/dist/cjs/coder/system/acc
 
 type KP = anchor.web3.Keypair;
 
-const DEFAULT_LOCATION = anchor.web3.Keypair.generate();
+const DEFAULT_LOCATION: KP = anchor.web3.Keypair.generate();
 
-describe("/Unknown", async () => {
+before("Init", async () => {
+  anchor.setProvider(anchor.AnchorProvider.env());
+  const program = anchor.workspace.GotAMin as Program<GotAMin>;
+  //const programProvider = program.provider as anchor.AnchorProvider;
+
+  await initDefaultLocation(program);
+});
+
+describe("/Sandbox", () => {
+  anchor.setProvider(anchor.AnchorProvider.env());
+  const program = anchor.workspace.GotAMin as Program<GotAMin>;
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  it("test1", async () => {
+    const p1: KP = anchor.web3.Keypair.generate();
+    const p2: KP = anchor.web3.Keypair.generate();
+    //let [resource, _1] = await createResource(program, 'A', []);
+    //let [p1storage, _2] = await createStorageNew(program, p1, resource, 1);
+
+    /*await program.methods
+      .change()
+      .accounts({
+        location: DEFAULT_LOCATION.publicKey,
+        storage: p1storage.publicKey,
+        player: p1.publicKey,
+      })
+      .signers([
+        p1,
+      ])
+      .rpc();*/
+
+      /*await program.methods
+      .change()
+      .accounts({
+        location: DEFAULT_LOCATION.publicKey,
+        storage: p1storage.publicKey,
+        player: p2.publicKey,
+      })
+      .signers([
+        p2,
+      ])
+      .rpc();*/
+
+    //let location = await program.account.location.fetch(DEFAULT_LOCATION.publicKey);
+
+    //expect(location.occupiedSpace.toNumber()).equal(2)
+    expect(false, "Not implemented").to.equal(true);
+  });
+});
+
+describe("/Unknown", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
-  await initDefaultLocation(program);
   
   it("Init resource", async () => {
     const resource = anchor.web3.Keypair.generate();
@@ -547,8 +596,46 @@ async function initProducer(program: Program<GotAMin>, producer, resource, produ
     return await program.account.producer.fetch(producer.publicKey);
 }
 
-async function createStorage(
+async function createStorageNew(
+  program: Program<GotAMin>,
+  owner: KP,
+  resource: KP, 
+  capacity: number, 
+  location: KP = DEFAULT_LOCATION, 
+  mobilityType: MobilityType = {fixed:{}}, 
+  speed: number = 1,
+): Promise<[KP, any]> {
+  const storage: KP = anchor.web3.Keypair.generate();
+  return [storage, await initStorageNew(program, owner, storage, resource, capacity, location, mobilityType, speed)];
+}
+
+async function initStorageNew(
   program: Program<GotAMin>, 
+  owner: KP,
+  storage, resource: KP, 
+  capacity: number, 
+  location: KP = DEFAULT_LOCATION, 
+  mobilityType: MobilityType = {fixed:{}}, 
+  speed: number = 1,
+) {
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  await program.methods
+    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType, new anchor.BN(speed))
+    .accounts({
+      storage: storage.publicKey,
+      location: location.publicKey,
+      owner: owner.publicKey,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    })
+    .signers([storage, owner])
+    .rpc();
+    
+  return await program.account.storage.fetch(storage.publicKey);
+}
+
+async function createStorage(
+  program: Program<GotAMin>,
   resource: KP, 
   capacity: number, 
   location: KP = DEFAULT_LOCATION, 

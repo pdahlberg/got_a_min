@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::state::{storage::*, Location};
+use crate::state::{storage::*, Location, OwnershipRef};
 use crate::instructions::location;
 use crate::errors::ValidationError;
 
@@ -15,7 +15,7 @@ pub fn init(
     let location: &mut Account<Location> = &mut ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
 
-    storage.owner = *owner.key;
+    storage.owner = owner.key();
     storage.resource_id = resource_id;
     storage.location_id = location.key();
     storage.amount = 0;
@@ -24,7 +24,7 @@ pub fn init(
     storage.movement_speed = movement_speed;
     storage.arrives_at = 0;
 
-    location.add(storage.size())
+    location.add(owner, OwnershipRef { item: storage.key(), player: owner.key() })
 }
 
 #[derive(Accounts)]
@@ -66,7 +66,7 @@ pub fn move_to_location(ctx: Context<MoveStorage>) -> Result<()> {
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let from_location: &mut Account<Location> = &mut ctx.accounts.from_location;
     let to_location: &mut Account<Location> = &mut ctx.accounts.to_location;
-    let _owner: &Signer = &ctx.accounts.owner;
+    let owner: &Signer = &ctx.accounts.owner;
     let now = (Clock::get()?).unix_timestamp;
 
     require!(storage.mobility_type == MobilityType::Movable, ValidationError::StorageTypeNotMovable);
@@ -81,7 +81,8 @@ pub fn move_to_location(ctx: Context<MoveStorage>) -> Result<()> {
         _ => now + travel_time,
     };
 
-    location::register_move(from_location, to_location, 1)
+
+    location::register_move(owner, from_location, to_location, OwnershipRef { item: storage.key(), player: storage.owner })
 }
 
 #[derive(Accounts)]

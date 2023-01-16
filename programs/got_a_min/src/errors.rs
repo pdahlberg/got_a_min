@@ -2,6 +2,7 @@ use anchor_lang::error_code;
 
 #[error_code]
 pub enum ValidationError {
+    #[msg("Only allowed by owner.")]                                            OwnerRequired,
     #[msg("Resource has too many inputs defined.")]                             ResourceInputMax,
     #[msg("Resource types doesn't match.")]                                     ResourceNotMatching,
     #[msg("Missing resource input amount.")]                                    MissingResourceInputAmount,

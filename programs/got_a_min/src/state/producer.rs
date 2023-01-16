@@ -6,7 +6,7 @@ pub struct Producer {
     pub resource_id: Pubkey,
     pub location_id: Pubkey,
     pub production_rate: i64,   // Produce this many units per [production_time]. 
-    pub production_time: i64,   
+    pub production_time: i64,   // Seconds
     pub awaiting_units: i64,    // This amount can be claimed after waiting [production_time] * [awaiting_units] seconds.
     pub claimed_at: i64,
 }

@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use crate::instructions::location;
 use crate::state::Location;
+use crate::state::OwnershipRef;
 use crate::state::producer::*;
 use crate::state::resource::*;
 use crate::state::storage::*;
@@ -20,7 +21,7 @@ pub fn init(ctx: Context<InitProducer>, resource_id: Pubkey, production_rate: i6
     producer.awaiting_units = 0;
     producer.claimed_at = clock.unix_timestamp;
 
-    location.add(producer.size())
+    location.add(owner, OwnershipRef { item: producer.key(), player: owner.key() })
 }
 
 // claim any units "done" waiting

@@ -2,6 +2,12 @@ use anchor_lang::prelude::*;
 
 use crate::errors::ValidationError;
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct OwnershipRef {
+    pub item: Pubkey,
+    pub player: Pubkey
+}
+
 #[account]
 pub struct Location {
     pub owner: Pubkey,
@@ -9,6 +15,7 @@ pub struct Location {
     pub capacity: i64,
     pub name: String,
     pub position: i64,
+    pub occupied_by: Vec<OwnershipRef>,
 }
 
 impl Location {
@@ -18,18 +25,39 @@ impl Location {
         + CAPACITY_LENGTH
         + NAME_LENGTH
         + POSITION_LENGTH
+        + OCCUPIED_BY_LENGTH
     ;
 
-    pub fn add(&mut self, size: i64) -> Result<()> {
-        self.occupied_space += size;
-        require!(self.occupied_space <= self.capacity, ValidationError::LocationFull);
+    pub fn add(&mut self, owner: &Signer, ownership_ref: OwnershipRef) -> Result<()> {
+        require!(ownership_ref.player == owner.key(), ValidationError::OwnerRequired);
+
+        self.occupied_space += 1;
+        self.occupied_by.push(ownership_ref);
+        // verify that it only exists once in the list
+        require!(self.occupied_space() <= self.capacity, ValidationError::LocationFull);
+        Ok(())
+    }
+
+    pub fn remove(&mut self, owner: &Signer, ownership_ref: &OwnershipRef) -> Result<()> {
+        require!(ownership_ref.player == owner.key(), ValidationError::OwnerRequired);
+
+        self.occupied_space -= 1;
+        match self.occupied_by.iter().position(|i| i.item == ownership_ref.item) {
+            Some(index) => {
+                self.occupied_by.remove(index);
+                require!(self.occupied_space() >= 0, ValidationError::ExperimentalError);        
+            },
+            None => require!(false, ValidationError::ExperimentalError), // Custom error for not finding item
+        }
+
         Ok(())    
     }
 
-    pub fn remove(&mut self, size: i64) -> Result<()> {
-        self.occupied_space -= size;
-        require!(self.occupied_space >= 0, ValidationError::ExperimentalError);
-        Ok(())    
+    pub fn occupied_space(&self) -> i64 {
+        match i64::try_from(self.occupied_by.len()) {
+            Ok(value) => value,
+            Err(_) => MAX_CAPACITY_I64,
+        }
     }
 }
 
@@ -39,9 +67,13 @@ pub trait InLocation {
     }
 }
 
+const MAX_CAPACITY: usize = 10;
+const MAX_CAPACITY_I64: i64 = 10;
+
 const CAPACITY_LENGTH: usize = 8;
 const DISCRIMINATOR_LENGTH: usize = 8;
 pub const NAME_LENGTH: usize = 64 * 4;
+const OCCUPIED_BY_LENGTH: usize = MAX_CAPACITY * (PUBLIC_KEY_LENGTH * 2);
 const OCCUPIED_SPACE_LENGTH: usize = 8;
 const POSITION_LENGTH: usize = 8;
 const PUBLIC_KEY_LENGTH: usize = 32;

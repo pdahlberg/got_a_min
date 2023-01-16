@@ -11,15 +11,16 @@ pub fn init(ctx: Context<InitLocation>, name: String, position: i64, capacity: i
     location.position = position;
     location.occupied_space = 0;
     location.capacity = capacity;
+    location.occupied_by = vec!();
 
     require!(location.name.len() <= NAME_LENGTH, ValidationError::NameTooLong);
 
     Ok(())
 }
 
-pub fn register_move(from_location: &mut Account<Location>, to_location: &mut Account<Location>, size: i64) -> Result<()> {
-    from_location.remove(size)?;
-    to_location.add(size)
+pub fn register_move(owner: &Signer, from_location: &mut Account<Location>, to_location: &mut Account<Location>, ownership_ref: OwnershipRef) -> Result<()> {
+    from_location.remove(owner, &ownership_ref)?;
+    to_location.add(owner, ownership_ref)
 }
 
 pub fn same_location_id(location_id_1: Option<Pubkey>, location_id_2: Option<Pubkey>) -> bool {
