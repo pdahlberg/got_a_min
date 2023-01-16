@@ -55,13 +55,25 @@ fn move_awaiting(producer: &mut Account<Producer>, storage: &mut Account<Storage
     Ok(())
 }
 
-pub fn produce_without_input(ctx: Context<ProduceResource>) -> Result<()> {
+pub fn claim_production(ctx: Context<ProduceResource>) -> Result<()> {
     let producer = &mut ctx.accounts.producer;
     let resource = &ctx.accounts.resource;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
+
+    // Verify owner gets the resources, currently fun for anyone reading the source code
+    // let owner: &Signer = &ctx.accounts.owner;
+
     let current_timestamp = Clock::get()?.unix_timestamp;
 
-    producer.awaiting_units += producer.production_rate;
+    // Second 1: Producer created, timestamp = 1
+    // Second 2: Claim production, waiting moved to amount => 1, total 1, timestamp = 2
+    // Second 3: No action, waiting = 1
+    // Second 4: Claim production, waiting moved to amount => 2, total 3, timestamp = 4
+
+    let diff_time = current_timestamp - producer.claimed_at;
+    let prod_slots_during_diff_time = diff_time; // / producer.production_time;
+    let prod_during_diff_time = prod_slots_during_diff_time * producer.production_rate;
+    producer.awaiting_units = prod_during_diff_time;
 
     if producer.awaiting_units > 0 {
         move_awaiting(producer, storage, current_timestamp)?;
@@ -79,7 +91,7 @@ pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result
     let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let storage_input: &mut Account<Storage> = &mut ctx.accounts.storage_input;
-    let current_timestamp = Clock::get()?.unix_timestamp;       // 15
+    let current_timestamp = Clock::get()?.unix_timestamp;
  
     require!(resource_to_produce.key().eq(&storage.resource_id), ValidationError::InputStorageNotSupplied);
     require!(location::same_location_id(storage.location_id(current_timestamp), storage_input.location_id(current_timestamp)), ValidationError::DifferentLocations);
