@@ -7,7 +7,7 @@ use crate::state::resource::*;
 use crate::state::storage::*;
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitProducer>, resource_id: Pubkey, output_rate: i64, output_time: i64) -> Result<()> {
+pub fn init(ctx: Context<InitProducer>, resource_id: Pubkey, output_rate: i64, processing_duration: i64) -> Result<()> {
     let producer: &mut Account<Producer> = &mut ctx.accounts.producer;
     let location: &mut Account<Location> = &mut ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
@@ -17,12 +17,12 @@ pub fn init(ctx: Context<InitProducer>, resource_id: Pubkey, output_rate: i64, o
     producer.resource_id = resource_id;
     producer.location_id = location.key();
     producer.output_rate = output_rate;
-    producer.output_time = output_time;
+    producer.processing_duration = processing_duration;
     producer.awaiting_units = 0;
     producer.claimed_at = clock.unix_timestamp;
 
     require!(producer.output_rate > 0, ValidationError::InvalidInput);
-    require!(producer.output_time > 0, ValidationError::InvalidInput);
+    require!(producer.processing_duration > 0, ValidationError::InvalidInput);
 
     location.add(owner, OwnershipRef { item: producer.key(), player: owner.key() })
 }
@@ -31,12 +31,12 @@ pub fn init(ctx: Context<InitProducer>, resource_id: Pubkey, output_rate: i64, o
 fn move_awaiting(producer: &mut Account<Producer>, storage: &mut Account<Storage>, current_timestamp: i64) -> Result<()> {
     require!(producer.location_id == storage.location_id, ValidationError::DifferentLocations);
 
-    let withdraw_awaiting = match producer.output_time == 0 {
+    let withdraw_awaiting = match producer.processing_duration == 0 {
         true => producer.awaiting_units,
         false => {
             let previous_claim_at = producer.claimed_at;
             let diff_time = current_timestamp - previous_claim_at;
-            let prod_slots_during_diff_time = diff_time / producer.output_time;
+            let prod_slots_during_diff_time = diff_time / producer.processing_duration;
             let prod_during_diff_time = prod_slots_during_diff_time * producer.output_rate;
             let withdraw_awaiting = match producer.awaiting_units >= prod_during_diff_time {
                 true => prod_during_diff_time,
@@ -68,7 +68,7 @@ pub fn claim_production(ctx: Context<ProduceResource>) -> Result<()> {
 
     let current_timestamp = Clock::get()?.unix_timestamp;
     let diff_time = current_timestamp - producer.claimed_at;
-    let prod_slots_during_diff_time = diff_time / producer.output_time;
+    let prod_slots_during_diff_time = diff_time / producer.processing_duration;
     let prod_during_diff_time = prod_slots_during_diff_time * producer.output_rate;
     producer.awaiting_units = prod_during_diff_time;
 

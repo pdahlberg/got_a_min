@@ -26,8 +26,8 @@ pub mod got_a_min {
         stuff::update(ctx, number)
     }
 
-    pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, output_rate: i64, output_time: i64) -> Result<()> {
-        producer::init(ctx, resource_id, output_rate, output_time)
+    pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, output_rate: i64, processing_duration: i64) -> Result<()> {
+        producer::init(ctx, resource_id, output_rate, processing_duration)
     }
 
     pub fn init_resource(ctx: Context<InitResource>, name: String, inputs: Vec<Pubkey>, input_amounts: Vec<i64>) -> Result<()> {
