@@ -5,9 +5,9 @@ pub struct Producer {
     pub owner: Pubkey,
     pub resource_id: Pubkey,
     pub location_id: Pubkey,
-    pub production_rate: i64,   // Produce this many units per [production_time]. 
-    pub production_time: i64,   // Seconds
-    pub awaiting_units: i64,    // This amount can be claimed after waiting [production_time] * [awaiting_units] seconds.
+    pub output_rate: i64,   // Produce this many units per [output_time]. 
+    pub output_time: i64,   // Seconds
+    pub awaiting_units: i64,    // This amount can be claimed after waiting [output_time] * [awaiting_units] seconds.
     pub claimed_at: i64,
 }
 
@@ -16,8 +16,8 @@ impl Producer {
         + PUBLIC_KEY_LENGTH  // owner
         + PUBLIC_KEY_LENGTH  // resource_id
         + PUBLIC_KEY_LENGTH  // location_id
-        + PRODUCTION_RATE_LENGTH
-        + PRODUCTION_TIME_LENGTH
+        + OUTPUT_RATE_LENGTH
+        + OUTPUT_TIME_LENGTH
         + AWAITING_UNITS_LENGTH
         + CLAIMED_AT_LENGTH;
         
@@ -29,6 +29,6 @@ impl Producer {
 const AWAITING_UNITS_LENGTH: usize = 8;
 const CLAIMED_AT_LENGTH: usize = 8;
 const DISCRIMINATOR_LENGTH: usize = 8;
-const PRODUCTION_RATE_LENGTH: usize = 8;
-const PRODUCTION_TIME_LENGTH: usize = 8;
+const OUTPUT_RATE_LENGTH: usize = 8;
+const OUTPUT_TIME_LENGTH: usize = 8;
 const PUBLIC_KEY_LENGTH: usize = 32;
