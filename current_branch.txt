@@ -1,0 +1,4 @@
+#### Goal
+Producer should produce continuesly according to production rate and time.
+
+

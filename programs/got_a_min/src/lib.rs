@@ -57,7 +57,7 @@ pub mod got_a_min {
     }
 
     pub fn produce_without_input(ctx: Context<ProduceResource>) -> Result<()> {
-        producer::produce_without_input(ctx)
+        producer::claim_production(ctx)
     }
 
     pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result<()> {
