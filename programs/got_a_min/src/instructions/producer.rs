@@ -58,7 +58,7 @@ fn move_awaiting(producer: &mut Account<Producer>, storage: &mut Account<Storage
     Ok(())
 }
 
-pub fn claim_production(ctx: Context<ProduceResource>) -> Result<()> {
+pub fn claim_production(ctx: Context<ProcessesResource>) -> Result<()> {
     let producer = &mut ctx.accounts.producer;
     let resource = &ctx.accounts.resource;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
@@ -83,7 +83,7 @@ pub fn claim_production(ctx: Context<ProduceResource>) -> Result<()> {
     Ok(())
 }
 
-pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result<()> {
+pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>) -> Result<()> {
     let producer = &mut ctx.accounts.producer;
     let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
@@ -113,7 +113,7 @@ pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result
     Ok(())
 }
 
-pub fn produce_with_two_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Result<()> {
+pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>) -> Result<()> {
     let producer = &mut ctx.accounts.producer;
     let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
@@ -162,7 +162,7 @@ pub struct InitProducer<'info> {
 }
 
 #[derive(Accounts)]
-pub struct ProduceResource<'info> {
+pub struct ProcessesResource<'info> {
     #[account(mut)]
     pub producer: Account<'info, Producer>,
     #[account(mut)]
@@ -172,7 +172,7 @@ pub struct ProduceResource<'info> {
 }
 
 #[derive(Accounts)]
-pub struct ProduceResourceWith1Input<'info> {
+pub struct ProcessesResourceWith1Input<'info> {
     #[account(mut)]
     pub producer: Account<'info, Producer>,
     #[account(mut)]
@@ -184,7 +184,7 @@ pub struct ProduceResourceWith1Input<'info> {
 }
 
 #[derive(Accounts)]
-pub struct ProduceResourceWith2Inputs<'info> {
+pub struct ProcessesResourceWith2Inputs<'info> {
     #[account(mut)]
     pub producer: Account<'info, Producer>,
     #[account(mut)]

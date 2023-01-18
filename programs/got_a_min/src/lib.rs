@@ -56,16 +56,16 @@ pub mod got_a_min {
         storage::move_to_location(ctx)
     }
 
-    pub fn produce_without_input(ctx: Context<ProduceResource>) -> Result<()> {
+    pub fn produce_without_input(ctx: Context<ProcessesResource>) -> Result<()> {
         producer::claim_production(ctx)
     }
 
-    pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result<()> {
+    pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>) -> Result<()> {
         producer::produce_with_one_input(ctx)
         //Ok(())
     }
 
-    pub fn produce_with_two_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Result<()> {
+    pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>) -> Result<()> {
         producer::produce_with_two_inputs(ctx)
     }
 }
