@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 //import { PublicKey, Keypair } from "@solana/web3.js";
 import { assert, expect } from 'chai';
 import { assertion, promise } from 'chai-as-promised';
-import { AnchorError, Program } from "@coral-xyz/anchor";
+import { AccountClient, AnchorError, Program } from "@coral-xyz/anchor";
 import { GotAMin } from "../target/types/got_a_min";
 import { publicKey } from "@coral-xyz/anchor/dist/cjs/utils";
 import { SystemAccountsCoder } from "@coral-xyz/anchor/dist/cjs/coder/system/accounts";
@@ -304,30 +304,17 @@ describe("/Sending", () => {
   });
 
   it("Send 1 resource A", async () => {
-    failNotImplemented();
-
-
+    let location1 = await createLocation(program, 'loc1', 1, 10);
+    let location2 = await createLocation(program, 'loc1', 2, 10);
     let producerProdRate = 1;
     let [resource, _1] = await createResource(program, 'A', []);
-    let [producer, _2] = await createProcessor(program, resource, producerProdRate, 1);
-    let [storage, _3] = await createStorage(program, resource, 1);
+    let producer = await createProcessor2(program, resource, producerProdRate, 1);
+    let sender = await createProcessor2(program, resource, producerProdRate, 1);
+    let storage1Id = await createStorage2(program, resource, 10, location1);
+    let storage2Id = await createStorage2(program, resource, 10, location2);
 
-    // Production in progress
-    let storageResult = await produce_without_input(program, producer, storage, resource);
-    let producerResult = await program.account.processor.fetch(producer.publicKey);
-
-    expect(producerResult.awaitingUnits.toNumber(), "1) producer awaitingUnits").to.equal(producerProdRate);
-    expect(storageResult.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
-    expect(storageResult.amount.toNumber(), "storage amount").to.equal(0);
-
-    // Production is done after delay
-    await new Promise(f => setTimeout(f, 5001)); // todo: delay 5+ seconds... 
-    let storageResult2 = await produce_without_input(program, producer, storage, resource);
-    let producerResult2 = await program.account.processor.fetch(producer.publicKey);
-
-    expect(producerResult2.awaitingUnits.toNumber(), "2) producer awaitingUnits").to.equal(producerProdRate);
-    expect(storageResult2.amount.toNumber(), "storage amount").to.equal(producerProdRate);
-
+    let storage2 = await getStorageState(storage2Id);
+    expect(storage2.amount.toNumber(), "storage amount").to.equal(producerProdRate);
   });
 });
 
@@ -639,6 +626,12 @@ async function createProcessor(program: Program<GotAMin>, resource, outputRate, 
   return [processor, await initProcessor(program, processor, resource, outputRate, processingDuration, location, type)];
 }
 
+async function createProcessor2(program: Program<GotAMin>, resource, outputRate, processingDuration = 5, location = DEFAULT_LOCATION, type: ProcessorType = {producer:{}}): Promise<KP> {
+  const processor = anchor.web3.Keypair.generate();
+  await initProcessor(program, processor, resource, outputRate, processingDuration, location, type);
+  return processor;
+}
+
 async function initProcessor(program: Program<GotAMin>, processor, resource, outputRate, processingDuration = 5, location = DEFAULT_LOCATION, type: ProcessorType = {producer:{}}) {
   assert(outputRate > 0, 'initProcessor requirement: outputRate > 0');
   assert(processingDuration > 0, 'initProcessor requirement: processingDuration > 0');
@@ -708,6 +701,19 @@ async function createStorage(
 ): Promise<[KP, any]> {
   const storage: KP = anchor.web3.Keypair.generate();
   return [storage, await initStorage(program, storage, resource, capacity, location, mobilityType, speed)];
+}
+
+async function createStorage2(
+  program: Program<GotAMin>,
+  resource: KP, 
+  capacity: number, 
+  location: KP = DEFAULT_LOCATION, 
+  mobilityType: MobilityType = {fixed:{}}, 
+  speed: number = 1,
+): Promise<[Program<GotAMin>, KP]> {
+  const storage: KP = anchor.web3.Keypair.generate();
+  await initStorage(program, storage, resource, capacity, location, mobilityType, speed);
+  return [program, storage];
 }
 
 async function initStorage(
@@ -842,6 +848,11 @@ async function updateStorageMoveStatus(program: Program<GotAMin>, storage) {
       storage: storage.publicKey,
     })
     .rpc();
+}
+
+async function getStorageState(id: [Program<GotAMin>, KP]): Promise<any> {
+  let [program, storageId] = id;
+  return await program.account.storage.fetch(storageId.publicKey);
 }
 
 function failNotImplemented() {
