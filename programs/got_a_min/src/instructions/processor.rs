@@ -2,13 +2,13 @@ use anchor_lang::prelude::*;
 use crate::instructions::location;
 use crate::state::Location;
 use crate::state::OwnershipRef;
-use crate::state::producer::*;
+use crate::state::processor::*;
 use crate::state::resource::*;
 use crate::state::storage::*;
 use crate::errors::ValidationError;
 
 pub fn init(ctx: Context<InitProducer>, resource_id: Pubkey, output_rate: i64, processing_duration: i64) -> Result<()> {
-    let producer: &mut Account<Producer> = &mut ctx.accounts.producer;
+    let producer: &mut Account<Processor> = &mut ctx.accounts.producer;
     let location: &mut Account<Location> = &mut ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
     let clock = Clock::get()?;
@@ -28,7 +28,7 @@ pub fn init(ctx: Context<InitProducer>, resource_id: Pubkey, output_rate: i64, p
 }
 
 // claim any units "done" waiting
-fn move_awaiting(producer: &mut Account<Producer>, storage: &mut Account<Storage>, current_timestamp: i64) -> Result<()> {
+fn move_awaiting(producer: &mut Account<Processor>, storage: &mut Account<Storage>, current_timestamp: i64) -> Result<()> {
     require!(producer.location_id == storage.location_id, ValidationError::DifferentLocations);
 
     let withdraw_awaiting = match producer.processing_duration == 0 {
@@ -152,8 +152,8 @@ pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>) -> Re
 
 #[derive(Accounts)]
 pub struct InitProducer<'info> {
-    #[account(init, payer = owner, space = Producer::LEN)]
-    pub producer: Account<'info, Producer>,
+    #[account(init, payer = owner, space = Processor::LEN)]
+    pub producer: Account<'info, Processor>,
     #[account(mut)]
     pub location: Account<'info, Location>,
     #[account(mut)]
@@ -164,7 +164,7 @@ pub struct InitProducer<'info> {
 #[derive(Accounts)]
 pub struct ProcessesResource<'info> {
     #[account(mut)]
-    pub producer: Account<'info, Producer>,
+    pub producer: Account<'info, Processor>,
     #[account(mut)]
     pub resource: Account<'info, Resource>,
     #[account(mut)]
@@ -174,7 +174,7 @@ pub struct ProcessesResource<'info> {
 #[derive(Accounts)]
 pub struct ProcessesResourceWith1Input<'info> {
     #[account(mut)]
-    pub producer: Account<'info, Producer>,
+    pub producer: Account<'info, Processor>,
     #[account(mut)]
     pub resource_to_produce: Account<'info, Resource>,
     #[account(mut)]
@@ -186,7 +186,7 @@ pub struct ProcessesResourceWith1Input<'info> {
 #[derive(Accounts)]
 pub struct ProcessesResourceWith2Inputs<'info> {
     #[account(mut)]
-    pub producer: Account<'info, Producer>,
+    pub producer: Account<'info, Processor>,
     #[account(mut)]
     pub resource_to_produce: Account<'info, Resource>,
     #[account(mut)]

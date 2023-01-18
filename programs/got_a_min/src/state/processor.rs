@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 #[account]
-pub struct Producer {
+pub struct Processor {
     pub owner: Pubkey,
     pub resource_id: Pubkey,
     pub location_id: Pubkey,
@@ -10,10 +10,10 @@ pub struct Producer {
     pub processing_duration: i64,   // Solana time unit (usually 400-415ms)
     pub awaiting_units: i64,    // This amount can be claimed after waiting [processing_duration] * [awaiting_units] seconds.
     pub claimed_at: i64,
-    pub producer_type: ProducerType,
+    pub processor_type: ProcessorType,
 }
 
-impl Producer {
+impl Processor {
     pub const LEN: usize = DISCRIMINATOR_LENGTH
         + PUBLIC_KEY_LENGTH  // owner
         + PUBLIC_KEY_LENGTH  // resource_id
@@ -30,7 +30,7 @@ impl Producer {
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
-pub enum ProducerType {
+pub enum ProcessorType {
     Producer,
     Sender,
 }

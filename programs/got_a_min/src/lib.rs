@@ -27,7 +27,7 @@ pub mod got_a_min {
     }
 
     pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, output_rate: i64, processing_duration: i64) -> Result<()> {
-        producer::init(ctx, resource_id, output_rate, processing_duration)
+        processor::init(ctx, resource_id, output_rate, processing_duration)
     }
 
     pub fn init_resource(ctx: Context<InitResource>, name: String, inputs: Vec<Pubkey>, input_amounts: Vec<i64>) -> Result<()> {
@@ -57,16 +57,16 @@ pub mod got_a_min {
     }
 
     pub fn produce_without_input(ctx: Context<ProcessesResource>) -> Result<()> {
-        producer::claim_production(ctx)
+        processor::claim_production(ctx)
     }
 
     pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>) -> Result<()> {
-        producer::produce_with_one_input(ctx)
+        processor::produce_with_one_input(ctx)
         //Ok(())
     }
 
     pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>) -> Result<()> {
-        producer::produce_with_two_inputs(ctx)
+        processor::produce_with_two_inputs(ctx)
     }
 }
 
