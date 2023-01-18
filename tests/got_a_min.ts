@@ -137,10 +137,10 @@ describe("/Production", () => {
     expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
   });
 
-  /*it("Produce 1 of resource A with delay", async () => {
+  it("Produce 1 of resource A with minimal delay", async () => {
     let producerProdRate = 1;
     let [resource, _1] = await createResource(program, 'A', []);
-    let [producer, _2] = await createProcessor(program, resource, producerProdRate);
+    let [producer, _2] = await createProcessor(program, resource, producerProdRate, 1);
     let [storage, _3] = await createStorage(program, resource, 1);
 
     // Production in progress
@@ -160,24 +160,10 @@ describe("/Production", () => {
     expect(storageResult2.amount.toNumber(), "storage amount").to.equal(producerProdRate);
   });
 
-  it("Produce 1 of resource A without delay", async () => {
-    let producerProdRate = 1;
-    let [resource, _1] = await createResource(program, 'A', []);
-    let [producer, _2] = await createProcessor(program, resource, producerProdRate, 0);
-    let [storage, _3] = await createStorage(program, resource, 1);
-
-    // Production in progress
-    let storageResult = await produce_without_input(program, producer, storage, resource);
-    let producerResult = await program.account.processor.fetch(producer.publicKey);
-
-    expect(producerResult.awaitingUnits.toNumber(), "producerResult.awaitingUnits").to.equal(0);
-    expect(storageResult.amount.toNumber(), "storage amount").to.equal(1);
-  });
-
-  it("Produce 2 of resource A without delay and Storage below full capacity", async () => {
+  it("Produce 2 of resource A and Storage below full capacity", async () => {
     let producerProdRate = 5;
     let [resource, _1] = await createResource(program, 'A', []);
-    let [producer, _2] = await createProcessor(program, resource, producerProdRate, 0);
+    let [producer, _2] = await createProcessor(program, resource, producerProdRate, 1);
     let [storage, _3] = await createStorage(program, resource, 3);
 
     // Production in progress
@@ -211,7 +197,7 @@ describe("/Production", () => {
   it("Produce 1 resource B from 2 A", async () => {
     let producerBProdRate = 1;
     let [resourceA, _1] = await createResource(program, 'A', []);
-    let [producerA, _2] = await createProcessor(program, resourceA, 5, 0);
+    let [producerA, _2] = await createProcessor(program, resourceA, 5, 1);
     let [storageA, _3] = await createStorage(program, resourceA, 5);
     let [resourceB, _4] = await createResource(program, 'B', [[resourceA, 2]]);
     let [producerB, _5] = await createProcessor(program, resourceB, producerBProdRate, 5);
@@ -242,7 +228,7 @@ describe("/Production", () => {
     let producerBProdRate = 1;
     let locationA = await createLocation(program, 'locA', 0, 10);
     let [resourceA, _1] = await createResource(program, 'A', []);
-    let [producerA, _2] = await createProcessor(program, resourceA, 5, 0);
+    let [producerA, _2] = await createProcessor(program, resourceA, 5, 1);
     let [storageA, _3] = await createStorage(program, resourceA, 5, locationA);
     let locationB = await createLocation(program, 'locB', 50, 10);
     let [resourceB, _4] = await createResource(program, 'B', [[resourceA, 2]]);
@@ -298,7 +284,7 @@ describe("/Production", () => {
     expect(storageCResult.amount.toNumber(), "storageCResult.amount").to.equal(2);
     expect(inputAResult.amount.toNumber(), "inputAResult.amount").to.equal(0);    
     expect(inputBResult.amount.toNumber(), "inputBResult.amount").to.equal(0);    
-  });*/
+  });
 
 });
 
@@ -333,7 +319,7 @@ describe("/Transportation", () => {
   it("Add to Storage while moving should fail", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
     let location1 = await createLocation(program, 'loc1', 0, 10);
-    let [producer, _2] = await createProcessor(program, resource, 10, 0, location1);
+    let [producer, _2] = await createProcessor(program, resource, 10, 1, location1);
     let [storage, _3] = await createStorage(program, resource, 10, location1, {movable:{}});
     let location2 = await createLocation(program, 'loc2', 10, 10);
     await move_storage(program, storage, location1, location2);
@@ -605,15 +591,17 @@ async function initResource(program: Program<GotAMin>, resource, name: string, i
   return await program.account.resource.fetch(resource.publicKey);
 }
 
-async function createProcessor(program: Program<GotAMin>, resource, outputRate, productionTime = 5, location = DEFAULT_LOCATION): Promise<[KP, any]> {
+async function createProcessor(program: Program<GotAMin>, resource, outputRate, processingDuration = 5, location = DEFAULT_LOCATION): Promise<[KP, any]> {
   const processor = anchor.web3.Keypair.generate();
-  return [processor, await initProcessor(program, processor, resource, outputRate, productionTime, location)];
+  return [processor, await initProcessor(program, processor, resource, outputRate, processingDuration, location)];
 }
 
-async function initProcessor(program: Program<GotAMin>, processor, resource, outputRate, productionTime = 5, location = DEFAULT_LOCATION) {
+async function initProcessor(program: Program<GotAMin>, processor, resource, outputRate, processingDuration = 5, location = DEFAULT_LOCATION) {
+  assert(outputRate > 0, 'initProcessor requirement: outputRate > 0');
+  assert(processingDuration > 0, 'initProcessor requirement: processingDuration > 0');
   const programProvider = program.provider as anchor.AnchorProvider;
   const outputRateBN = new anchor.BN(outputRate);
-  const processingDurationBN = new anchor.BN(productionTime);
+  const processingDurationBN = new anchor.BN(processingDuration);
 
   await program.methods
     .initProcessor(resource.publicKey, outputRateBN, processingDurationBN)
