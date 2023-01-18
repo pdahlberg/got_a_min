@@ -7,7 +7,7 @@ use crate::state::resource::*;
 use crate::state::storage::*;
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitProcessor>, resource_id: Pubkey, output_rate: i64, processing_duration: i64) -> Result<()> {
+pub fn init(ctx: Context<InitProcessor>, processor_type: ProcessorType, resource_id: Pubkey, output_rate: i64, processing_duration: i64) -> Result<()> {
     let processor: &mut Account<Processor> = &mut ctx.accounts.processor;
     let location: &mut Account<Location> = &mut ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
@@ -20,7 +20,7 @@ pub fn init(ctx: Context<InitProcessor>, resource_id: Pubkey, output_rate: i64, 
     processor.processing_duration = processing_duration;
     processor.awaiting_units = 0;
     processor.claimed_at = clock.unix_timestamp;
-    processor.processor_type = ProcessorType::Producer;
+    processor.processor_type = processor_type;
 
     require!(processor.output_rate > 0, ValidationError::InvalidInput);
     require!(processor.processing_duration > 0, ValidationError::InvalidInput);

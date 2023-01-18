@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use instructions::*;
 use crate::state::MobilityType;
+use crate::state::ProcessorType;
 
 pub mod errors;
 pub mod state;
@@ -26,8 +27,8 @@ pub mod got_a_min {
         stuff::update(ctx, number)
     }
 
-    pub fn init_processor(ctx: Context<InitProcessor>, resource_id: Pubkey, output_rate: i64, processing_duration: i64) -> Result<()> {
-        processor::init(ctx, resource_id, output_rate, processing_duration)
+    pub fn init_processor(ctx: Context<InitProcessor>, processor_type: ProcessorType, resource_id: Pubkey, output_rate: i64, processing_duration: i64) -> Result<()> {
+        processor::init(ctx, processor_type, resource_id, output_rate, processing_duration)
     }
 
     pub fn init_resource(ctx: Context<InitResource>, name: String, inputs: Vec<Pubkey>, input_amounts: Vec<i64>) -> Result<()> {

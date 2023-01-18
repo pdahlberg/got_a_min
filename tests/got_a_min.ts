@@ -10,6 +10,8 @@ import { SystemAccountsCoder } from "@coral-xyz/anchor/dist/cjs/coder/system/acc
 type KP = anchor.web3.Keypair;
 
 const DEFAULT_LOCATION: KP = anchor.web3.Keypair.generate();
+type MobilityType = {fixed:{}} | {movable:{}};
+type ProcessorType = {producer:{}} | {sender:{}};
 
 before("Init", async () => {
   anchor.setProvider(anchor.AnchorProvider.env());
@@ -282,6 +284,48 @@ describe("/Production", () => {
     expect(inputBResult.amount.toNumber(), "inputBResult.amount").to.equal(0);    
   });
 
+});
+
+describe("/Sending", () => {
+  // Configure the client to use the local cluster.
+  anchor.setProvider(anchor.AnchorProvider.env());
+  const program = anchor.workspace.GotAMin as Program<GotAMin>;
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  it("Init sender", async () => {
+    const sender = anchor.web3.Keypair.generate();
+    const resource = anchor.web3.Keypair.generate();
+    await initResource(program, resource, "A", []);
+
+    let result = await initProcessor(program, sender, resource, 1);
+    
+    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(result.outputRate.toNumber()).to.equal(1);
+    expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
+  });
+
+  it("Produce 1 of resource A", async () => {
+    let producerProdRate = 1;
+    let [resource, _1] = await createResource(program, 'A', []);
+    let [producer, _2] = await createProcessor(program, resource, producerProdRate, 1);
+    let [storage, _3] = await createStorage(program, resource, 1);
+
+    // Production in progress
+    let storageResult = await produce_without_input(program, producer, storage, resource);
+    let producerResult = await program.account.processor.fetch(producer.publicKey);
+
+    expect(producerResult.awaitingUnits.toNumber(), "1) producer awaitingUnits").to.equal(producerProdRate);
+    expect(storageResult.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
+    expect(storageResult.amount.toNumber(), "storage amount").to.equal(0);
+
+    // Production is done after delay
+    await new Promise(f => setTimeout(f, 5001)); // todo: delay 5+ seconds... 
+    let storageResult2 = await produce_without_input(program, producer, storage, resource);
+    let producerResult2 = await program.account.processor.fetch(producer.publicKey);
+
+    expect(producerResult2.awaitingUnits.toNumber(), "2) producer awaitingUnits").to.equal(producerProdRate);
+    expect(storageResult2.amount.toNumber(), "storage amount").to.equal(producerProdRate);
+  });
 });
 
 describe("/Transportation", () => {
@@ -587,12 +631,12 @@ async function initResource(program: Program<GotAMin>, resource, name: string, i
   return await program.account.resource.fetch(resource.publicKey);
 }
 
-async function createProcessor(program: Program<GotAMin>, resource, outputRate, processingDuration = 5, location = DEFAULT_LOCATION): Promise<[KP, any]> {
+async function createProcessor(program: Program<GotAMin>, resource, outputRate, processingDuration = 5, location = DEFAULT_LOCATION, type: ProcessorType = {producer:{}}): Promise<[KP, any]> {
   const processor = anchor.web3.Keypair.generate();
-  return [processor, await initProcessor(program, processor, resource, outputRate, processingDuration, location)];
+  return [processor, await initProcessor(program, processor, resource, outputRate, processingDuration, location, type)];
 }
 
-async function initProcessor(program: Program<GotAMin>, processor, resource, outputRate, processingDuration = 5, location = DEFAULT_LOCATION) {
+async function initProcessor(program: Program<GotAMin>, processor, resource, outputRate, processingDuration = 5, location = DEFAULT_LOCATION, type: ProcessorType = {producer:{}}) {
   assert(outputRate > 0, 'initProcessor requirement: outputRate > 0');
   assert(processingDuration > 0, 'initProcessor requirement: processingDuration > 0');
   const programProvider = program.provider as anchor.AnchorProvider;
@@ -600,7 +644,7 @@ async function initProcessor(program: Program<GotAMin>, processor, resource, out
   const processingDurationBN = new anchor.BN(processingDuration);
 
   await program.methods
-    .initProcessor(resource.publicKey, outputRateBN, processingDurationBN)
+    .initProcessor(type, resource.publicKey, outputRateBN, processingDurationBN)
     .accounts({
       processor: processor.publicKey,
       location: location.publicKey,
@@ -662,8 +706,6 @@ async function createStorage(
   const storage: KP = anchor.web3.Keypair.generate();
   return [storage, await initStorage(program, storage, resource, capacity, location, mobilityType, speed)];
 }
-
-type MobilityType = {fixed:{}} | {movable:{}};
 
 async function initStorage(
   program: Program<GotAMin>, 
