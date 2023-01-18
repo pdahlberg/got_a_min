@@ -31,6 +31,7 @@ pub fn init(ctx: Context<InitProcessor>, processor_type: ProcessorType, resource
 // claim any units "done" waiting
 fn move_awaiting(producer: &mut Account<Processor>, storage: &mut Account<Storage>, current_timestamp: i64) -> Result<()> {
     require!(producer.location_id == storage.location_id, ValidationError::DifferentLocations);
+    require!(producer.processor_type == ProcessorType::Producer, ValidationError::InvalidProcessorType);
 
     let withdraw_awaiting = match producer.processing_duration == 0 {
         true => producer.awaiting_units,

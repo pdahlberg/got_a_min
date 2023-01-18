@@ -18,6 +18,7 @@ pub enum ValidationError {
     #[msg("Location is full.")]                                                 LocationFull,
     #[msg("Storage type static cannot be moved.")]                              StorageTypeNotMovable,
     #[msg("This is not allowed while moving.")]                                 NotAllowedWhileMoving,
+    #[msg("Processor type 'producer' required.")]                               InvalidProcessorType,
     #[msg("Invalid input parameter.")]                                          InvalidInput,
     #[msg("Trying stuff out and failing quite deliberately.")]                  ExperimentalError,
 }
