@@ -26,7 +26,7 @@ pub mod got_a_min {
         stuff::update(ctx, number)
     }
 
-    pub fn init_producer(ctx: Context<InitProducer>, resource_id: Pubkey, output_rate: i64, processing_duration: i64) -> Result<()> {
+    pub fn init_processor(ctx: Context<InitProcessor>, resource_id: Pubkey, output_rate: i64, processing_duration: i64) -> Result<()> {
         processor::init(ctx, resource_id, output_rate, processing_duration)
     }
 

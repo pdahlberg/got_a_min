@@ -7,24 +7,25 @@ use crate::state::resource::*;
 use crate::state::storage::*;
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitProducer>, resource_id: Pubkey, output_rate: i64, processing_duration: i64) -> Result<()> {
-    let producer: &mut Account<Processor> = &mut ctx.accounts.producer;
+pub fn init(ctx: Context<InitProcessor>, resource_id: Pubkey, output_rate: i64, processing_duration: i64) -> Result<()> {
+    let processor: &mut Account<Processor> = &mut ctx.accounts.processor;
     let location: &mut Account<Location> = &mut ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
     let clock = Clock::get()?;
 
-    producer.owner = *owner.key;
-    producer.resource_id = resource_id;
-    producer.location_id = location.key();
-    producer.output_rate = output_rate;
-    producer.processing_duration = processing_duration;
-    producer.awaiting_units = 0;
-    producer.claimed_at = clock.unix_timestamp;
+    processor.owner = *owner.key;
+    processor.resource_id = resource_id;
+    processor.location_id = location.key();
+    processor.output_rate = output_rate;
+    processor.processing_duration = processing_duration;
+    processor.awaiting_units = 0;
+    processor.claimed_at = clock.unix_timestamp;
+    processor.processor_type = ProcessorType::Producer;
 
-    require!(producer.output_rate > 0, ValidationError::InvalidInput);
-    require!(producer.processing_duration > 0, ValidationError::InvalidInput);
+    require!(processor.output_rate > 0, ValidationError::InvalidInput);
+    require!(processor.processing_duration > 0, ValidationError::InvalidInput);
 
-    location.add(owner, OwnershipRef { item: producer.key(), player: owner.key() })
+    location.add(owner, OwnershipRef { item: processor.key(), player: owner.key() })
 }
 
 // claim any units "done" waiting
@@ -59,7 +60,7 @@ fn move_awaiting(producer: &mut Account<Processor>, storage: &mut Account<Storag
 }
 
 pub fn claim_production(ctx: Context<ProcessesResource>) -> Result<()> {
-    let producer = &mut ctx.accounts.producer;
+    let producer = &mut ctx.accounts.processor;
     let resource = &ctx.accounts.resource;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
 
@@ -84,7 +85,7 @@ pub fn claim_production(ctx: Context<ProcessesResource>) -> Result<()> {
 }
 
 pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>) -> Result<()> {
-    let producer = &mut ctx.accounts.producer;
+    let producer = &mut ctx.accounts.processor;
     let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let storage_input: &mut Account<Storage> = &mut ctx.accounts.storage_input;
@@ -114,7 +115,7 @@ pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>) -> Resu
 }
 
 pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>) -> Result<()> {
-    let producer = &mut ctx.accounts.producer;
+    let producer = &mut ctx.accounts.processor;
     let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let storage_input_1: &mut Account<Storage> = &mut ctx.accounts.storage_input_1;
@@ -151,9 +152,9 @@ pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>) -> Re
 }
 
 #[derive(Accounts)]
-pub struct InitProducer<'info> {
+pub struct InitProcessor<'info> {
     #[account(init, payer = owner, space = Processor::LEN)]
-    pub producer: Account<'info, Processor>,
+    pub processor: Account<'info, Processor>,
     #[account(mut)]
     pub location: Account<'info, Location>,
     #[account(mut)]
@@ -164,7 +165,7 @@ pub struct InitProducer<'info> {
 #[derive(Accounts)]
 pub struct ProcessesResource<'info> {
     #[account(mut)]
-    pub producer: Account<'info, Processor>,
+    pub processor: Account<'info, Processor>,
     #[account(mut)]
     pub resource: Account<'info, Resource>,
     #[account(mut)]
@@ -174,7 +175,7 @@ pub struct ProcessesResource<'info> {
 #[derive(Accounts)]
 pub struct ProcessesResourceWith1Input<'info> {
     #[account(mut)]
-    pub producer: Account<'info, Processor>,
+    pub processor: Account<'info, Processor>,
     #[account(mut)]
     pub resource_to_produce: Account<'info, Resource>,
     #[account(mut)]
@@ -186,7 +187,7 @@ pub struct ProcessesResourceWith1Input<'info> {
 #[derive(Accounts)]
 pub struct ProcessesResourceWith2Inputs<'info> {
     #[account(mut)]
-    pub producer: Account<'info, Processor>,
+    pub processor: Account<'info, Processor>,
     #[account(mut)]
     pub resource_to_produce: Account<'info, Resource>,
     #[account(mut)]

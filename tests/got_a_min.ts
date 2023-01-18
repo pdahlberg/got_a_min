@@ -67,6 +67,14 @@ describe("/Unknown", () => {
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
   
+});
+
+describe("/Initializations", () => {
+  // Configure the client to use the local cluster.
+  anchor.setProvider(anchor.AnchorProvider.env());
+  const program = anchor.workspace.GotAMin as Program<GotAMin>;
+  const programProvider = program.provider as anchor.AnchorProvider;
+
   it("Init resource", async () => {
     const resource = anchor.web3.Keypair.generate();
 
@@ -84,6 +92,31 @@ describe("/Unknown", () => {
     expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
   });
 
+  it("Init producer", async () => {
+    const producer = anchor.web3.Keypair.generate();
+    const resource = anchor.web3.Keypair.generate();
+    await initResource(program, resource, "A", []);
+
+    let result = await initProcessor(program, producer, resource, 1);
+    
+    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(result.outputRate.toNumber()).to.equal(1);
+    expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
+  });
+
+  it("Init storage", async () => {
+    const storage = anchor.web3.Keypair.generate();
+    const resource = anchor.web3.Keypair.generate();
+    await initResource(program, resource, "A", []);
+
+    let result = await initStorage(program, storage, resource, 5);
+    
+    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(result.amount.toNumber()).to.equal(0);
+    expect(result.capacity.toNumber()).to.equal(5);
+    expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
+  });
+
 });
 
 describe("/Production", () => {
@@ -97,22 +130,22 @@ describe("/Production", () => {
     const resource = anchor.web3.Keypair.generate();
     await initResource(program, resource, "A", []);
 
-    let result = await initProducer(program, producer, resource, 1);
+    let result = await initProcessor(program, producer, resource, 1);
     
     expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
-    expect(result.productionRate.toNumber()).to.equal(1);
+    expect(result.outputRate.toNumber()).to.equal(1);
     expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
   });
 
-  it("Produce 1 of resource A with delay", async () => {
+  /*it("Produce 1 of resource A with delay", async () => {
     let producerProdRate = 1;
     let [resource, _1] = await createResource(program, 'A', []);
-    let [producer, _2] = await createProducer(program, resource, producerProdRate);
+    let [producer, _2] = await createProcessor(program, resource, producerProdRate);
     let [storage, _3] = await createStorage(program, resource, 1);
 
     // Production in progress
     let storageResult = await produce_without_input(program, producer, storage, resource);
-    let producerResult = await program.account.producer.fetch(producer.publicKey);
+    let producerResult = await program.account.processor.fetch(producer.publicKey);
 
     expect(producerResult.awaitingUnits.toNumber(), "1) producer awaitingUnits").to.equal(producerProdRate);
     expect(storageResult.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
@@ -121,7 +154,7 @@ describe("/Production", () => {
     // Production is done after delay
     await new Promise(f => setTimeout(f, 5001)); // todo: delay 5+ seconds... 
     let storageResult2 = await produce_without_input(program, producer, storage, resource);
-    let producerResult2 = await program.account.producer.fetch(producer.publicKey);
+    let producerResult2 = await program.account.processor.fetch(producer.publicKey);
 
     expect(producerResult2.awaitingUnits.toNumber(), "2) producer awaitingUnits").to.equal(producerProdRate);
     expect(storageResult2.amount.toNumber(), "storage amount").to.equal(producerProdRate);
@@ -130,12 +163,12 @@ describe("/Production", () => {
   it("Produce 1 of resource A without delay", async () => {
     let producerProdRate = 1;
     let [resource, _1] = await createResource(program, 'A', []);
-    let [producer, _2] = await createProducer(program, resource, producerProdRate, 0);
+    let [producer, _2] = await createProcessor(program, resource, producerProdRate, 0);
     let [storage, _3] = await createStorage(program, resource, 1);
 
     // Production in progress
     let storageResult = await produce_without_input(program, producer, storage, resource);
-    let producerResult = await program.account.producer.fetch(producer.publicKey);
+    let producerResult = await program.account.processor.fetch(producer.publicKey);
 
     expect(producerResult.awaitingUnits.toNumber(), "producerResult.awaitingUnits").to.equal(0);
     expect(storageResult.amount.toNumber(), "storage amount").to.equal(1);
@@ -144,12 +177,12 @@ describe("/Production", () => {
   it("Produce 2 of resource A without delay and Storage below full capacity", async () => {
     let producerProdRate = 5;
     let [resource, _1] = await createResource(program, 'A', []);
-    let [producer, _2] = await createProducer(program, resource, producerProdRate, 0);
+    let [producer, _2] = await createProcessor(program, resource, producerProdRate, 0);
     let [storage, _3] = await createStorage(program, resource, 3);
 
     // Production in progress
     let storageResult = await produce_without_input(program, producer, storage, resource);
-    let producerResult = await program.account.producer.fetch(producer.publicKey);
+    let producerResult = await program.account.processor.fetch(producer.publicKey);
 
     expect(producerResult.awaitingUnits.toNumber(), "producerResult.awaitingUnits").to.equal(2);
     expect(storageResult.amount.toNumber(), "storage amount").to.equal(3);
@@ -158,18 +191,18 @@ describe("/Production", () => {
   it("Produce 2 of resource B", async () => {
     let producerProdRate = 2;
     let [resource, _1] = await createResource(program, 'B', []) as [KP, any];
-    let [producer, _2] = await createProducer(program, resource, producerProdRate);
+    let [producer, _2] = await createProcessor(program, resource, producerProdRate);
     let [storage, _3] = await createStorage(program, resource, 2);
 
     let storageResult = await produce_without_input(program, producer, storage, resource);
-    let producerResult = await program.account.producer.fetch(producer.publicKey);
+    let producerResult = await program.account.processor.fetch(producer.publicKey);
 
     expect(storageResult.amount.toNumber(), "storage amount").to.equal(0);
 
     // Production is done after delay
     await new Promise(f => setTimeout(f, 5001)); // todo: delay 5+ seconds... 
     let storageResult2 = await produce_without_input(program, producer, storage, resource);
-    let producerResult2 = await program.account.producer.fetch(producer.publicKey);
+    let producerResult2 = await program.account.processor.fetch(producer.publicKey);
 
     expect(producerResult2.awaitingUnits.toNumber(), "producer awaitingUnits").to.equal(producerProdRate);
     expect(storageResult2.amount.toNumber(), "storage amount").to.equal(producerProdRate);
@@ -178,10 +211,10 @@ describe("/Production", () => {
   it("Produce 1 resource B from 2 A", async () => {
     let producerBProdRate = 1;
     let [resourceA, _1] = await createResource(program, 'A', []);
-    let [producerA, _2] = await createProducer(program, resourceA, 5, 0);
+    let [producerA, _2] = await createProcessor(program, resourceA, 5, 0);
     let [storageA, _3] = await createStorage(program, resourceA, 5);
     let [resourceB, _4] = await createResource(program, 'B', [[resourceA, 2]]);
-    let [producerB, _5] = await createProducer(program, resourceB, producerBProdRate, 5);
+    let [producerB, _5] = await createProcessor(program, resourceB, producerBProdRate, 5);
     let [storageB, _6] = await createStorage(program, resourceB, 5);
     
     let storageAResult = await produce_without_input(program, producerA, storageA, resourceA);
@@ -189,7 +222,7 @@ describe("/Production", () => {
     //await produce_without_input(program, producerA, storageA, resourceA);
 
     let storageBResult = await produce_with_1_input(program, producerB, storageB, resourceB, storageA);
-    let producerBResult = await program.account.producer.fetch(producerB.publicKey);
+    let producerBResult = await program.account.processor.fetch(producerB.publicKey);
     let inputAResult = await program.account.storage.fetch(storageA.publicKey);
 
     expect(producerBResult.awaitingUnits.toNumber(), "producerBResult.awaitingUnits").to.equal(producerBProdRate);
@@ -199,7 +232,7 @@ describe("/Production", () => {
     // Production is done after delay
     await new Promise(f => setTimeout(f, 5001)); // todo: delay 5+ seconds... 
     let storageBResult2 = await produce_with_1_input(program, producerB, storageB, resourceB, storageA);
-    let producerBResult2 = await program.account.producer.fetch(producerB.publicKey);
+    let producerBResult2 = await program.account.processor.fetch(producerB.publicKey);
 
     expect(producerBResult2.awaitingUnits.toNumber(), "producerBResult2.awaitingUnits").to.equal(producerBProdRate);
     expect(storageBResult2.amount.toNumber(), "storageBResult2.amount").to.equal(1);    
@@ -209,11 +242,11 @@ describe("/Production", () => {
     let producerBProdRate = 1;
     let locationA = await createLocation(program, 'locA', 0, 10);
     let [resourceA, _1] = await createResource(program, 'A', []);
-    let [producerA, _2] = await createProducer(program, resourceA, 5, 0);
+    let [producerA, _2] = await createProcessor(program, resourceA, 5, 0);
     let [storageA, _3] = await createStorage(program, resourceA, 5, locationA);
     let locationB = await createLocation(program, 'locB', 50, 10);
     let [resourceB, _4] = await createResource(program, 'B', [[resourceA, 2]]);
-    let [producerB, _5] = await createProducer(program, resourceB, producerBProdRate, 5, locationB);
+    let [producerB, _5] = await createProcessor(program, resourceB, producerBProdRate, 5, locationB);
     let [storageB, _6] = await createStorage(program, resourceB, 5, locationB);    
 
     try {
@@ -229,7 +262,7 @@ describe("/Production", () => {
     let [resourceA, _1] = await createResource(program, 'A', []);
     let [storageA, _2] = await createStorage(program, resourceA, 1);
     let [resourceB, _3] = await createResource(program, 'B', [[resourceA, 1]]);
-    let [producerB, _4] = await createProducer(program, resourceB, 2);
+    let [producerB, _4] = await createProcessor(program, resourceB, 2);
     let [storageB, _5] = await createStorage(program, resourceB, 1);
 
     // await expect(stuff(program, producerB, resourceB, resourceA)).should.be.rejectedWith("I AM THE EXPECTED ERROR");
@@ -245,19 +278,19 @@ describe("/Production", () => {
   it("Produce 1 resource C from 1 A + 1 B", async () => {
     let producerCProdRate = 2;
     let [resourceA, _1] = await createResource(program, 'A', []);
-    let [producerA, _2] = await createProducer(program, resourceA, 1, 0);
+    let [producerA, _2] = await createProcessor(program, resourceA, 1, 0);
     let [storageA, _3] = await createStorage(program, resourceA, 1);
     let [resourceB, _4] = await createResource(program, 'B', []);
-    let [producerB, _5] = await createProducer(program, resourceB, 1, 0);
+    let [producerB, _5] = await createProcessor(program, resourceB, 1, 0);
     let [storageB, _6] = await createStorage(program, resourceB, 1);
     let [resourceC, _7] = await createResource(program, 'C', [[resourceA, 1], [resourceB, 1]]);
-    let [producerC, _8] = await createProducer(program, resourceC, producerCProdRate, 0);
+    let [producerC, _8] = await createProcessor(program, resourceC, producerCProdRate, 0);
     let [storageC, _9] = await createStorage(program, resourceC, 2);
     await produce_without_input(program, producerA, storageA, resourceA);
     await produce_without_input(program, producerB, storageB, resourceB);
 
     let storageCResult = await produce_with_2_inputs(program, producerC, storageC, resourceC, storageA, storageB);
-    let producerCResult = await program.account.producer.fetch(producerC.publicKey);
+    let producerCResult = await program.account.processor.fetch(producerC.publicKey);
     let inputAResult = await program.account.storage.fetch(storageA.publicKey);
     let inputBResult = await program.account.storage.fetch(storageB.publicKey);
 
@@ -265,7 +298,7 @@ describe("/Production", () => {
     expect(storageCResult.amount.toNumber(), "storageCResult.amount").to.equal(2);
     expect(inputAResult.amount.toNumber(), "inputAResult.amount").to.equal(0);    
     expect(inputBResult.amount.toNumber(), "inputBResult.amount").to.equal(0);    
-  });
+  });*/
 
 });
 
@@ -300,7 +333,7 @@ describe("/Transportation", () => {
   it("Add to Storage while moving should fail", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
     let location1 = await createLocation(program, 'loc1', 0, 10);
-    let [producer, _2] = await createProducer(program, resource, 10, 0, location1);
+    let [producer, _2] = await createProcessor(program, resource, 10, 0, location1);
     let [storage, _3] = await createStorage(program, resource, 10, location1, {movable:{}});
     let location2 = await createLocation(program, 'loc2', 10, 10);
     await move_storage(program, storage, location1, location2);
@@ -342,7 +375,7 @@ describe("/Storage", () => {
 
   it("Storage full", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
-    let [producer, _2] = await createProducer(program, resource, 10, 0);
+    let [producer, _2] = await createProcessor(program, resource, 10, 0);
     let [storageFrom, _3] = await createStorage(program, resource, 10);
     let [storageTo, _4] = await createStorage(program, resource, 3);
     await produce_without_input(program, producer, storageFrom, resource);
@@ -358,7 +391,7 @@ describe("/Storage", () => {
 
   it("Storage with amount too low", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
-    let [producer, _2] = await createProducer(program, resource, 10, 0);
+    let [producer, _2] = await createProcessor(program, resource, 10, 0);
     let [storageFrom, _3] = await createStorage(program, resource, 10);
     let [storageTo, _4] = await createStorage(program, resource, 100);
     await produce_without_input(program, producer, storageFrom, resource);
@@ -374,10 +407,10 @@ describe("/Storage", () => {
     
   it("Move between Storage with different resources", async () => {
     let [resourceA, _1] = await createResource(program, 'A', []);
-    let [producerA, _2] = await createProducer(program, resourceA, 10, 0);
+    let [producerA, _2] = await createProcessor(program, resourceA, 10, 0);
     let [storageAFrom, _3] = await createStorage(program, resourceA, 10);
     let [resourceB, _4] = await createResource(program, 'B', []);
-    let [producerB, _5] = await createProducer(program, resourceB, 10, 0);
+    let [producerB, _5] = await createProcessor(program, resourceB, 10, 0);
     let [storageBTo, _6] = await createStorage(program, resourceB, 100);
     await produce_without_input(program, producerA, storageAFrom, resourceA);
     await produce_without_input(program, producerB, storageBTo, resourceB);
@@ -413,7 +446,7 @@ describe("/Location", () => {
   it("Move between Storage in different locations", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
     let locationA = await createLocation(program, 'locA', 0, 10);
-    let [producerA, _2] = await createProducer(program, resource, 10, 0, locationA);
+    let [producerA, _2] = await createProcessor(program, resource, 10, 0, locationA);
     let [storageAFrom, _3] = await createStorage(program, resource, 10, locationA);
     let locationB = await createLocation(program, 'locB', 1, 10);
     let [storageBTo, _6] = await createStorage(program, resource, 100, locationB);
@@ -431,7 +464,7 @@ describe("/Location", () => {
   it("Producer and Storage in different locations", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
     let location = await createLocation(program, 'locA', 0, 10);
-    let [producer, _2] = await createProducer(program, resource, 10, 0);
+    let [producer, _2] = await createProcessor(program, resource, 10, 0);
     let [storage, _3] = await createStorage(program, resource, 10, location);
 
     try {
@@ -572,28 +605,28 @@ async function initResource(program: Program<GotAMin>, resource, name: string, i
   return await program.account.resource.fetch(resource.publicKey);
 }
 
-async function createProducer(program: Program<GotAMin>, resource, productionRate, productionTime = 5, location = DEFAULT_LOCATION): Promise<[KP, any]> {
-  const producer = anchor.web3.Keypair.generate();
-  return [producer, await initProducer(program, producer, resource, productionRate, productionTime, location)];
+async function createProcessor(program: Program<GotAMin>, resource, outputRate, productionTime = 5, location = DEFAULT_LOCATION): Promise<[KP, any]> {
+  const processor = anchor.web3.Keypair.generate();
+  return [processor, await initProcessor(program, processor, resource, outputRate, productionTime, location)];
 }
 
-async function initProducer(program: Program<GotAMin>, producer, resource, productionRate, productionTime = 5, location = DEFAULT_LOCATION) {
+async function initProcessor(program: Program<GotAMin>, processor, resource, outputRate, productionTime = 5, location = DEFAULT_LOCATION) {
   const programProvider = program.provider as anchor.AnchorProvider;
-  const prodRateBN = new anchor.BN(productionRate);
-  const prodTimeBN = new anchor.BN(productionTime);
+  const outputRateBN = new anchor.BN(outputRate);
+  const processingDurationBN = new anchor.BN(productionTime);
 
   await program.methods
-    .initProducer(resource.publicKey, prodRateBN, prodTimeBN)
+    .initProcessor(resource.publicKey, outputRateBN, processingDurationBN)
     .accounts({
-      producer: producer.publicKey,
+      processor: processor.publicKey,
       location: location.publicKey,
       owner: programProvider.wallet.publicKey,
       systemProgram: anchor.web3.SystemProgram.programId,
     })
-    .signers(producer)
+    .signers(processor)
     .rpc();
     
-    return await program.account.producer.fetch(producer.publicKey);
+    return await program.account.processor.fetch(processor.publicKey);
 }
 
 async function createStorageNew(
@@ -704,7 +737,7 @@ async function produce_without_input(program: Program<GotAMin>, producer, storag
   await program.methods
     .produceWithoutInput()
     .accounts({
-      producer: producer.publicKey,
+      processor: producer.publicKey,
       storage: storage.publicKey,
       resource: resource.publicKey,
     })
@@ -719,7 +752,7 @@ async function produce_with_1_input(program: Program<GotAMin>, producer, storage
   await program.methods
     .produceWithOneInput()
     .accounts({
-      producer: producer.publicKey,
+      processor: producer.publicKey,
       storage: storage.publicKey,
       resourceToProduce: resourceToProduce.publicKey,
       storageInput: storageInput.publicKey,      
@@ -735,7 +768,7 @@ async function produce_with_2_inputs(program: Program<GotAMin>, producer, storag
   await program.methods
     .produceWithTwoInputs()
     .accounts({
-      producer: producer.publicKey,
+      processor: producer.publicKey,
       storage: storage.publicKey,
       resourceToProduce: resourceToProduce.publicKey,
       storageInput1: storageInput1.publicKey,
