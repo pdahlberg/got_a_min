@@ -59,7 +59,7 @@ describe("/Sandbox", () => {
     //let location = await program.account.location.fetch(DEFAULT_LOCATION.publicKey);
 
     //expect(location.occupiedSpace.toNumber()).equal(2)
-    expect(false, "Not implemented").to.equal(true);
+    failNotImplemented();
   });
 });
 
@@ -297,14 +297,16 @@ describe("/Sending", () => {
     const resource = anchor.web3.Keypair.generate();
     await initResource(program, resource, "A", []);
 
-    let result = await initProcessor(program, sender, resource, 1);
+    let result = await initProcessor(program, sender, resource, 1, 1, DEFAULT_LOCATION, {sender:{}});
     
     expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
-    expect(result.outputRate.toNumber()).to.equal(1);
-    expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
+    expect(JSON.stringify(result.processorType)).to.equal(JSON.stringify({sender:{}}));
   });
 
-  it("Produce 1 of resource A", async () => {
+  it("Send 1 resource A", async () => {
+    failNotImplemented();
+
+
     let producerProdRate = 1;
     let [resource, _1] = await createResource(program, 'A', []);
     let [producer, _2] = await createProcessor(program, resource, producerProdRate, 1);
@@ -325,6 +327,7 @@ describe("/Sending", () => {
 
     expect(producerResult2.awaitingUnits.toNumber(), "2) producer awaitingUnits").to.equal(producerProdRate);
     expect(storageResult2.amount.toNumber(), "storage amount").to.equal(producerProdRate);
+
   });
 });
 
@@ -841,3 +844,6 @@ async function updateStorageMoveStatus(program: Program<GotAMin>, storage) {
     .rpc();
 }
 
+function failNotImplemented() {
+  expect(false, "Not implemented").to.equal(true);
+}
