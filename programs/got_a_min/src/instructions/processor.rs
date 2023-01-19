@@ -2,42 +2,44 @@ use anchor_lang::prelude::*;
 use crate::instructions::location;
 use crate::state::Location;
 use crate::state::OwnershipRef;
-use crate::state::producer::*;
+use crate::state::processor::*;
 use crate::state::resource::*;
 use crate::state::storage::*;
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitProducer>, resource_id: Pubkey, production_rate: i64, production_time: i64) -> Result<()> {
-    let producer: &mut Account<Producer> = &mut ctx.accounts.producer;
+pub fn init(ctx: Context<InitProcessor>, processor_type: ProcessorType, resource_id: Pubkey, output_rate: i64, processing_duration: i64) -> Result<()> {
+    let processor: &mut Account<Processor> = &mut ctx.accounts.processor;
     let location: &mut Account<Location> = &mut ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
     let clock = Clock::get()?;
 
-    producer.owner = *owner.key;
-    producer.resource_id = resource_id;
-    producer.location_id = location.key();
-    producer.production_rate = production_rate;
-    producer.production_time = production_time;
-    producer.awaiting_units = 0;
-    producer.claimed_at = clock.unix_timestamp;
+    processor.owner = *owner.key;
+    processor.resource_id = resource_id;
+    processor.location_id = location.key();
+    processor.output_rate = output_rate;
+    processor.processing_duration = processing_duration;
+    processor.awaiting_units = 0;
+    processor.claimed_at = clock.unix_timestamp;
+    processor.processor_type = processor_type;
 
-    require!(producer.production_rate > 0, ValidationError::InvalidInput);
-    require!(producer.production_time > 0, ValidationError::InvalidInput);
+    require!(processor.output_rate > 0, ValidationError::InvalidInput);
+    require!(processor.processing_duration > 0, ValidationError::InvalidInput);
 
-    location.add(owner, OwnershipRef { item: producer.key(), player: owner.key() })
+    location.add(owner, OwnershipRef { item: processor.key(), player: owner.key() })
 }
 
 // claim any units "done" waiting
-fn move_awaiting(producer: &mut Account<Producer>, storage: &mut Account<Storage>, current_timestamp: i64) -> Result<()> {
+fn move_awaiting(producer: &mut Account<Processor>, storage: &mut Account<Storage>, current_timestamp: i64) -> Result<()> {
     require!(producer.location_id == storage.location_id, ValidationError::DifferentLocations);
+    require!(producer.processor_type == ProcessorType::Producer, ValidationError::InvalidProcessorType);
 
-    let withdraw_awaiting = match producer.production_time == 0 {
+    let withdraw_awaiting = match producer.processing_duration == 0 {
         true => producer.awaiting_units,
         false => {
             let previous_claim_at = producer.claimed_at;
             let diff_time = current_timestamp - previous_claim_at;
-            let prod_slots_during_diff_time = diff_time / producer.production_time;
-            let prod_during_diff_time = prod_slots_during_diff_time * producer.production_rate;
+            let prod_slots_during_diff_time = diff_time / producer.processing_duration;
+            let prod_during_diff_time = prod_slots_during_diff_time * producer.output_rate;
             let withdraw_awaiting = match producer.awaiting_units >= prod_during_diff_time {
                 true => prod_during_diff_time,
                 false => producer.awaiting_units,
@@ -58,8 +60,8 @@ fn move_awaiting(producer: &mut Account<Producer>, storage: &mut Account<Storage
     Ok(())
 }
 
-pub fn claim_production(ctx: Context<ProduceResource>) -> Result<()> {
-    let producer = &mut ctx.accounts.producer;
+pub fn claim_production(ctx: Context<ProcessesResource>) -> Result<()> {
+    let producer = &mut ctx.accounts.processor;
     let resource = &ctx.accounts.resource;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
 
@@ -68,8 +70,8 @@ pub fn claim_production(ctx: Context<ProduceResource>) -> Result<()> {
 
     let current_timestamp = Clock::get()?.unix_timestamp;
     let diff_time = current_timestamp - producer.claimed_at;
-    let prod_slots_during_diff_time = diff_time / producer.production_time;
-    let prod_during_diff_time = prod_slots_during_diff_time * producer.production_rate;
+    let prod_slots_during_diff_time = diff_time / producer.processing_duration;
+    let prod_during_diff_time = prod_slots_during_diff_time * producer.output_rate;
     producer.awaiting_units = prod_during_diff_time;
 
     if producer.awaiting_units > 0 {
@@ -83,8 +85,8 @@ pub fn claim_production(ctx: Context<ProduceResource>) -> Result<()> {
     Ok(())
 }
 
-pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result<()> {
-    let producer = &mut ctx.accounts.producer;
+pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>) -> Result<()> {
+    let producer = &mut ctx.accounts.processor;
     let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let storage_input: &mut Account<Storage> = &mut ctx.accounts.storage_input;
@@ -102,7 +104,7 @@ pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result
 
 
     storage_input.amount -= required_input_amount;
-    producer.awaiting_units += producer.production_rate;
+    producer.awaiting_units += producer.output_rate;
 
     if producer.awaiting_units > 0 {
         move_awaiting(producer, storage, current_timestamp)?;
@@ -113,8 +115,8 @@ pub fn produce_with_one_input(ctx: Context<ProduceResourceWith1Input>) -> Result
     Ok(())
 }
 
-pub fn produce_with_two_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Result<()> {
-    let producer = &mut ctx.accounts.producer;
+pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>) -> Result<()> {
+    let producer = &mut ctx.accounts.processor;
     let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let storage_input_1: &mut Account<Storage> = &mut ctx.accounts.storage_input_1;
@@ -139,7 +141,7 @@ pub fn produce_with_two_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Resu
 
     storage_input_1.amount -= input_1_amount;
     storage_input_2.amount -= input_2_amount;
-    producer.awaiting_units += producer.production_rate;
+    producer.awaiting_units += producer.output_rate;
 
     if producer.awaiting_units > 0 {
         move_awaiting(producer, storage, current_timestamp)?;
@@ -151,9 +153,9 @@ pub fn produce_with_two_inputs(ctx: Context<ProduceResourceWith2Inputs>) -> Resu
 }
 
 #[derive(Accounts)]
-pub struct InitProducer<'info> {
-    #[account(init, payer = owner, space = Producer::LEN)]
-    pub producer: Account<'info, Producer>,
+pub struct InitProcessor<'info> {
+    #[account(init, payer = owner, space = Processor::LEN)]
+    pub processor: Account<'info, Processor>,
     #[account(mut)]
     pub location: Account<'info, Location>,
     #[account(mut)]
@@ -162,9 +164,9 @@ pub struct InitProducer<'info> {
 }
 
 #[derive(Accounts)]
-pub struct ProduceResource<'info> {
+pub struct ProcessesResource<'info> {
     #[account(mut)]
-    pub producer: Account<'info, Producer>,
+    pub processor: Account<'info, Processor>,
     #[account(mut)]
     pub resource: Account<'info, Resource>,
     #[account(mut)]
@@ -172,9 +174,9 @@ pub struct ProduceResource<'info> {
 }
 
 #[derive(Accounts)]
-pub struct ProduceResourceWith1Input<'info> {
+pub struct ProcessesResourceWith1Input<'info> {
     #[account(mut)]
-    pub producer: Account<'info, Producer>,
+    pub processor: Account<'info, Processor>,
     #[account(mut)]
     pub resource_to_produce: Account<'info, Resource>,
     #[account(mut)]
@@ -184,9 +186,9 @@ pub struct ProduceResourceWith1Input<'info> {
 }
 
 #[derive(Accounts)]
-pub struct ProduceResourceWith2Inputs<'info> {
+pub struct ProcessesResourceWith2Inputs<'info> {
     #[account(mut)]
-    pub producer: Account<'info, Producer>,
+    pub processor: Account<'info, Processor>,
     #[account(mut)]
     pub resource_to_produce: Account<'info, Resource>,
     #[account(mut)]
