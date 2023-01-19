@@ -1,21 +1,36 @@
+use std::hash::Hash;
+
 use anchor_lang::prelude::*;
 
 pub fn create_game_tile(ctx: Context<CreateGameTile>, xy: [u8; 2]) -> Result<()> {
     let game_tile = &mut ctx.accounts.game_tile;
+
+    let tile_type = fake_rng(game_tile.key());
+
     game_tile.x = xy[0];
     game_tile.y = xy[1];
-    if game_tile.x == 3 && game_tile.y == 0 {
+    if tile_type % 28 == 0 {
         game_tile.name = "planet".to_string();
-    //} else if game_tile.x % 2 == 0 {
-    //    game_tile.name = "asteroid".to_string();
+    } else if tile_type % 5 == 0 {
+        game_tile.name = "asteroid".to_string();
     } else {
         game_tile.name = "space".to_string();
     }
-    //game_tile.thing = "stone".to_string();
-    // let key = format!("{x}:{y}");
+
     game_tile.bump = *ctx.bumps.get("game_tile").unwrap();
     Ok(())
 }
+
+fn fake_rng(key: Pubkey) -> u8 {
+    let bytes = &key.to_bytes();
+    let mut hasher = DefaultHasher::new();
+    bytes.hash(&mut hasher);
+    (hasher.finish() % 256) as u8
+}
+
+use std::hash::{Hasher};
+use std::collections::hash_map::DefaultHasher;
+
 
 #[account]
 pub struct GameTile {

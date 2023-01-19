@@ -67,8 +67,8 @@ describe("/Sandbox", () => {
     let pk = provider.wallet.publicKey;
 
     let map = [];
-    let maxColumns = 5;
-    let maxRows = 5;
+    let maxColumns = 10;
+    let maxRows = 10;
 
     var planetCount = 0;
     for(let y = 0; y < maxRows; y++) {
