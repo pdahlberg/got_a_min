@@ -572,7 +572,7 @@ describe("/Location", () => {
     let result = await initLocation(program, location, 'name', [0, 0], 5);
     
     expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
-    expect(result.position).to.equal(0);
+    expect(result.posX).to.equal(0);
     expect(result.capacity.toNumber()).to.equal(5);
     expect(result.name).to.equal('name');
   });

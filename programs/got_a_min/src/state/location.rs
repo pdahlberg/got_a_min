@@ -14,7 +14,8 @@ pub struct Location {
     pub occupied_space: i64,
     pub capacity: i64,
     pub name: String,
-    pub position: u8,
+    pub pos_x: u8,
+    pub pos_y: u8,
     pub occupied_by: Vec<OwnershipRef>,
 }
 
@@ -24,7 +25,8 @@ impl Location {
         + OCCUPIED_SPACE_LENGTH
         + CAPACITY_LENGTH
         + NAME_LENGTH
-        + POSITION_LENGTH
+        + POS_X_LENGTH
+        + POS_Y_LENGTH
         + OCCUPIED_BY_LENGTH
     ;
 
@@ -79,5 +81,6 @@ const DISCRIMINATOR_LENGTH: usize = 8;
 pub const NAME_LENGTH: usize = 64 * 4;
 const OCCUPIED_BY_LENGTH: usize = MAX_CAPACITY * (PUBLIC_KEY_LENGTH * 2);
 const OCCUPIED_SPACE_LENGTH: usize = 8;
-const POSITION_LENGTH: usize = 1;
+const POS_X_LENGTH: usize = 1;
+const POS_Y_LENGTH: usize = 1;
 const PUBLIC_KEY_LENGTH: usize = 32;

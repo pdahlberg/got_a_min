@@ -8,7 +8,8 @@ pub fn init(ctx: Context<InitLocation>, name: String, position: [u8; 2], capacit
 
     location.owner = *owner.key;
     location.name = name;
-    location.position = position[0];
+    location.pos_x = position[0];
+    location.pos_y = position[1];
     location.occupied_space = 0;
     location.capacity = capacity;
     location.occupied_by = vec!();
