@@ -17,6 +17,7 @@ pub struct Location {
     pub pos_x: u8,
     pub pos_y: u8,
     pub occupied_by: Vec<OwnershipRef>,
+    pub bump: u8,
 }
 
 impl Location {
@@ -28,6 +29,7 @@ impl Location {
         + POS_X_LENGTH
         + POS_Y_LENGTH
         + OCCUPIED_BY_LENGTH
+        + BUMP_LENGTH
     ;
 
     pub fn add(&mut self, owner: &Signer, ownership_ref: OwnershipRef) -> Result<()> {
@@ -84,3 +86,4 @@ const OCCUPIED_SPACE_LENGTH: usize = 8;
 const POS_X_LENGTH: usize = 1;
 const POS_Y_LENGTH: usize = 1;
 const PUBLIC_KEY_LENGTH: usize = 32;
+const BUMP_LENGTH: usize = 1;

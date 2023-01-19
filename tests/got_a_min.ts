@@ -69,9 +69,26 @@ function getMapTilePda(program, pk, x, y) {
   return pda;
 }
 
+function getLocationPda(program, pk, pos: [number, number]) {
+  const [pda, _] = PublicKey.findProgramAddressSync(
+    [
+      anchor.utils.bytes.utf8.encode("map-location"),
+      pk.toBuffer(),
+      new Uint8Array(pos),
+    ],
+    program.programId,
+  );
+  return pda;
+}
+
 async function fetchMapTileState(program, pk, x, y) {
   let pda = getMapTilePda(program, pk, x, y);
   return await program.account.gameTile.fetch(pda);
+}
+
+async function fetchLocationState(program, pk, pos: [number, number]) {
+  let pda = getLocationPda(program, pk, pos);
+  return await program.account.location.fetch(pda);
 }
 
 function printMap(map, debug = false) {
@@ -110,6 +127,8 @@ describe("/Sandbox", () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
 
+    //await initDefaultLocation(program);
+    
     let map = [];
     let maxColumns = 5;
     let maxRows = 5;
@@ -565,16 +584,18 @@ describe("/Location", () => {
   anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
+  const pk = programProvider.wallet.publicKey;
 
   it("Init location", async () => {
-    const location = anchor.web3.Keypair.generate();
+    let pos: [number, number] = [0, 0];
 
-    let result = await initLocation(program, location, 'name', [0, 0], 5);
+    let location = await initLocation2(program, 'name', pos, 5);
+    let state = await fetchLocationState(program, pk, pos);
     
-    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
-    expect(result.posX).to.equal(0);
-    expect(result.capacity.toNumber()).to.equal(5);
-    expect(result.name).to.equal('name');
+    expect(state.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(state.posX).to.equal(0);
+    expect(state.capacity.toNumber()).to.equal(5);
+    expect(state.name).to.equal('name');
   });
 
   it("Move between Storage in different locations", async () => {
@@ -869,19 +890,23 @@ async function initDefaultLocation(program: Program<GotAMin>) {
 }
 
 async function initLocation(program: Program<GotAMin>, location, name: string, position: [number, number], capacity: number) {
+  return initLocation2(program, name, position, capacity);
+}
+async function initLocation2(program: Program<GotAMin>, name: string, position: [number, number], capacity: number) {
   const programProvider = program.provider as anchor.AnchorProvider;
+  let pk = programProvider.wallet.publicKey;
 
+  let locationPda = getLocationPda(program, pk, position);
+  
   await program.methods
     .initLocation(name, position, new anchor.BN(capacity))
     .accounts({
-      location: location.publicKey,
-      owner: programProvider.wallet.publicKey,
-      systemProgram: anchor.web3.SystemProgram.programId,
+      location: locationPda,
+      owner: pk,
     })
-    .signers(location)
     .rpc();
     
-  return await program.account.location.fetch(location.publicKey);
+  return locationPda;
 }
 
 async function produce_without_input(program: Program<GotAMin>, producer, storage, resource) {

@@ -13,6 +13,7 @@ pub fn init(ctx: Context<InitLocation>, name: String, position: [u8; 2], capacit
     location.occupied_space = 0;
     location.capacity = capacity;
     location.occupied_by = vec!();
+    location.bump = *ctx.bumps.get("location").unwrap();
 
     require!(location.name.len() <= NAME_LENGTH, ValidationError::NameTooLong);
 
@@ -32,8 +33,19 @@ pub fn same_location_id(location_id_1: Option<Pubkey>, location_id_2: Option<Pub
 }
 
 #[derive(Accounts)]
+#[instruction(name: String, xy: [u8; 2], capacity: i64)]
 pub struct InitLocation<'info> {
-    #[account(init, payer = owner, space = Location::LEN)]
+    #[account(
+        init, 
+        payer = owner, 
+        space = Location::LEN,
+        seeds = [
+            b"map-location", 
+            owner.key().as_ref(),
+            &xy,
+        ],
+        bump,
+    )]
     pub location: Account<'info, Location>,
     #[account(mut)]
     pub owner: Signer<'info>,
