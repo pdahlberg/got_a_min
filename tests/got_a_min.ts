@@ -65,30 +65,47 @@ describe("/Sandbox", () => {
   it("pda-1", async () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
-    let y = 2;
-    for(let x = 0; x < 10; x++) {
-      let gameTilePda = await createGameTile(program, pk, x, y);
-      let mapTile = await fetchMapTileState(program, pk, x, y);
-      console.log(mapTile);
 
-      //expect((await program.account.gameTile.fetch(gameTilePda)).x).to.equal(x);
-      //expect((await program.account.gameTile.fetch(gameTilePda)).y).to.equal(y);
-      //expect((await program.account.gameTile.fetch(gameTilePda)).name).to.equal("no-name");
-  
-      /*await program.methods
-        .gameUpdate([x, y], "grass")
-        .accounts({
-          owner: pk,
-          gameTile: gameTilePda,
-        })
-        .rpc();*/
-  
-      //expect((await program.account.gameTile.fetch(gameTilePda)).name).to.equal("grass");
-  
+    let map = [];
+    let maxColumns = 5;
+    let maxRows = 5;
+
+    var planetCount = 0;
+    for(let y = 0; y < maxRows; y++) {
+      map[y] = [];
+      for(let x = 0; x < maxColumns; x++) {
+        console.log("Creating ", x, "/", y);
+        await createGameTile(program, pk, x, y);
+        let mapTile = await fetchMapTileState(program, pk, x, y);
+        if(mapTile.name == "planet") {
+          planetCount++;
+        }
+        map[y][x] = mapTile;
+      }
+    }
+    console.log("Planet count: ", planetCount);
+
+    for(let y = 0; y < maxRows; y++) {
+      var row = "";
+      for(let x = 0; x < maxColumns; x++) {
+        if(map[y][x].name == "space") {
+          row = row + ".";
+          //console.log("   ");
+        } else if(map[y][x].name == "planet") {
+          row = row + "*";
+          //console.log("(O)");
+        } else {
+          row = row + ":";
+          //console.log("...");
+        }
+      }
+      console.log(row);
     }
 
+  
     //failNotImplemented();
   });
+
 
   /*it("test1", async () => {
     const p1: KP = anchor.web3.Keypair.generate();

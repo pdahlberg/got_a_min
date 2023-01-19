@@ -4,10 +4,10 @@ pub fn create_game_tile(ctx: Context<CreateGameTile>, xy: [u8; 2]) -> Result<()>
     let game_tile = &mut ctx.accounts.game_tile;
     game_tile.x = xy[0];
     game_tile.y = xy[1];
-    if game_tile.x % 5 == 0 {
+    if game_tile.x == 3 && game_tile.y == 0 {
         game_tile.name = "planet".to_string();
-    } else if game_tile.x % 2 == 0 {
-        game_tile.name = "asteroid".to_string();
+    //} else if game_tile.x % 2 == 0 {
+    //    game_tile.name = "asteroid".to_string();
     } else {
         game_tile.name = "space".to_string();
     }
