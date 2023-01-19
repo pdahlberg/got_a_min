@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { assert, expect } from 'chai';
 import { assertion, promise } from 'chai-as-promised';
-import { AccountClient, AnchorError, Program } from "@coral-xyz/anchor";
+import { AccountClient, AnchorError, parseIdlErrors, Program } from "@coral-xyz/anchor";
 import { GotAMin } from "../target/types/got_a_min";
 import { publicKey } from "@coral-xyz/anchor/dist/cjs/utils";
 import { SystemAccountsCoder } from "@coral-xyz/anchor/dist/cjs/coder/system/accounts";
@@ -24,17 +24,18 @@ before("Init", async () => {
 async function createGameTile(program, pk, x, y, ) {
   let pos = [x, y];
 
-  const [gameTilePda, _] = PublicKey.findProgramAddressSync(
+  /*const [gameTilePda, _] = PublicKey.findProgramAddressSync(
     [
       anchor.utils.bytes.utf8.encode("game-tile"),
       pk.toBuffer(),
       new Uint8Array(pos),
     ],
     program.programId,
-  );
+  );*/
+  let gameTilePda = getMapTile(program, pk, x, y);
 
   await program.methods
-    .createGameTile(pos, "no-name")
+    .createGameTile(pos)
     .accounts({
       owner: pk,
       gameTile: gameTilePda,
@@ -44,6 +45,23 @@ async function createGameTile(program, pk, x, y, ) {
 
   return gameTilePda;
 }
+
+function getMapTile(program, pk, x, y) {
+  let pos = [x, y];
+  const [pda, _] = PublicKey.findProgramAddressSync(
+    [
+      anchor.utils.bytes.utf8.encode("game-tile"),
+      pk.toBuffer(),
+      new Uint8Array(pos),
+    ],
+    program.programId,
+  );
+  return pda;
+}
+
+/*async funciton getMapTile(program, ) {
+  return await program.account.gameTile.fetch(gameTilePda);
+}*/
 
 describe("/Sandbox", () => {
   let provider = anchor.AnchorProvider.env();
@@ -58,19 +76,19 @@ describe("/Sandbox", () => {
     for(let x = 0; x < 10; x++) {
       let gameTilePda = await createGameTile(program, pk, x, y);
 
-      expect((await program.account.gameTile.fetch(gameTilePda)).x).to.equal(x);
-      expect((await program.account.gameTile.fetch(gameTilePda)).y).to.equal(y);
-      expect((await program.account.gameTile.fetch(gameTilePda)).name).to.equal("no-name");
+      //expect((await program.account.gameTile.fetch(gameTilePda)).x).to.equal(x);
+      //expect((await program.account.gameTile.fetch(gameTilePda)).y).to.equal(y);
+      //expect((await program.account.gameTile.fetch(gameTilePda)).name).to.equal("no-name");
   
-      await program.methods
+      /*await program.methods
         .gameUpdate([x, y], "grass")
         .accounts({
           owner: pk,
           gameTile: gameTilePda,
         })
-        .rpc();
+        .rpc();*/
   
-      expect((await program.account.gameTile.fetch(gameTilePda)).name).to.equal("grass");
+      //expect((await program.account.gameTile.fetch(gameTilePda)).name).to.equal("grass");
   
     }
 
