@@ -24,15 +24,7 @@ before("Init", async () => {
 async function createGameTile(program, pk, x, y, ) {
   let pos = [x, y];
 
-  /*const [gameTilePda, _] = PublicKey.findProgramAddressSync(
-    [
-      anchor.utils.bytes.utf8.encode("game-tile"),
-      pk.toBuffer(),
-      new Uint8Array(pos),
-    ],
-    program.programId,
-  );*/
-  let gameTilePda = getMapTile(program, pk, x, y);
+  let gameTilePda = getMapTilePda(program, pk, x, y);
 
   await program.methods
     .createGameTile(pos)
@@ -46,7 +38,7 @@ async function createGameTile(program, pk, x, y, ) {
   return gameTilePda;
 }
 
-function getMapTile(program, pk, x, y) {
+function getMapTilePda(program, pk, x, y) {
   let pos = [x, y];
   const [pda, _] = PublicKey.findProgramAddressSync(
     [
@@ -59,9 +51,10 @@ function getMapTile(program, pk, x, y) {
   return pda;
 }
 
-/*async funciton getMapTile(program, ) {
-  return await program.account.gameTile.fetch(gameTilePda);
-}*/
+async function fetchMapTileState(program, pk, x, y) {
+  let pda = getMapTilePda(program, pk, x, y);
+  return await program.account.gameTile.fetch(pda);
+}
 
 describe("/Sandbox", () => {
   let provider = anchor.AnchorProvider.env();
@@ -75,6 +68,8 @@ describe("/Sandbox", () => {
     let y = 2;
     for(let x = 0; x < 10; x++) {
       let gameTilePda = await createGameTile(program, pk, x, y);
+      let mapTile = await fetchMapTileState(program, pk, x, y);
+      console.log(mapTile);
 
       //expect((await program.account.gameTile.fetch(gameTilePda)).x).to.equal(x);
       //expect((await program.account.gameTile.fetch(gameTilePda)).y).to.equal(y);
