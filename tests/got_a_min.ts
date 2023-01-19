@@ -40,7 +40,7 @@ describe("/Sandbox", () => {
     );
 
     await program.methods
-      .gameCreate()
+      .gameCreate(1, 2)
       .accounts({
         owner: pk,
         gameTile: gameTilePda,

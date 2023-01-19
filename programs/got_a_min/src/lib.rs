@@ -15,8 +15,8 @@ declare_id!("3113AWybUqHaSKaEmUXnUFwXu4EUp1VDpqQFCvY7oajN");
 pub mod got_a_min {
     use super::*;
 
-    pub fn game_create(ctx: Context<CreateGameTile>) -> Result<()> {
-        game::create_game_tile(ctx, 1, 2, "3".to_string())
+    pub fn game_create(ctx: Context<CreateGameTile>, x: u8, y: u8) -> Result<()> {
+        game::create_game_tile(ctx, x, y)
     }
 
     pub fn game_update(ctx: Context<UpdateGameTile>) -> Result<()> {

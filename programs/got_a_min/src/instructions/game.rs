@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-pub fn create_game_tile(ctx: Context<CreateGameTile>, x: u8, y: u8, name: String) -> Result<()> {
+pub fn create_game_tile(ctx: Context<CreateGameTile>, x: u8, y: u8) -> Result<()> {
     let game_tile = &mut ctx.accounts.game_tile;
     game_tile.x = x;
     game_tile.y = y;
@@ -14,7 +14,6 @@ pub fn create_game_tile(ctx: Context<CreateGameTile>, x: u8, y: u8, name: String
 pub struct GameTile {
     pub x: u8,
     pub y: u8,
-    pub name: String,
     pub bump: u8,
 }
 
@@ -24,14 +23,14 @@ fn name_seed(name: &str) -> &[u8] {
 }
 
 #[derive(Accounts)]
-// #[instruction(x: u8, y: u8, name: String)]
+#[instruction(x: u8, y: u8)]
 pub struct CreateGameTile<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
     #[account(
         init, 
         payer = owner, 
-        space = 8 + 8 + 8 + 1,
+        space = 8 + 1 + 1 + 1,
         seeds = [
             b"game-tile", 
             owner.key().as_ref(),
