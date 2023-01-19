@@ -35,12 +35,13 @@ describe("/Sandbox", () => {
       [
         anchor.utils.bytes.utf8.encode("game-tile"),
         pk.toBuffer(),
+        anchor.utils.bytes.utf8.encode("1:2"),
       ], 
       program.programId,
     );
 
     await program.methods
-      .gameCreate(1, 2)
+      .gameCreate(1, 2, "1:2")
       .accounts({
         owner: pk,
         gameTile: gameTilePda,
