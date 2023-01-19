@@ -31,17 +31,19 @@ describe("/Sandbox", () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
 
+    let buf = new Uint8Array([1, 2]);
+    
     const [gameTilePda, _] = PublicKey.findProgramAddressSync(
       [
         anchor.utils.bytes.utf8.encode("game-tile"),
         pk.toBuffer(),
-        anchor.utils.bytes.utf8.encode("1:2"),
-      ], 
+        buf,
+      ],
       program.programId,
     );
 
     await program.methods
-      .gameCreate(1, 2, "1:2")
+      .gameCreate([1, 2])
       .accounts({
         owner: pk,
         gameTile: gameTilePda,
