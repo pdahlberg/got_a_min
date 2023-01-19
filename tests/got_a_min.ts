@@ -21,6 +21,30 @@ before("Init", async () => {
   await initDefaultLocation(program);
 });
 
+async function createGameTile(program, pk, x, y, ) {
+  let pos = [x, y];
+
+  const [gameTilePda, _] = PublicKey.findProgramAddressSync(
+    [
+      anchor.utils.bytes.utf8.encode("game-tile"),
+      pk.toBuffer(),
+      new Uint8Array(pos),
+    ],
+    program.programId,
+  );
+
+  await program.methods
+    .createGameTile(pos, "no-name")
+    .accounts({
+      owner: pk,
+      gameTile: gameTilePda,
+    })
+    //.signers([p1])
+    .rpc();
+
+  return gameTilePda;
+}
+
 describe("/Sandbox", () => {
   let provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
@@ -30,25 +54,9 @@ describe("/Sandbox", () => {
   it("pda-1", async () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
-    let [x, y] = [1, 2];
-
-    const [gameTilePda, _] = PublicKey.findProgramAddressSync(
-      [
-        anchor.utils.bytes.utf8.encode("game-tile"),
-        pk.toBuffer(),
-        new Uint8Array([x, y]),
-      ],
-      program.programId,
-    );
-
-    await program.methods
-      .createGameTile([x, y], "no-name")
-      .accounts({
-        owner: pk,
-        gameTile: gameTilePda,
-      })
-      //.signers([p1])
-      .rpc();
+    let x = 1;
+    let y = 2;
+    let gameTilePda = await createGameTile(program, pk, x, y);
 
     expect((await program.account.gameTile.fetch(gameTilePda)).x).to.equal(1);
     expect((await program.account.gameTile.fetch(gameTilePda)).name).to.equal("no-name");
