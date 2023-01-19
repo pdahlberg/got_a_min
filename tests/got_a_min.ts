@@ -30,20 +30,19 @@ describe("/Sandbox", () => {
   it("pda-1", async () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
+    let [x, y] = [1, 2];
 
-    let buf = new Uint8Array([1, 2]);
-    
     const [gameTilePda, _] = PublicKey.findProgramAddressSync(
       [
         anchor.utils.bytes.utf8.encode("game-tile"),
         pk.toBuffer(),
-        buf,
+        new Uint8Array([x, y]),
       ],
       program.programId,
     );
 
     await program.methods
-      .gameCreate([1, 2], "no-name")
+      .gameCreate([x, y], "no-name")
       .accounts({
         owner: pk,
         gameTile: gameTilePda,
@@ -52,17 +51,18 @@ describe("/Sandbox", () => {
       .rpc();
 
     expect((await program.account.gameTile.fetch(gameTilePda)).x).to.equal(1);
+    expect((await program.account.gameTile.fetch(gameTilePda)).name).to.equal("no-name");
 
-    /*await program.methods
-      .gameUpdate()
+    await program.methods
+      .gameUpdate([x, y], "grass")
       .accounts({
         owner: pk,
         gameTile: gameTilePda,
       })
       .rpc();
 
-    expect((await program.account.gameTile.fetch(gameTilePda)).x.toNumber()).to.equal(5);
-*/
+    expect((await program.account.gameTile.fetch(gameTilePda)).name).to.equal("grass");
+
     //failNotImplemented();
   });
 

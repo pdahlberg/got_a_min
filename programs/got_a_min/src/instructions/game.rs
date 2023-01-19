@@ -45,22 +45,26 @@ pub struct CreateGameTile<'info> {
 }
 
 // Update ----------------------------------
-pub fn update_game_tile(ctx: Context<UpdateGameTile>) -> Result<()> {
+pub fn update_game_tile(ctx: Context<UpdateGameTile>, xy: [u8; 2], name: String) -> Result<()> {
     let game_tile = &mut ctx.accounts.game_tile;
 
-    game_tile.x = 5;
-    //game_tile.thing = "grass".to_string();
+    game_tile.name = name;
 
     Ok(())
 }
 
 #[derive(Accounts)]
+#[instruction(xy: [u8; 2], name: String)]
 pub struct UpdateGameTile<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"game-tile", owner.key().as_ref()],
+        seeds = [
+            b"game-tile", 
+            owner.key().as_ref(),
+            &xy,
+        ],
         bump = game_tile.bump,
     )]
     pub game_tile: Account<'info, GameTile>,
