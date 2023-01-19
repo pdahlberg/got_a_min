@@ -74,7 +74,7 @@ pub fn move_to_location(ctx: Context<MoveStorage>) -> Result<()> {
     require!(!storage.is_moving(now), ValidationError::NotAllowedWhileMoving);
 
     storage.location_id = to_location.key();
-    let distance = (to_location.position - from_location.position).abs();
+    let distance = from_location.distance(to_location);
     let travel_time = distance / storage.movement_speed;
     storage.arrives_at = match travel_time {
         0 => 0,

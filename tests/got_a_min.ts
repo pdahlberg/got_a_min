@@ -340,11 +340,11 @@ describe("/Production", () => {
 
   it("Produce 1 resource B from 2 A from a different location fails", async () => {
     let producerBProdRate = 1;
-    let locationA = await createLocation(program, 'locA', 0, 10);
+    let locationA = await createLocation(program, 'locA', [0, 0], 10);
     let [resourceA, _1] = await createResource(program, 'A', []);
     let [producerA, _2] = await createProcessor(program, resourceA, 5, 1);
     let [storageA, _3] = await createStorage(program, resourceA, 5, locationA);
-    let locationB = await createLocation(program, 'locB', 50, 10);
+    let locationB = await createLocation(program, 'locB', [50, 0], 10);
     let [resourceB, _4] = await createResource(program, 'B', [[resourceA, 2]]);
     let [producerB, _5] = await createProcessor(program, resourceB, producerBProdRate, 5, locationB);
     let [storageB, _6] = await createStorage(program, resourceB, 5, locationB);    
@@ -359,7 +359,7 @@ describe("/Production", () => {
   });
 
   it("Produce resource B with input A fails when A is empty", async () => {
-    let location = await createLocation(program, 'locA', 0, 10); // Why is DEFAULT_LOCATION not working?
+    let location = await createLocation(program, 'locA', [0, 0], 10); // Why is DEFAULT_LOCATION not working?
     let [resourceA, _1] = await createResource(program, 'A', []);
     let [storageA, _2] = await createStorage(program, resourceA, 1, location);
     let [resourceB, _3] = await createResource(program, 'B', [[resourceA, 1]]);
@@ -377,7 +377,7 @@ describe("/Production", () => {
   });
 
   it("Produce 1 resource C from 1 A + 1 B", async () => {
-    let location = await createLocation(program, 'locA', 0, 10); // Why is DEFAULT_LOCATION not working?
+    let location = await createLocation(program, 'locA', [0, 0], 10); // Why is DEFAULT_LOCATION not working?
     let producerCProdRate = 2;
     let [resourceA, _1] = await createResource(program, 'A', []);
     let [producerA, _2] = await createProcessor(program, resourceA, 1, 1, location);
@@ -422,8 +422,8 @@ describe("/Sending", () => {
   });
 
   it("Send 1 resource A", async () => {
-    let location1 = await createLocation(program, 'loc1', 1, 10);
-    let location2 = await createLocation(program, 'loc1', 2, 10);
+    let location1 = await createLocation(program, 'loc1', [1, 0], 10);
+    let location2 = await createLocation(program, 'loc1', [2, 0], 10);
     let producerProdRate = 1;
     let [resource, _1] = await createResource(program, 'A', []);
     let producer = await createProcessor2(program, resource, producerProdRate, 1);
@@ -444,9 +444,9 @@ describe("/Transportation", () => {
 
   it("Move movable Storage", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
-    let location1 = await createLocation(program, 'loc1', 0, 10);
+    let location1 = await createLocation(program, 'loc1', [0, 0], 10);
     let [storage, _3] = await createStorage(program, resource, 10, location1, {movable:{}}, 2);
-    let location2 = await createLocation(program, 'loc2', 2, 10);
+    let location2 = await createLocation(program, 'loc2', [2, 0], 10);
 
     await move_storage(program, storage, location1, location2);
 
@@ -466,10 +466,10 @@ describe("/Transportation", () => {
 
   it("Add to Storage while moving should fail", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
-    let location1 = await createLocation(program, 'loc1', 0, 10);
+    let location1 = await createLocation(program, 'loc1', [0, 0], 10);
     let [producer, _2] = await createProcessor(program, resource, 10, 1, location1);
     let [storage, _3] = await createStorage(program, resource, 10, location1, {movable:{}});
-    let location2 = await createLocation(program, 'loc2', 10, 10);
+    let location2 = await createLocation(program, 'loc2', [10, 0], 10);
     await move_storage(program, storage, location1, location2);
   
     try {
@@ -569,20 +569,20 @@ describe("/Location", () => {
   it("Init location", async () => {
     const location = anchor.web3.Keypair.generate();
 
-    let result = await initLocation(program, location, 'name', 0, 5);
+    let result = await initLocation(program, location, 'name', [0, 0], 5);
     
     expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
-    expect(result.position.toNumber()).to.equal(0);
+    expect(result.position).to.equal(0);
     expect(result.capacity.toNumber()).to.equal(5);
     expect(result.name).to.equal('name');
   });
 
   it("Move between Storage in different locations", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
-    let locationA = await createLocation(program, 'locA', 0, 10);
+    let locationA = await createLocation(program, 'locA', [0, 0], 10);
     let [producerA, _2] = await createProcessor(program, resource, 10, 0, locationA);
     let [storageAFrom, _3] = await createStorage(program, resource, 10, locationA);
-    let locationB = await createLocation(program, 'locB', 1, 10);
+    let locationB = await createLocation(program, 'locB', [1, 0], 10);
     let [storageBTo, _6] = await createStorage(program, resource, 100, locationB);
     await produce_without_input(program, producerA, storageAFrom, resource);
 
@@ -597,7 +597,7 @@ describe("/Location", () => {
 
   it("Producer and Storage in different locations", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
-    let location = await createLocation(program, 'locA', 0, 10);
+    let location = await createLocation(program, 'locA', [0, 0], 10);
     let [producer, _2] = await createProcessor(program, resource, 10, 0);
     let [storage, _3] = await createStorage(program, resource, 10, location);
 
@@ -612,9 +612,9 @@ describe("/Location", () => {
 
   it("Move static Storage fails", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
-    let location1 = await createLocation(program, 'loc1', 0, 10);
+    let location1 = await createLocation(program, 'loc1', [0, 0], 10);
     let [storage, _3] = await createStorage(program, resource, 10, location1);
-    let location2 = await createLocation(program, 'loc2', 1, 10);
+    let location2 = await createLocation(program, 'loc2', [1, 0], 10);
 
     try {
       await move_storage(program, storage, location1, location2);
@@ -627,9 +627,9 @@ describe("/Location", () => {
 
   it("Move Storage to full Location fails", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
-    let location1 = await createLocation(program, 'loc1', 0, 10);
+    let location1 = await createLocation(program, 'loc1', [0, 0], 10);
     let [storage, _3] = await createStorage(program, resource, 10, location1, {movable:{}});
-    let location2 = await createLocation(program, 'loc2', 1, 0);
+    let location2 = await createLocation(program, 'loc2', [1, 0], 0);
 
     try {
       await move_storage(program, storage, location1, location2);
@@ -642,9 +642,9 @@ describe("/Location", () => {
 
   it("Move Storage to new Location", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
-    let location1 = await createLocation(program, 'loc1', 0, 10);
+    let location1 = await createLocation(program, 'loc1', [0, 0], 10);
     let [storage, _3] = await createStorage(program, resource, 10, location1, {movable:{}});
-    let location2 = await createLocation(program, 'loc2', 1, 10);
+    let location2 = await createLocation(program, 'loc2', [1, 0], 10);
 
     await move_storage(program, storage, location1, location2);
     let storageResult = await program.account.storage.fetch(storage.publicKey);
@@ -858,21 +858,21 @@ async function initStorage(
   return await program.account.storage.fetch(storage.publicKey);
 }
 
-async function createLocation(program: Program<GotAMin>, name: string, position: number, capacity: number):  Promise<KP> {
+async function createLocation(program: Program<GotAMin>, name: string, position: [number, number], capacity: number):  Promise<KP> {
   const location: anchor.web3.Keypair = anchor.web3.Keypair.generate();
   await initLocation(program, location, name, position, capacity);
   return location;
 }
 
 async function initDefaultLocation(program: Program<GotAMin>) {
-  return initLocation(program, DEFAULT_LOCATION, 'default', 999, 999);
+  return initLocation(program, DEFAULT_LOCATION, 'default', [255, 255], 999);
 }
 
-async function initLocation(program: Program<GotAMin>, location, name: string, position: number, capacity: number) {
+async function initLocation(program: Program<GotAMin>, location, name: string, position: [number, number], capacity: number) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
-    .initLocation(name, new anchor.BN(position), new anchor.BN(capacity))
+    .initLocation(name, position, new anchor.BN(capacity))
     .accounts({
       location: location.publicKey,
       owner: programProvider.wallet.publicKey,

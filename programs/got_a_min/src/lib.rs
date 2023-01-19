@@ -23,7 +23,7 @@ pub mod got_a_min {
         game::explore_game_tile(ctx, xy)
     }
 
-    pub fn init_location(ctx: Context<InitLocation>, name: String, position: i64, capacity: i64) -> Result<()> {
+    pub fn init_location(ctx: Context<InitLocation>, name: String, position: [u8; 2], capacity: i64) -> Result<()> {
         location::init(ctx, name, position, capacity)
     }
 

@@ -2,13 +2,13 @@ use anchor_lang::prelude::*;
 use crate::state::location::*;
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitLocation>, name: String, position: i64, capacity: i64) -> Result<()> {
+pub fn init(ctx: Context<InitLocation>, name: String, position: [u8; 2], capacity: i64) -> Result<()> {
     let location: &mut Account<Location> = &mut ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
 
     location.owner = *owner.key;
     location.name = name;
-    location.position = position;
+    location.position = position[0];
     location.occupied_space = 0;
     location.capacity = capacity;
     location.occupied_by = vec!();
