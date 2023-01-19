@@ -1,5 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
-//import { PublicKey, Keypair } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import { assert, expect } from 'chai';
 import { assertion, promise } from 'chai-as-promised';
 import { AccountClient, AnchorError, Program } from "@coral-xyz/anchor";
@@ -22,17 +22,54 @@ before("Init", async () => {
 });
 
 describe("/Sandbox", () => {
-  anchor.setProvider(anchor.AnchorProvider.env());
+  let provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
 
-  it("test1", async () => {
+  it("pda-1", async () => {
+    const p1: KP = anchor.web3.Keypair.generate();
+    let pk = provider.wallet.publicKey;
+
+    const [gameTilePda, _] = PublicKey.findProgramAddressSync(
+      [
+        anchor.utils.bytes.utf8.encode("game-tile"),
+        pk.toBuffer(),
+      ], 
+      program.programId,
+    );
+
+    await program.methods
+      .gameCreate()
+      .accounts({
+        owner: pk,
+        gameTile: gameTilePda,
+      })
+      //.signers([p1])
+      .rpc();
+
+    expect((await program.account.gameTile.fetch(gameTilePda)).x).to.equal(1);
+
+    /*await program.methods
+      .gameUpdate()
+      .accounts({
+        owner: pk,
+        gameTile: gameTilePda,
+      })
+      .rpc();
+
+    expect((await program.account.gameTile.fetch(gameTilePda)).x.toNumber()).to.equal(5);
+*/
+    //failNotImplemented();
+  });
+
+  /*it("test1", async () => {
     const p1: KP = anchor.web3.Keypair.generate();
     const p2: KP = anchor.web3.Keypair.generate();
     //let [resource, _1] = await createResource(program, 'A', []);
     //let [p1storage, _2] = await createStorageNew(program, p1, resource, 1);
 
-    /*await program.methods
+    await program.methods
       .change()
       .accounts({
         location: DEFAULT_LOCATION.publicKey,
@@ -54,13 +91,13 @@ describe("/Sandbox", () => {
       .signers([
         p2,
       ])
-      .rpc();*/
+      .rpc();
 
     //let location = await program.account.location.fetch(DEFAULT_LOCATION.publicKey);
 
     //expect(location.occupiedSpace.toNumber()).equal(2)
     failNotImplemented();
-  });
+  });*/
 });
 
 describe("/Unknown", () => {
