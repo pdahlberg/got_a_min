@@ -4,19 +4,9 @@ use anchor_lang::prelude::*;
 
 pub fn create_game_tile(ctx: Context<CreateGameTile>, xy: [u8; 2]) -> Result<()> {
     let game_tile = &mut ctx.accounts.game_tile;
-
-    let tile_type = fake_rng(game_tile.key());
-
     game_tile.x = xy[0];
     game_tile.y = xy[1];
-    if tile_type % 28 == 0 {
-        game_tile.name = "planet".to_string();
-    } else if tile_type % 5 == 0 {
-        game_tile.name = "asteroid".to_string();
-    } else {
-        game_tile.name = "space".to_string();
-    }
-
+    game_tile.name = "unknown".to_string();
     game_tile.bump = *ctx.bumps.get("game_tile").unwrap();
     Ok(())
 }
@@ -31,11 +21,14 @@ fn fake_rng(key: Pubkey) -> u8 {
 use std::hash::{Hasher};
 use std::collections::hash_map::DefaultHasher;
 
+use crate::errors::ValidationError;
+
 
 #[account]
 pub struct GameTile {
     pub x: u8,
     pub y: u8,
+    pub tile_type: u8,
     pub name: String,
     pub bump: u8,
 }
@@ -53,7 +46,7 @@ pub struct CreateGameTile<'info> {
     #[account(
         init, 
         payer = owner, 
-        space = 8 + 2 + (4 + 32) + 1,
+        space = 8 + 1 + 1 + 1 + (4 + 32) + 1,
         seeds = [
             b"game-tile", 
             owner.key().as_ref(),
@@ -65,18 +58,30 @@ pub struct CreateGameTile<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// Update ----------------------------------
-pub fn update_game_tile(ctx: Context<UpdateGameTile>, xy: [u8; 2], name: String) -> Result<()> {
+// Exploration ----------------------------------
+pub fn explore_game_tile(ctx: Context<ExploreGameTile>, xy: [u8; 2]) -> Result<()> {
     let game_tile = &mut ctx.accounts.game_tile;
 
-    game_tile.name = name;
+    require!(game_tile.tile_type == 0, ValidationError::ExperimentalError);
 
+    let tile_type = fake_rng(game_tile.key());
+    if tile_type % 28 == 0 {
+        game_tile.name = "planet".to_string();
+        game_tile.tile_type = 3;
+    } else if tile_type % 5 == 0 {
+        game_tile.name = "asteroid".to_string();
+        game_tile.tile_type = 2;
+    } else {
+        game_tile.name = "space".to_string();
+        game_tile.tile_type = 1;
+    }
+    
     Ok(())
 }
 
 #[derive(Accounts)]
-#[instruction(xy: [u8; 2], name: String)]
-pub struct UpdateGameTile<'info> {
+#[instruction(xy: [u8; 2])]
+pub struct ExploreGameTile<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
     #[account(

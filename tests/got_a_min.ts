@@ -38,6 +38,24 @@ async function createGameTile(program, pk, x, y, ) {
   return gameTilePda;
 }
 
+async function exploreGameTile(program, pk, x, y, map) {
+  let pos = [x, y];
+
+  let gameTilePda = getMapTilePda(program, pk, x, y);
+
+  await program.methods
+    .exploreGameTile(pos)
+    .accounts({
+      owner: pk,
+      gameTile: gameTilePda,
+    })
+    .rpc();
+
+  let updatedState = await fetchMapTileState(program, pk, x, y);
+  map[y][x] = updatedState;
+  return updatedState;
+}
+
 function getMapTilePda(program, pk, x, y) {
   let pos = [x, y];
   const [pda, _] = PublicKey.findProgramAddressSync(
@@ -56,6 +74,32 @@ async function fetchMapTileState(program, pk, x, y) {
   return await program.account.gameTile.fetch(pda);
 }
 
+function printMap(map, debug = false) {
+  var debugStr = "";
+  for(let y = 0; y < map.length; y++) {
+    var row = "";
+    for(let x = 0; x < map[y].length; x++) {
+      if(map[y][x].tileType == 1) {
+        row = row + " ";
+      } else if(map[y][x].tileType == 3) {
+        row = row + "*";
+      } else if(map[y][x].tileType == 2) {
+        row = row + ":";
+      } else {
+        row = row + "?";
+      }
+
+      if(debug) {
+        debugStr = debugStr + "\n" + x + "/" + y + "=" + map[y][x].tileType + "(" + map[y][x].name + ")";
+      }
+    }
+    console.log(row);
+  }
+  if(debug) {
+    console.log(debugStr);
+  }
+}
+
 describe("/Sandbox", () => {
   let provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
@@ -67,42 +111,35 @@ describe("/Sandbox", () => {
     let pk = provider.wallet.publicKey;
 
     let map = [];
-    let maxColumns = 10;
-    let maxRows = 10;
+    let maxColumns = 5;
+    let maxRows = 5;
 
-    var planetCount = 0;
     for(let y = 0; y < maxRows; y++) {
       map[y] = [];
       for(let x = 0; x < maxColumns; x++) {
         console.log("Creating ", x, "/", y);
         await createGameTile(program, pk, x, y);
         let mapTile = await fetchMapTileState(program, pk, x, y);
-        if(mapTile.name == "planet") {
-          planetCount++;
-        }
         map[y][x] = mapTile;
       }
     }
-    console.log("Planet count: ", planetCount);
 
-    for(let y = 0; y < maxRows; y++) {
-      var row = "";
-      for(let x = 0; x < maxColumns; x++) {
-        if(map[y][x].name == "space") {
-          row = row + ".";
-          //console.log("   ");
-        } else if(map[y][x].name == "planet") {
-          row = row + "*";
-          //console.log("(O)");
-        } else {
-          row = row + ":";
-          //console.log("...");
-        }
-      }
-      console.log(row);
-    }
+    console.log("After create:");
+    printMap(map);
+    console.log("");
 
-  
+    let exploreX = 0;
+    let exploreY = 0;
+    await exploreGameTile(program, pk, 2, 0, map);
+    await exploreGameTile(program, pk, 3, 0, map);
+    await exploreGameTile(program, pk, 1, 2, map);
+    await exploreGameTile(program, pk, 3, 4, map);
+    await exploreGameTile(program, pk, 0, 2, map);
+    await exploreGameTile(program, pk, 3, 3, map);
+
+    console.log("After explore:");
+    printMap(map);
+
     //failNotImplemented();
   });
 

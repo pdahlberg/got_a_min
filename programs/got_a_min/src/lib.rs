@@ -19,8 +19,8 @@ pub mod got_a_min {
         game::create_game_tile(ctx, xy)
     }
 
-    pub fn game_update(ctx: Context<UpdateGameTile>, xy: [u8; 2], name: String) -> Result<()> {
-        game::update_game_tile(ctx, xy, name)
+    pub fn explore_game_tile(ctx: Context<ExploreGameTile>, xy: [u8; 2]) -> Result<()> {
+        game::explore_game_tile(ctx, xy)
     }
 
     pub fn init_location(ctx: Context<InitLocation>, name: String, position: i64, capacity: i64) -> Result<()> {
