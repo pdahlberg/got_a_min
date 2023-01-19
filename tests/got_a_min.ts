@@ -54,22 +54,25 @@ describe("/Sandbox", () => {
   it("pda-1", async () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
-    let x = 1;
     let y = 2;
-    let gameTilePda = await createGameTile(program, pk, x, y);
+    for(let x = 0; x < 10; x++) {
+      let gameTilePda = await createGameTile(program, pk, x, y);
 
-    expect((await program.account.gameTile.fetch(gameTilePda)).x).to.equal(1);
-    expect((await program.account.gameTile.fetch(gameTilePda)).name).to.equal("no-name");
-
-    await program.methods
-      .gameUpdate([x, y], "grass")
-      .accounts({
-        owner: pk,
-        gameTile: gameTilePda,
-      })
-      .rpc();
-
-    expect((await program.account.gameTile.fetch(gameTilePda)).name).to.equal("grass");
+      expect((await program.account.gameTile.fetch(gameTilePda)).x).to.equal(x);
+      expect((await program.account.gameTile.fetch(gameTilePda)).y).to.equal(y);
+      expect((await program.account.gameTile.fetch(gameTilePda)).name).to.equal("no-name");
+  
+      await program.methods
+        .gameUpdate([x, y], "grass")
+        .accounts({
+          owner: pk,
+          gameTile: gameTilePda,
+        })
+        .rpc();
+  
+      expect((await program.account.gameTile.fetch(gameTilePda)).name).to.equal("grass");
+  
+    }
 
     //failNotImplemented();
   });
