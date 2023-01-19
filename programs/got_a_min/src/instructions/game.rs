@@ -1,9 +1,10 @@
 use anchor_lang::prelude::*;
 
-pub fn create_game_tile(ctx: Context<CreateGameTile>, xy: [u8; 2]) -> Result<()> {
+pub fn create_game_tile(ctx: Context<CreateGameTile>, xy: [u8; 2], name: String) -> Result<()> {
     let game_tile = &mut ctx.accounts.game_tile;
     game_tile.x = xy[0];
     game_tile.y = xy[1];
+    game_tile.name = name;
     //game_tile.thing = "stone".to_string();
     // let key = format!("{x}:{y}");
     game_tile.bump = *ctx.bumps.get("game_tile").unwrap();
@@ -14,6 +15,7 @@ pub fn create_game_tile(ctx: Context<CreateGameTile>, xy: [u8; 2]) -> Result<()>
 pub struct GameTile {
     pub x: u8,
     pub y: u8,
+    pub name: String,
     pub bump: u8,
 }
 
@@ -23,14 +25,14 @@ pub struct GameTile {
 }*/
 
 #[derive(Accounts)]
-#[instruction(xy: [u8; 2])]
+#[instruction(xy: [u8; 2], name: String)]
 pub struct CreateGameTile<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
     #[account(
         init, 
         payer = owner, 
-        space = 8 + 2 + 1,
+        space = 8 + 2 + (4 + name.len()) + 1,
         seeds = [
             b"game-tile", 
             owner.key().as_ref(),
