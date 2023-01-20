@@ -606,9 +606,9 @@ describe("/Storage", () => {
     }
   });
 
-  /*it("Storage with amount too low", async () => {
+  it("Storage with amount too low", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
-    let [producer, _2] = await createProcessor(program, resource, 10, 0);
+    let [producer, _2] = await createProcessor(program, resource, 10, 1);
     let [storageFrom, _3] = await createStorage(program, resource, 10);
     let [storageTo, _4] = await createStorage(program, resource, 100);
     await produce_without_input(program, producer, storageFrom, resource);
@@ -620,14 +620,14 @@ describe("/Storage", () => {
     } catch(e) {
       assertAnchorError(e, "StorageAmountTooLow");
     }
-  });*/
+  });
     
-  /*it("Move between Storage with different resources", async () => {
+  it("Move between Storage with different resources", async () => {
     let [resourceA, _1] = await createResource(program, 'A', []);
-    let [producerA, _2] = await createProcessor(program, resourceA, 10, 0);
+    let [producerA, _2] = await createProcessor(program, resourceA, 10, 1);
     let [storageAFrom, _3] = await createStorage(program, resourceA, 10);
     let [resourceB, _4] = await createResource(program, 'B', []);
-    let [producerB, _5] = await createProcessor(program, resourceB, 10, 0);
+    let [producerB, _5] = await createProcessor(program, resourceB, 10, 1);
     let [storageBTo, _6] = await createStorage(program, resourceB, 100);
     await produce_without_input(program, producerA, storageAFrom, resourceA);
     await produce_without_input(program, producerB, storageBTo, resourceB);
@@ -639,7 +639,7 @@ describe("/Storage", () => {
     } catch(e) {
       assertAnchorError(e, "ResourceNotMatching");
     }
-  });*/
+  });
     
 });
 
