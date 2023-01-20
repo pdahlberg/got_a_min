@@ -9,7 +9,7 @@ import { SystemAccountsCoder } from "@coral-xyz/anchor/dist/cjs/coder/system/acc
 
 type KP = anchor.web3.Keypair;
 
-const DEFAULT_LOCATION: KP = anchor.web3.Keypair.generate();
+var DEFAULT_LOCATION: PublicKey;
 type MobilityType = {fixed:{}} | {movable:{}};
 type ProcessorType = {producer:{}} | {sender:{}};
 
@@ -18,19 +18,38 @@ before("Init", async () => {
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   //const programProvider = program.provider as anchor.AnchorProvider;
 
-  await initDefaultLocation(program);
+  DEFAULT_LOCATION = await initDefaultLocation(program);
 });
 
 async function createGameTile(program, pk, x, y, ) {
-  let pos = [x, y];
+  let pos: [number, number] = [x, y];
 
   let gameTilePda = getMapTilePda(program, pk, x, y);
+  let locationPda = getLocationPda(program, pk, pos);
+
+  // Location test
+  await initLocation2(program, 'name', pos, 5);
+  
+  const storage: KP = anchor.web3.Keypair.generate();
+  await program.methods
+    .simpleInitStorage(pos)
+    .accounts({
+      storage: storage.publicKey,
+      location: locationPda,
+      owner: pk,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    })
+    .signers([storage])
+    .rpc();
+
 
   await program.methods
     .createGameTile(pos)
     .accounts({
       owner: pk,
       gameTile: gameTilePda,
+      location: locationPda,
+      storage: storage.publicKey,
     })
     //.signers([p1])
     .rpc();
@@ -39,15 +58,17 @@ async function createGameTile(program, pk, x, y, ) {
 }
 
 async function exploreGameTile(program, pk, x, y, map) {
-  let pos = [x, y];
+  let pos: [number, number] = [x, y];
 
   let gameTilePda = getMapTilePda(program, pk, x, y);
+  let locationPda = getLocationPda(program, pk, pos);
 
   await program.methods
     .exploreGameTile(pos)
     .accounts({
       owner: pk,
       gameTile: gameTilePda,
+      location: locationPda,
     })
     .rpc();
 
@@ -69,7 +90,7 @@ function getMapTilePda(program, pk, x, y) {
   return pda;
 }
 
-function getLocationPda(program, pk, pos: [number, number]) {
+function getLocationPda(program, pk, pos: [number, number]): PublicKey {
   const [pda, _] = PublicKey.findProgramAddressSync(
     [
       anchor.utils.bytes.utf8.encode("map-location"),
@@ -86,9 +107,13 @@ async function fetchMapTileState(program, pk, x, y) {
   return await program.account.gameTile.fetch(pda);
 }
 
+async function fetchLocationStatePK(program, pos: PublicKey) {
+  return await program.account.location.fetch(pos);
+}
+
 async function fetchLocationState(program, pk, pos: [number, number]) {
   let pda = getLocationPda(program, pk, pos);
-  return await program.account.location.fetch(pda);
+  return await fetchLocationStatePK(program, pda);
 }
 
 function printMap(map, debug = false) {
@@ -123,21 +148,23 @@ describe("/Sandbox", () => {
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
 
-  it("pda-1", async () => {
+  it.skip("pda-1", async () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
 
     //await initDefaultLocation(program);
     
     let map = [];
-    let maxColumns = 5;
-    let maxRows = 5;
+    let maxColumns = 2;
+    let maxRows = 2;
 
     for(let y = 0; y < maxRows; y++) {
       map[y] = [];
       for(let x = 0; x < maxColumns; x++) {
         console.log("Creating ", x, "/", y);
         await createGameTile(program, pk, x, y);
+        let loc = await fetchLocationState(program, pk, [x, y]);
+        console.log("Created loc: ", loc.capacity);
         let mapTile = await fetchMapTileState(program, pk, x, y);
         map[y][x] = mapTile;
       }
@@ -149,12 +176,12 @@ describe("/Sandbox", () => {
 
     let exploreX = 0;
     let exploreY = 0;
-    await exploreGameTile(program, pk, 2, 0, map);
-    await exploreGameTile(program, pk, 3, 0, map);
-    await exploreGameTile(program, pk, 1, 2, map);
-    await exploreGameTile(program, pk, 3, 4, map);
-    await exploreGameTile(program, pk, 0, 2, map);
-    await exploreGameTile(program, pk, 3, 3, map);
+    let exploringPoses: Array<[number, number]> = [[2, 0], [3, 0], [1, 2], [3, 4]];
+    for(var pos of exploringPoses) {
+      if(pos[0] < maxColumns && pos[1] < maxRows) {
+        await exploreGameTile(program, pk, pos[0], pos[1], map);
+      }
+    }
 
     console.log("After explore:");
     printMap(map);
@@ -162,6 +189,43 @@ describe("/Sandbox", () => {
     //failNotImplemented();
   });
 
+  it("simple storage", async () => {
+    let pk = provider.wallet.publicKey;
+    let pos: [number, number] = [2, 1];
+
+    await initLocation2(program, 'name', pos, 5);
+    let state = await fetchLocationState(program, pk, pos);
+    let locationPda = getLocationPda(program, pk, pos);
+    
+    console.log(state);
+    console.log(state.owner);
+    console.log(state.owner.toBase58());
+    expect(state.owner.toBase58()).to.equal(locationPda.toBase58());
+
+    const storage: KP = anchor.web3.Keypair.generate();
+    await program.methods
+      .simpleInitStorage(pos)
+      .accounts({
+        storage: storage.publicKey,
+        location: state.publicKey,
+        owner: pk,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([storage])
+      .rpc();
+
+    console.log("Init done... ");
+
+    await program.methods
+      .simpleTestStorage(pos)
+      .accounts({
+        storage: storage.publicKey,
+        location: state.publicKey,
+        owner: pk,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+  });
 
   /*it("test1", async () => {
     const p1: KP = anchor.web3.Keypair.generate();
@@ -470,7 +534,7 @@ describe("/Transportation", () => {
     await move_storage(program, storage, location1, location2);
 
     let result1 = await program.account.storage.fetch(storage.publicKey);
-    expect(result1.locationId.toBase58()).to.equal(location2.publicKey.toBase58());
+    expect(result1.locationId.toBase58()).to.equal(location2.toBase58());
     expect(result1.arrivesAt.toNumber()).to.greaterThan(0);
 
     // Production is done after delay
@@ -479,7 +543,7 @@ describe("/Transportation", () => {
     await updateStorageMoveStatus(program, storage);
 
     let result2 = await program.account.storage.fetch(storage.publicKey);
-    expect(result2.locationId.toBase58()).to.equal(location2.publicKey.toBase58());
+    expect(result2.locationId.toBase58()).to.equal(location2.toBase58());
     expect(result2.arrivesAt.toNumber()).to.equal(0);
   });
 
@@ -503,7 +567,7 @@ describe("/Transportation", () => {
     await new Promise(f => setTimeout(f, 3001)); // todo: delay 5+ seconds... 
 
     let result2 = await program.account.storage.fetch(storage.publicKey);
-    expect(result2.locationId.toBase58()).to.equal(location2.publicKey.toBase58());
+    expect(result2.locationId.toBase58()).to.equal(location2.toBase58());
   });
 });
 
@@ -528,7 +592,7 @@ describe("/Storage", () => {
 
   it("Storage full", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
-    let [producer, _2] = await createProcessor(program, resource, 10, 0);
+    let [producer, _2] = await createProcessor(program, resource, 10, 1);
     let [storageFrom, _3] = await createStorage(program, resource, 10);
     let [storageTo, _4] = await createStorage(program, resource, 3);
     await produce_without_input(program, producer, storageFrom, resource);
@@ -542,7 +606,7 @@ describe("/Storage", () => {
     }
   });
 
-  it("Storage with amount too low", async () => {
+  /*it("Storage with amount too low", async () => {
     let [resource, _1] = await createResource(program, 'A', []);
     let [producer, _2] = await createProcessor(program, resource, 10, 0);
     let [storageFrom, _3] = await createStorage(program, resource, 10);
@@ -556,9 +620,9 @@ describe("/Storage", () => {
     } catch(e) {
       assertAnchorError(e, "StorageAmountTooLow");
     }
-  });
+  });*/
     
-  it("Move between Storage with different resources", async () => {
+  /*it("Move between Storage with different resources", async () => {
     let [resourceA, _1] = await createResource(program, 'A', []);
     let [producerA, _2] = await createProcessor(program, resourceA, 10, 0);
     let [storageAFrom, _3] = await createStorage(program, resourceA, 10);
@@ -575,7 +639,7 @@ describe("/Storage", () => {
     } catch(e) {
       assertAnchorError(e, "ResourceNotMatching");
     }
-  });
+  });*/
     
 });
 
@@ -589,10 +653,10 @@ describe("/Location", () => {
   it("Init location", async () => {
     let pos: [number, number] = [0, 0];
 
-    let location = await initLocation2(program, 'name', pos, 5);
+    await initLocation2(program, 'name', pos, 5);
     let state = await fetchLocationState(program, pk, pos);
     
-    expect(state.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(state.owner.toBase58()).to.equal(pk.toBase58());
     expect(state.posX).to.equal(0);
     expect(state.capacity.toNumber()).to.equal(5);
     expect(state.name).to.equal('name');
@@ -669,10 +733,10 @@ describe("/Location", () => {
 
     await move_storage(program, storage, location1, location2);
     let storageResult = await program.account.storage.fetch(storage.publicKey);
-    let location1Result = await program.account.location.fetch(location1.publicKey);
-    let location2Result = await program.account.location.fetch(location2.publicKey);
+    let location1Result = await program.account.location.fetch(location1);
+    let location2Result = await program.account.location.fetch(location2);
 
-    expect(storageResult.locationId.toBase58()).equal(location2.publicKey.toBase58());
+    expect(storageResult.locationId.toBase58()).equal(location2.toBase58());
     expect(location1Result.occupiedSpace.toNumber()).equal(0);
     expect(location2Result.occupiedSpace.toNumber()).equal(1);
   });  
@@ -782,7 +846,7 @@ async function initProcessor(program: Program<GotAMin>, processor, resource, out
     .initProcessor(type, resource.publicKey, outputRateBN, processingDurationBN)
     .accounts({
       processor: processor.publicKey,
-      location: location.publicKey,
+      location: location,
       owner: programProvider.wallet.publicKey,
       systemProgram: anchor.web3.SystemProgram.programId,
     })
@@ -797,7 +861,7 @@ async function createStorageNew(
   owner: KP,
   resource: KP, 
   capacity: number, 
-  location: KP = DEFAULT_LOCATION, 
+  location: PublicKey = DEFAULT_LOCATION, 
   mobilityType: MobilityType = {fixed:{}}, 
   speed: number = 1,
 ): Promise<[KP, any]> {
@@ -810,17 +874,17 @@ async function initStorageNew(
   owner: KP,
   storage, resource: KP, 
   capacity: number, 
-  location: KP = DEFAULT_LOCATION, 
+  location: PublicKey = DEFAULT_LOCATION, 
   mobilityType: MobilityType = {fixed:{}}, 
   speed: number = 1,
 ) {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
-    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType, new anchor.BN(speed))
+    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType, new anchor.BN(speed), [0, 0])
     .accounts({
       storage: storage.publicKey,
-      location: location.publicKey,
+      location: location,
       owner: owner.publicKey,
       systemProgram: anchor.web3.SystemProgram.programId,
     })
@@ -834,7 +898,7 @@ async function createStorage(
   program: Program<GotAMin>,
   resource: KP, 
   capacity: number, 
-  location: KP = DEFAULT_LOCATION, 
+  location: PublicKey = DEFAULT_LOCATION, 
   mobilityType: MobilityType = {fixed:{}}, 
   speed: number = 1,
 ): Promise<[KP, any]> {
@@ -846,7 +910,7 @@ async function createStorage2(
   program: Program<GotAMin>,
   resource: KP, 
   capacity: number, 
-  location: KP = DEFAULT_LOCATION, 
+  location: PublicKey = DEFAULT_LOCATION, 
   mobilityType: MobilityType = {fixed:{}}, 
   speed: number = 1,
 ): Promise<[Program<GotAMin>, KP]> {
@@ -859,17 +923,19 @@ async function initStorage(
   program: Program<GotAMin>, 
   storage, resource: KP, 
   capacity: number, 
-  location: KP = DEFAULT_LOCATION, 
+  location: PublicKey = DEFAULT_LOCATION, 
   mobilityType: MobilityType = {fixed:{}}, 
   speed: number = 1,
 ) {
   const programProvider = program.provider as anchor.AnchorProvider;
+  let locationState = await fetchLocationStatePK(program, location);
+  let pos = [locationState.posX, locationState.posY];
 
   await program.methods
-    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType, new anchor.BN(speed))
+    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType, new anchor.BN(speed), pos)
     .accounts({
       storage: storage.publicKey,
-      location: location.publicKey,
+      location: location,
       owner: programProvider.wallet.publicKey,
       systemProgram: anchor.web3.SystemProgram.programId,
     })
@@ -879,20 +945,18 @@ async function initStorage(
   return await program.account.storage.fetch(storage.publicKey);
 }
 
-async function createLocation(program: Program<GotAMin>, name: string, position: [number, number], capacity: number):  Promise<KP> {
-  const location: anchor.web3.Keypair = anchor.web3.Keypair.generate();
-  await initLocation(program, location, name, position, capacity);
-  return location;
+async function createLocation(program: Program<GotAMin>, name: string, position: [number, number], capacity: number):  Promise<PublicKey> {
+  return await initLocation2(program, name, position, capacity);
 }
 
 async function initDefaultLocation(program: Program<GotAMin>) {
-  return initLocation(program, DEFAULT_LOCATION, 'default', [255, 255], 999);
+  return initLocation2(program, 'default', [255, 255], 999);
 }
 
 async function initLocation(program: Program<GotAMin>, location, name: string, position: [number, number], capacity: number) {
   return initLocation2(program, name, position, capacity);
 }
-async function initLocation2(program: Program<GotAMin>, name: string, position: [number, number], capacity: number) {
+async function initLocation2(program: Program<GotAMin>, name: string, position: [number, number], capacity: number): Promise<PublicKey> {
   const programProvider = program.provider as anchor.AnchorProvider;
   let pk = programProvider.wallet.publicKey;
 

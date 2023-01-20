@@ -33,7 +33,7 @@ pub fn same_location_id(location_id_1: Option<Pubkey>, location_id_2: Option<Pub
 }
 
 #[derive(Accounts)]
-#[instruction(name: String, xy: [u8; 2], capacity: i64)]
+#[instruction(name: String, position: [u8; 2], capacity: i64)]
 pub struct InitLocation<'info> {
     #[account(
         init, 
@@ -42,7 +42,7 @@ pub struct InitLocation<'info> {
         seeds = [
             b"map-location", 
             owner.key().as_ref(),
-            &xy,
+            &position,
         ],
         bump,
     )]

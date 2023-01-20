@@ -22,6 +22,7 @@ use std::hash::{Hasher};
 use std::collections::hash_map::DefaultHasher;
 
 use crate::errors::ValidationError;
+use crate::state::{Location, Storage};
 
 
 #[account]
@@ -55,6 +56,18 @@ pub struct CreateGameTile<'info> {
         bump,
     )]
     pub game_tile: Account<'info, GameTile>,
+    #[account(
+        mut,
+        seeds = [
+            b"map-location", 
+            owner.key().as_ref(),
+            &xy,
+        ],
+        bump = location.bump,
+    )]
+    pub location: Account<'info, Location>,
+    #[account(mut)]
+    pub storage: Account<'info, Storage>,
     pub system_program: Program<'info, System>,
 }
 
@@ -94,4 +107,14 @@ pub struct ExploreGameTile<'info> {
         bump = game_tile.bump,
     )]
     pub game_tile: Account<'info, GameTile>,
+    #[account(
+        mut,
+        seeds = [
+            b"map-location", 
+            owner.key().as_ref(),
+            &xy,
+        ],
+        bump = location.bump,
+    )]
+    pub location: Account<'info, Location>,
 }

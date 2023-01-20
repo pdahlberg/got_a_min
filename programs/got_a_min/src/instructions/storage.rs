@@ -10,6 +10,7 @@ pub fn init(
     capacity: i64,
     mobility_type: MobilityType,
     movement_speed: i64,
+    position: [u8; 2],
 ) -> Result<()> {
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let location: &mut Account<Location> = &mut ctx.accounts.location;
@@ -28,10 +29,25 @@ pub fn init(
 }
 
 #[derive(Accounts)]
+#[instruction(
+    resource_id: Pubkey,
+    capacity: i64,
+    mobility_type: MobilityType,
+    movement_speed: i64,
+    position: [u8; 2],
+)]
 pub struct InitStorage<'info> {
     #[account(init, payer = owner, space = Storage::LEN)]
     pub storage: Account<'info, Storage>,
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [
+            b"map-location", 
+            owner.key().as_ref(),
+            &position,
+        ],
+        bump = location.bump,
+    )]
     pub location: Account<'info, Location>,
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -117,4 +133,73 @@ pub struct UpdateStorageMoveStatus<'info> {
     pub storage: Account<'info, Storage>,
     #[account(mut)]
     pub owner: Signer<'info>,
+}
+
+
+// simple init
+#[derive(Accounts)]
+#[instruction(xy: [u8; 2])]
+pub struct SimpleInitStorage<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    #[account(init, payer = owner, space = Storage::LEN)]
+    pub storage: Account<'info, Storage>,
+    #[account(
+        mut,
+        seeds = [
+            b"map-location", 
+            owner.key().as_ref(),
+            &xy,
+        ],
+        bump = location.bump,
+    )]
+    pub location: Account<'info, Location>,
+    pub system_program: Program<'info, System>,
+}
+pub fn simple_init(
+    ctx: Context<SimpleInitStorage>, xy: [u8; 2]) -> Result<()> {
+    let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
+    //let location: &mut Account<Location> = &mut ctx.accounts.location;
+    let owner: &Signer = &ctx.accounts.owner;
+
+    //require!(position[0] > position[1], ValidationError::ExperimentalError);
+
+    storage.owner = owner.key();
+    storage.resource_id = owner.key();
+    storage.location_id = owner.key();
+    storage.amount = 0;
+    storage.capacity = 10;
+    storage.mobility_type = MobilityType::Fixed;
+    storage.movement_speed = 1;
+    storage.arrives_at = 0;
+    Ok(())
+}
+
+#[derive(Accounts)]
+#[instruction(xy: [u8; 2])]
+pub struct SimpleTestStorage<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    #[account(mut)]
+    pub storage: Account<'info, Storage>,
+    #[account(
+        mut,
+        seeds = [
+            b"map-location", 
+            owner.key().as_ref(),
+            &xy,
+        ],
+        bump = location.bump,
+    )]
+    pub location: Account<'info, Location>,
+    pub system_program: Program<'info, System>,
+}
+pub fn simple_test(
+    ctx: Context<SimpleTestStorage>, position: [u8; 2]) -> Result<()> {
+    let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
+    let location: &mut Account<Location> = &mut ctx.accounts.location;
+
+    require!(position[0] < position[1], ValidationError::ExperimentalError);
+
+    Ok(())
 }
