@@ -14,8 +14,10 @@ pub struct Location {
     pub occupied_space: i64,
     pub capacity: i64,
     pub name: String,
-    pub position: i64,
+    pub pos_x: u8,
+    pub pos_y: u8,
     pub occupied_by: Vec<OwnershipRef>,
+    pub bump: u8,
 }
 
 impl Location {
@@ -24,8 +26,10 @@ impl Location {
         + OCCUPIED_SPACE_LENGTH
         + CAPACITY_LENGTH
         + NAME_LENGTH
-        + POSITION_LENGTH
+        + POS_X_LENGTH
+        + POS_Y_LENGTH
         + OCCUPIED_BY_LENGTH
+        + BUMP_LENGTH
     ;
 
     pub fn add(&mut self, owner: &Signer, ownership_ref: OwnershipRef) -> Result<()> {
@@ -59,6 +63,10 @@ impl Location {
             Err(_) => MAX_CAPACITY_I64,
         }
     }
+
+    pub fn distance(&self, other_location: &Location) -> i64 {
+        1
+    }
 }
 
 pub trait InLocation {
@@ -75,5 +83,7 @@ const DISCRIMINATOR_LENGTH: usize = 8;
 pub const NAME_LENGTH: usize = 64 * 4;
 const OCCUPIED_BY_LENGTH: usize = MAX_CAPACITY * (PUBLIC_KEY_LENGTH * 2);
 const OCCUPIED_SPACE_LENGTH: usize = 8;
-const POSITION_LENGTH: usize = 8;
+const POS_X_LENGTH: usize = 1;
+const POS_Y_LENGTH: usize = 1;
 const PUBLIC_KEY_LENGTH: usize = 32;
+const BUMP_LENGTH: usize = 1;

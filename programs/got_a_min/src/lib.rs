@@ -23,7 +23,7 @@ pub mod got_a_min {
         game::explore_game_tile(ctx, xy)
     }
 
-    pub fn init_location(ctx: Context<InitLocation>, name: String, position: i64, capacity: i64) -> Result<()> {
+    pub fn init_location(ctx: Context<InitLocation>, name: String, position: [u8; 2], capacity: i64) -> Result<()> {
         location::init(ctx, name, position, capacity)
     }
 
@@ -49,8 +49,19 @@ pub mod got_a_min {
         capacity: i64, 
         mobility_type: MobilityType,
         movement_speed: i64,
+        position: [u8; 2],
     ) -> Result<()> {
-        storage::init(ctx, resource_id, capacity, mobility_type, movement_speed)
+        storage::init(ctx, resource_id, capacity, mobility_type, movement_speed, position)
+    }
+
+    pub fn simple_init_storage(
+        ctx: Context<SimpleInitStorage>, xy: [u8; 2]) -> Result<()> {
+        storage::simple_init(ctx, xy)
+    }
+
+    pub fn simple_test_storage(
+        ctx: Context<SimpleTestStorage>, position: [u8; 2]) -> Result<()> {
+        storage::simple_test(ctx, position)
     }
 
     pub fn move_between_storage(ctx: Context<MoveBetweenStorage>, amount: i64) -> Result<()> {

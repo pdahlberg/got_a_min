@@ -68,6 +68,8 @@ pub fn claim_production(ctx: Context<ProcessesResource>) -> Result<()> {
     // Verify owner gets the resources, currently fun for anyone reading the source code
     // let owner: &Signer = &ctx.accounts.owner;
 
+    msg!("claim_production/");
+
     let current_timestamp = Clock::get()?.unix_timestamp;
     let diff_time = current_timestamp - producer.claimed_at;
     let prod_slots_during_diff_time = diff_time / producer.processing_duration;
@@ -79,6 +81,8 @@ pub fn claim_production(ctx: Context<ProcessesResource>) -> Result<()> {
     }
 
     producer.claimed_at = current_timestamp;
+
+    msg!("/claim_production");
 
     require!(resource.input.is_empty(), ValidationError::ResourceInputMax);
 

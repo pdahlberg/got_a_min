@@ -8,6 +8,9 @@ pub fn create_game_tile(ctx: Context<CreateGameTile>, xy: [u8; 2]) -> Result<()>
     game_tile.y = xy[1];
     game_tile.name = "unknown".to_string();
     game_tile.bump = *ctx.bumps.get("game_tile").unwrap();
+
+    msg!("something... ... .. .  .");
+
     Ok(())
 }
 
@@ -22,6 +25,7 @@ use std::hash::{Hasher};
 use std::collections::hash_map::DefaultHasher;
 
 use crate::errors::ValidationError;
+use crate::state::{Location, Storage};
 
 
 #[account]
@@ -55,6 +59,18 @@ pub struct CreateGameTile<'info> {
         bump,
     )]
     pub game_tile: Account<'info, GameTile>,
+    /*#[account(
+        mut,
+        seeds = [
+            b"map-location", 
+            owner.key().as_ref(),
+            &xy,
+        ],
+        bump = location.bump,
+    )]
+    pub location: Account<'info, Location>,*/
+    //#[account(mut)]
+    //pub storage: Account<'info, Storage>,
     pub system_program: Program<'info, System>,
 }
 
@@ -94,4 +110,14 @@ pub struct ExploreGameTile<'info> {
         bump = game_tile.bump,
     )]
     pub game_tile: Account<'info, GameTile>,
+    #[account(
+        mut,
+        seeds = [
+            b"map-location", 
+            owner.key().as_ref(),
+            &xy,
+        ],
+        bump = location.bump,
+    )]
+    pub location: Account<'info, Location>,
 }
