@@ -94,8 +94,8 @@ pub mod got_a_min {
         unit::init(ctx, name, position)
     }
 
-    pub fn move_unit(ctx: Context<MoveUnit>, from_pos: [u8; 2], to_pos: [u8; 2]) -> Result<()> {
-        unit::move_unit(ctx, from_pos, to_pos)
+    pub fn move_unit(ctx: Context<MoveUnit>, from_pos: [u8; 2], to_pos: [u8; 2], name: String) -> Result<()> {
+        unit::move_unit(ctx, from_pos, to_pos, name)
     }
 }
 

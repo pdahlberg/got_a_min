@@ -97,11 +97,12 @@ function getLocationPda(program, pk, pos: [number, number]): PublicKey {
   return getPda(program, pk, "map-location", new Uint8Array(pos));
 }
 
-function getUnitPda(program, pk: PublicKey): PublicKey {
+function getUnitPda(program, pk: PublicKey, name: string): PublicKey {
   const [pda, _] = PublicKey.findProgramAddressSync(
     [
       anchor.utils.bytes.utf8.encode("unit"),
       pk.toBuffer(),
+      anchor.utils.bytes.utf8.encode(name),
     ],
     program.programId,
   );
@@ -139,8 +140,8 @@ async function fetchUnitStatePK(program, unitPda: PublicKey) {
   return await program.account.unit.fetch(unitPda);
 }
 
-async function fetchUnitState(program, pk) {
-  let pda = getUnitPda(program, pk);
+async function fetchUnitState(program, pk, name) {
+  let pda = getUnitPda(program, pk, name);
   return await fetchUnitStatePK(program, pda);
 }
 
@@ -394,15 +395,16 @@ describe("/Unit", () => {
     let startLocationPda = await initLocation2(program, "loc1", startPos, 10, {space:{}});
     let targetPos: [number, number] = [2, 1];
     let targetLocationPda = await initLocation2(program, "loc2", targetPos, 10, {space:{}});
+    let unitName = "s1";
 
-    await initUnit(program, "spaceship", startPos);
-    let unitBeforeMove = await fetchUnitState(program, pk);
+    await initUnit(program, unitName, startPos);
+    let unitBeforeMove = await fetchUnitState(program, pk, unitName);
 
-    expect(unitBeforeMove.name).equal("spaceship")
+    expect(unitBeforeMove.name).equal(unitName)
     expect(unitBeforeMove.atLocationId.toBase58()).equal(startLocationPda.toBase58(), "Start location")
 
     await moveUnit(program, unitBeforeMove, targetPos);
-    let unitAfterMove = await fetchUnitState(program, pk);
+    let unitAfterMove = await fetchUnitState(program, pk, unitName);
     let unitLocationAfterMove = await fetchLocationStatePK(program, unitAfterMove.atLocationId);
     expect(unitAfterMove.atLocationId.toBase58()).equal(targetLocationPda.toBase58(), "Target location")
     expect(unitLocationAfterMove.posX).equal(2);
@@ -412,24 +414,25 @@ describe("/Unit", () => {
   it("Move and explore", async () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
-    let startPos: [number, number] = [1, 1];
-    let startLocationPda = await initLocation2(program, "loc1", startPos, 10);
-    let targetPos: [number, number] = [2, 1];
-    let targetLocationPda = await initLocation2(program, "loc2", targetPos, 10);
+    let startPos: [number, number] = [10, 2];
+    let startLocationPda = await initLocation2(program, "loc10", startPos, 10, {space:{}});
+    let targetPos: [number, number] = [11, 2];
+    let targetLocationPda = await initLocation2(program, "loc11", targetPos, 10);
+    let unitName = "s2";
+    
+    await initUnit(program, unitName, startPos);
+    let unitBeforeMove = await fetchUnitState(program, pk, unitName);
+    let unitLocationBeforeMove = await fetchLocationStatePK(program, unitBeforeMove.atLocationId);
 
-    await initUnit(program, "spaceship", startPos);
-    /*let unitBeforeMove = await fetchUnitState(program, pk);
-
-    expect(unitBeforeMove.name).equal("spaceship")
-    expect(unitBeforeMove.atLocationId.toBase58()).equal(startLocationPda.toBase58(), "Start location")
+    expect(unitBeforeMove.name).equal(unitName)
+    expect(unitLocationBeforeMove.posX).equal(10, "Start location")
+    expect(unitLocationBeforeMove.posY).equal(2, "Start location")
 
     await moveUnit(program, unitBeforeMove, targetPos);
-    let unitAfterMove = await fetchUnitState(program, pk);
+    let unitAfterMove = await fetchUnitState(program, pk, unitName);
     let unitLocationAfterMove = await fetchLocationStatePK(program, unitAfterMove.atLocationId);
-    expect(unitAfterMove.atLocationId.toBase58()).equal(targetLocationPda.toBase58(), "Target location")
-    expect(unitLocationAfterMove.posX).equal(2);
-    expect(unitLocationAfterMove.posY).equal(1);*/
-    failNotImplemented();
+    expect(unitLocationAfterMove.posX).equal(11);
+    expect(unitLocationAfterMove.posY).equal(2);
   });
 
 });
@@ -1111,13 +1114,13 @@ async function moveUnit(program: Program<GotAMin>, unit, toPos): Promise<PublicK
   const provider = program.provider as anchor.AnchorProvider;
   let pk = provider.wallet.publicKey;
 
-  let unitPda = getUnitPda(program, pk);
+  let unitPda = getUnitPda(program, pk, unit.name);
   let currentLocation = await fetchLocationStatePK(program, unit.atLocationId);
   let fromPos: [number, number] = [currentLocation.posX, currentLocation.posY];
   let toLocationPda = getLocationPda(program, pk, toPos);
   
   await program.methods
-    .moveUnit(fromPos, toPos)
+    .moveUnit(fromPos, toPos, unit.name)
     .accounts({
       unit: unitPda,
       fromLocation: unit.atLocationId,
@@ -1133,7 +1136,7 @@ async function initUnit(program: Program<GotAMin>, name: string, pos: [number, n
   const provider = program.provider as anchor.AnchorProvider;
   let pk = provider.wallet.publicKey;
 
-  let unitPda = getUnitPda(program, pk);
+  let unitPda = getUnitPda(program, pk, name);
   let locationPda = getLocationPda(program, pk, pos);
   
   const pdaInfo = await provider.connection.getAccountInfo(unitPda);

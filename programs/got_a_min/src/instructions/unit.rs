@@ -20,8 +20,9 @@ pub fn init(ctx: Context<InitUnit>, name: String, _position: [u8; 2]) -> Result<
 }
 
 fn string_to_seed(value: &str) -> &[u8] {
-    let b = value.as_bytes();
-    if b.len() > 32 { &b[0..32] } else { b }
+    //let b = value.as_bytes();
+    //if b.len() > 32 { &b[0..32] } else { b }
+    value.as_bytes()
 }
 
 #[derive(Accounts)]
@@ -34,7 +35,7 @@ pub struct InitUnit<'info> {
         seeds = [
             b"unit", 
             owner.key().as_ref(),
-            //&string_to_seed(&name), // let's start with only one
+            &string_to_seed(&name),
         ],
         bump,
     )]
@@ -54,7 +55,7 @@ pub struct InitUnit<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn move_unit(ctx: Context<MoveUnit>, from_pos: [u8; 2], to_pos: [u8; 2]) -> Result<()> {
+pub fn move_unit(ctx: Context<MoveUnit>, _from_pos: [u8; 2], _to_pos: [u8; 2], _name: String) -> Result<()> {
     let unit: &mut Account<Unit> = &mut ctx.accounts.unit;
     let from_location: &Account<Location> = &ctx.accounts.from_location;
     let to_location: &Account<Location> = &ctx.accounts.to_location;
@@ -67,13 +68,14 @@ pub fn move_unit(ctx: Context<MoveUnit>, from_pos: [u8; 2], to_pos: [u8; 2]) -> 
 }
 
 #[derive(Accounts)]
-#[instruction(from_pos: [u8; 2], to_pos: [u8; 2])]
+#[instruction(from_pos: [u8; 2], to_pos: [u8; 2], name: String)]
 pub struct MoveUnit<'info> {
     #[account(
         mut,
         seeds = [
             b"unit", 
             owner.key().as_ref(),
+            &string_to_seed(&name),
         ],
         bump = unit.bump,
     )]
