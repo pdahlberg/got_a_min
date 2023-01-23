@@ -1,13 +1,15 @@
 use anchor_lang::prelude::*;
-use crate::state::unit::*;
+use crate::state::{unit::*, Location};
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitUnit>, name: String) -> Result<()> {
+pub fn init(ctx: Context<InitUnit>, name: String, position: [u8; 2]) -> Result<()> {
     let unit: &mut Account<Unit> = &mut ctx.accounts.unit;
+    let location: &Account<Location> = &ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
 
     unit.owner = *owner.key;
     unit.name = name;
+    unit.at_location_id = location.key();
     unit.bump = *ctx.bumps.get("unit").unwrap();
 
     require!(unit.name.len() <= NAME_LENGTH, ValidationError::NameTooLong);
@@ -21,7 +23,7 @@ fn string_to_seed(value: &str) -> &[u8] {
 }
 
 #[derive(Accounts)]
-//#[instruction(name: String)]
+#[instruction(name: String, position: [u8; 2],)]
 pub struct InitUnit<'info> {
     #[account(
         init, 
@@ -35,6 +37,16 @@ pub struct InitUnit<'info> {
         bump,
     )]
     pub unit: Account<'info, Unit>,
+    #[account(
+        mut,
+        seeds = [
+            b"map-location", 
+            owner.key().as_ref(),
+            &position,
+        ],
+        bump = location.bump,
+    )]
+    pub location: Account<'info, Location>,
     #[account(mut)]
     pub owner: Signer<'info>,
     pub system_program: Program<'info, System>,

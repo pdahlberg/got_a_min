@@ -180,8 +180,10 @@ describe("/Sandbox", () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
     let unitPda = getUnitPda(program, pk);
+    let pos: [number, number] = [1, 1];
 
-    await initUnit(program, "spaceship");
+    await initLocation2(program, "loc1", pos, 10);
+    await initUnit(program, "spaceship", pos);
     let unit = await fetchUnitState(program, pk);
 
     expect(unit.name).equal("spaceship")
@@ -1041,18 +1043,20 @@ async function initLocation2(program: Program<GotAMin>, name: string, position: 
   return locationPda;
 }
 
-async function initUnit(program: Program<GotAMin>, name: string): Promise<PublicKey> {
+async function initUnit(program: Program<GotAMin>, name: string, pos: [number, number]): Promise<PublicKey> {
   const provider = program.provider as anchor.AnchorProvider;
   let pk = provider.wallet.publicKey;
 
   let unitPda = getUnitPda(program, pk);
+  let locationPda = getLocationPda(program, pk, pos);
   
   const pdaInfo = await provider.connection.getAccountInfo(unitPda);
   if(pdaInfo == null) {
     await program.methods
-      .initUnit(name)
+      .initUnit(name, pos)
       .accounts({
         unit: unitPda,
+        location: locationPda,
         owner: pk,
       })
       .rpc();
