@@ -17,6 +17,7 @@ pub struct Location {
     pub pos_x: u8,
     pub pos_y: u8,
     pub occupied_by: Vec<OwnershipRef>,
+    pub location_type: LocationType,
     pub bump: u8,
 }
 
@@ -29,6 +30,7 @@ impl Location {
         + POS_X_LENGTH
         + POS_Y_LENGTH
         + OCCUPIED_BY_LENGTH
+        + LOCATION_TYPE_LENGTH
         + BUMP_LENGTH
     ;
 
@@ -69,6 +71,15 @@ impl Location {
     }
 }
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
+pub enum LocationType {
+    Unexplored,
+    Space,
+    Planet,
+    Moon,
+    Asteroid,
+}
+
 pub trait InLocation {
     fn size(&self) -> i64 {
         1
@@ -80,6 +91,7 @@ const MAX_CAPACITY_I64: i64 = 10;
 
 const CAPACITY_LENGTH: usize = 8;
 const DISCRIMINATOR_LENGTH: usize = 8;
+const LOCATION_TYPE_LENGTH: usize = 1;
 pub const NAME_LENGTH: usize = 64 * 4;
 const OCCUPIED_BY_LENGTH: usize = MAX_CAPACITY * (PUBLIC_KEY_LENGTH * 2);
 const OCCUPIED_SPACE_LENGTH: usize = 8;

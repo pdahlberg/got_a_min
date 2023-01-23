@@ -391,9 +391,9 @@ describe("/Unit", () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
     let startPos: [number, number] = [1, 1];
-    let startLocationPda = await initLocation2(program, "loc1", startPos, 10);
+    let startLocationPda = await initLocation2(program, "loc1", startPos, 10, {space:{}});
     let targetPos: [number, number] = [2, 1];
-    let targetLocationPda = await initLocation2(program, "loc2", targetPos, 10);
+    let targetLocationPda = await initLocation2(program, "loc2", targetPos, 10, {space:{}});
 
     await initUnit(program, "spaceship", startPos);
     let unitBeforeMove = await fetchUnitState(program, pk);
@@ -1087,7 +1087,7 @@ async function initDefaultLocation(program: Program<GotAMin>) {
 async function initLocation(program: Program<GotAMin>, location, name: string, position: [number, number], capacity: number) {
   return initLocation2(program, name, position, capacity);
 }
-async function initLocation2(program: Program<GotAMin>, name: string, position: [number, number], capacity: number): Promise<PublicKey> {
+async function initLocation2(program: Program<GotAMin>, name: string, position: [number, number], capacity: number, locationType = null): Promise<PublicKey> {
   const provider = program.provider as anchor.AnchorProvider;
   let pk = provider.wallet.publicKey;
 
@@ -1096,7 +1096,7 @@ async function initLocation2(program: Program<GotAMin>, name: string, position: 
   const pdaInfo = await provider.connection.getAccountInfo(locationPda);
   if(pdaInfo == null) {
     await program.methods
-      .initLocation(name, position, new anchor.BN(capacity))
+      .initLocation(name, position, new anchor.BN(capacity), locationType)
       .accounts({
         location: locationPda,
         owner: pk,

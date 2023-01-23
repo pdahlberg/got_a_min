@@ -1,11 +1,13 @@
 use anchor_lang::prelude::*;
-use crate::state::{unit::*, Location};
+use crate::state::{unit::*, Location, LocationType};
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitUnit>, name: String, position: [u8; 2]) -> Result<()> {
+pub fn init(ctx: Context<InitUnit>, name: String, _position: [u8; 2]) -> Result<()> {
     let unit: &mut Account<Unit> = &mut ctx.accounts.unit;
     let location: &Account<Location> = &ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
+
+    require!(location.location_type != LocationType::Unexplored, ValidationError::LocationUnexplored);
 
     unit.owner = *owner.key;
     unit.name = name;

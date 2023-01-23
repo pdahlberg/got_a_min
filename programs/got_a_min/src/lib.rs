@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use instructions::*;
 use crate::state::MobilityType;
 use crate::state::ProcessorType;
+use crate::state::LocationType;
 
 pub mod errors;
 pub mod state;
@@ -23,8 +24,8 @@ pub mod got_a_min {
         game::explore_game_tile(ctx, xy)
     }
 
-    pub fn init_location(ctx: Context<InitLocation>, name: String, position: [u8; 2], capacity: i64) -> Result<()> {
-        location::init(ctx, name, position, capacity)
+    pub fn init_location(ctx: Context<InitLocation>, name: String, position: [u8; 2], capacity: i64, location_type: Option<LocationType>) -> Result<()> {
+        location::init(ctx, name, position, capacity, location_type)
     }
 
     pub fn stuff(ctx: Context<InitStuff>) -> Result<()> {
