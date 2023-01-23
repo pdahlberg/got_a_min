@@ -354,6 +354,31 @@ describe("/Initializations", () => {
     expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
   });
 
+  it("Init unit", async () => {
+    /*const p1: KP = anchor.web3.Keypair.generate();
+    let pk = provider.wallet.publicKey;
+    let startPos: [number, number] = [1, 1];
+    let startLocationPda = await initLocation2(program, "loc1", startPos, 10);
+    let targetPos: [number, number] = [2, 1];
+    let targetLocationPda = await initLocation2(program, "loc2", targetPos, 10);
+
+    await initUnit(program, "spaceship", startPos);
+    let unitBeforeMove = await fetchUnitState(program, pk);
+
+    expect(unitBeforeMove.name).equal("spaceship")
+    expect(unitBeforeMove.atLocationId.toBase58()).equal(startLocationPda.toBase58(), "Start location")
+
+    await moveUnit(program, unitBeforeMove, targetPos);
+    let unitAfterMove = await fetchUnitState(program, pk);
+    let unitLocationAfterMove = await fetchLocationStatePK(program, unitAfterMove.atLocationId);
+    expect(unitAfterMove.atLocationId.toBase58()).equal(targetLocationPda.toBase58(), "Target location")
+    expect(unitLocationAfterMove.posX).equal(2);
+    expect(unitLocationAfterMove.posY).equal(1);
+    */
+    failNotImplemented();
+  });
+
+
 });
 
 describe("/Unit", () => {
