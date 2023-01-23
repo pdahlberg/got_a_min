@@ -52,4 +52,53 @@ pub struct InitUnit<'info> {
     pub system_program: Program<'info, System>,
 }
 
+pub fn move_unit(ctx: Context<MoveUnit>, from_pos: [u8; 2], to_pos: [u8; 2]) -> Result<()> {
+    let unit: &mut Account<Unit> = &mut ctx.accounts.unit;
+    let from_location: &Account<Location> = &ctx.accounts.from_location;
+    let to_location: &Account<Location> = &ctx.accounts.to_location;
+
+    require!(unit.at_location_id == from_location.key(), ValidationError::ExperimentalError);
+
+    unit.at_location_id = to_location.key();
+    
+    Ok(())
+}
+
+#[derive(Accounts)]
+#[instruction(from_pos: [u8; 2], to_pos: [u8; 2])]
+pub struct MoveUnit<'info> {
+    #[account(
+        mut,
+        seeds = [
+            b"unit", 
+            owner.key().as_ref(),
+        ],
+        bump = unit.bump,
+    )]
+    pub unit: Account<'info, Unit>,
+    #[account(
+        mut,
+        seeds = [
+            b"map-location", 
+            owner.key().as_ref(),
+            &from_pos,
+        ],
+        bump = from_location.bump,
+    )]
+    pub from_location: Account<'info, Location>,
+    #[account(
+        mut,
+        seeds = [
+            b"map-location", 
+            owner.key().as_ref(),
+            &to_pos,
+        ],
+        bump = to_location.bump,
+    )]
+    pub to_location: Account<'info, Location>,
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
 

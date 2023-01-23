@@ -182,12 +182,12 @@ describe("/Sandbox", () => {
     let unitPda = getUnitPda(program, pk);
     let pos: [number, number] = [1, 1];
 
-    await initLocation2(program, "loc1", pos, 10);
+    let locationPda = await initLocation2(program, "loc1", pos, 10);
     await initUnit(program, "spaceship", pos);
     let unit = await fetchUnitState(program, pk);
 
     expect(unit.name).equal("spaceship")
-    //expect(unit.atLocationId.toBase58()).equal("unit")
+    expect(unit.atLocationId.toBase58()).equal(locationPda.toBase58())
   });
 
   it.skip("pda-1", async () => {
@@ -1041,6 +1041,26 @@ async function initLocation2(program: Program<GotAMin>, name: string, position: 
   }
 
   return locationPda;
+}
+
+async function moveUnit(program: Program<GotAMin>, unit, toPos): Promise<PublicKey> {
+  const provider = program.provider as anchor.AnchorProvider;
+  let pk = provider.wallet.publicKey;
+
+  let fromLocationPda = unit.atLocationId;
+  let toLocationPda = getLocationPda(program, pk, toPos);
+  
+  await program.methods
+    .moveUnit()
+    .accounts({
+      unit: unit,
+      fromLocation: fromLocationPda,
+      toLocation: toLocationPda,
+      owner: pk,
+    })
+    .rpc();
+
+  return unit;
 }
 
 async function initUnit(program: Program<GotAMin>, name: string, pos: [number, number]): Promise<PublicKey> {
