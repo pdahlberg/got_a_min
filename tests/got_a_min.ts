@@ -176,18 +176,27 @@ describe("/Sandbox", () => {
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
   
-  it("unit", async () => {
+  it("Init and move unit", async () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
     let unitPda = getUnitPda(program, pk);
-    let pos: [number, number] = [1, 1];
+    let startPos: [number, number] = [1, 1];
+    let startLocationPda = await initLocation2(program, "loc1", startPos, 10);
+    let targetPos: [number, number] = [2, 1];
+    let targetLocationPda = await initLocation2(program, "loc2", targetPos, 10);
 
-    let locationPda = await initLocation2(program, "loc1", pos, 10);
-    await initUnit(program, "spaceship", pos);
-    let unit = await fetchUnitState(program, pk);
+    await initUnit(program, "spaceship", startPos);
+    let unitBeforeMove = await fetchUnitState(program, pk);
 
-    expect(unit.name).equal("spaceship")
-    expect(unit.atLocationId.toBase58()).equal(locationPda.toBase58())
+    expect(unitBeforeMove.name).equal("spaceship")
+    expect(unitBeforeMove.atLocationId.toBase58()).equal(startLocationPda.toBase58(), "Start location")
+
+    await moveUnit(program, unitBeforeMove, targetPos);
+    let unitAfterMove = await fetchUnitState(program, pk);
+    let unitLocationAfterMove = await fetchLocationStatePK(program, unitAfterMove.atLocationId);
+    expect(unitAfterMove.atLocationId.toBase58()).equal(targetLocationPda.toBase58(), "Target location")
+    expect(unitLocationAfterMove.posX).equal(2);
+    expect(unitLocationAfterMove.posY).equal(1);
   });
 
   it.skip("pda-1", async () => {
@@ -1047,14 +1056,16 @@ async function moveUnit(program: Program<GotAMin>, unit, toPos): Promise<PublicK
   const provider = program.provider as anchor.AnchorProvider;
   let pk = provider.wallet.publicKey;
 
-  let fromLocationPda = unit.atLocationId;
+  let unitPda = getUnitPda(program, pk);
+  let currentLocation = await fetchLocationStatePK(program, unit.atLocationId);
+  let fromPos: [number, number] = [currentLocation.posX, currentLocation.posY];
   let toLocationPda = getLocationPda(program, pk, toPos);
   
   await program.methods
-    .moveUnit()
+    .moveUnit(fromPos, toPos)
     .accounts({
-      unit: unit,
-      fromLocation: fromLocationPda,
+      unit: unitPda,
+      fromLocation: unit.atLocationId,
       toLocation: toLocationPda,
       owner: pk,
     })
