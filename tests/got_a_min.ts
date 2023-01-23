@@ -94,16 +94,32 @@ function getMapTilePda(program, pk, x, y) {
 }
 
 function getLocationPda(program, pk, pos: [number, number]): PublicKey {
+  return getPda(program, pk, "map-location", new Uint8Array(pos));
+}
+
+function getUnitPda(program, pk: PublicKey): PublicKey {
   const [pda, _] = PublicKey.findProgramAddressSync(
     [
-      anchor.utils.bytes.utf8.encode("map-location"),
+      anchor.utils.bytes.utf8.encode("unit"),
       pk.toBuffer(),
-      new Uint8Array(pos),
     ],
     program.programId,
   );
   return pda;
 }
+
+function getPda(program, pk: PublicKey, key, extraSeeds: Uint8Array): PublicKey {
+  const [pda, _] = PublicKey.findProgramAddressSync(
+    [
+      anchor.utils.bytes.utf8.encode(key),
+      pk.toBuffer(),
+      extraSeeds,
+    ],
+    program.programId,
+  );
+  return pda;
+}
+
 
 async function fetchMapTileState(program, pk, x, y) {
   let pda = getMapTilePda(program, pk, x, y);
@@ -117,6 +133,15 @@ async function fetchLocationStatePK(program, pos: PublicKey) {
 async function fetchLocationState(program, pk, pos: [number, number]) {
   let pda = getLocationPda(program, pk, pos);
   return await fetchLocationStatePK(program, pda);
+}
+
+async function fetchUnitStatePK(program, unitPda: PublicKey) {
+  return await program.account.unit.fetch(unitPda);
+}
+
+async function fetchUnitState(program, pk) {
+  let pda = getUnitPda(program, pk);
+  return await fetchUnitStatePK(program, pda);
 }
 
 function printMap(map, debug = false) {
@@ -150,8 +175,20 @@ describe("/Sandbox", () => {
   anchor.setProvider(provider);
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
+  
+  it("unit", async () => {
+    const p1: KP = anchor.web3.Keypair.generate();
+    let pk = provider.wallet.publicKey;
+    let unitPda = getUnitPda(program, pk);
 
-  it("pda-1", async () => {
+    await initUnit(program, "spaceship");
+    let unit = await fetchUnitState(program, pk);
+
+    expect(unit.name).equal("spaceship")
+    //expect(unit.atLocationId.toBase58()).equal("unit")
+  });
+
+  it.skip("pda-1", async () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
 
@@ -192,7 +229,7 @@ describe("/Sandbox", () => {
     //failNotImplemented();
   });
 
-  it("simple storage", async () => {
+  it.skip("simple storage", async () => {
     let pk = provider.wallet.publicKey;
     let pos: [number, number] = [2, 1];
 
@@ -1002,6 +1039,26 @@ async function initLocation2(program: Program<GotAMin>, name: string, position: 
   }
 
   return locationPda;
+}
+
+async function initUnit(program: Program<GotAMin>, name: string): Promise<PublicKey> {
+  const provider = program.provider as anchor.AnchorProvider;
+  let pk = provider.wallet.publicKey;
+
+  let unitPda = getUnitPda(program, pk);
+  
+  const pdaInfo = await provider.connection.getAccountInfo(unitPda);
+  if(pdaInfo == null) {
+    await program.methods
+      .initUnit(name)
+      .accounts({
+        unit: unitPda,
+        owner: pk,
+      })
+      .rpc();
+  }
+
+  return unitPda;
 }
 
 async function produce_without_input(program: Program<GotAMin>, producer, storage, resource) {

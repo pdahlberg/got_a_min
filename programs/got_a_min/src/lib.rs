@@ -88,6 +88,10 @@ pub mod got_a_min {
     pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>) -> Result<()> {
         processor::produce_with_two_inputs(ctx)
     }
+
+    pub fn init_unit(ctx: Context<InitUnit>, name: String) -> Result<()> {
+        unit::init(ctx, name)
+    }
 }
 
 
