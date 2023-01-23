@@ -419,7 +419,7 @@ describe("/Unit", () => {
     let targetPos: [number, number] = [11, 2];
     let targetLocationPda = await initLocation2(program, "loc11", targetPos, 10);
     let unitName = "s2";
-    
+
     await initUnit(program, unitName, startPos);
     let unitBeforeMove = await fetchUnitState(program, pk, unitName);
     let unitLocationBeforeMove = await fetchLocationStatePK(program, unitBeforeMove.atLocationId);
@@ -433,6 +433,7 @@ describe("/Unit", () => {
     let unitLocationAfterMove = await fetchLocationStatePK(program, unitAfterMove.atLocationId);
     expect(unitLocationAfterMove.posX).equal(11);
     expect(unitLocationAfterMove.posY).equal(2);
+    expect(JSON.stringify(unitLocationAfterMove.locationType)).to.equal(JSON.stringify({space:{}}));
   });
 
 });

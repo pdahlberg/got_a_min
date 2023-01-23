@@ -58,9 +58,13 @@ pub struct InitUnit<'info> {
 pub fn move_unit(ctx: Context<MoveUnit>, _from_pos: [u8; 2], _to_pos: [u8; 2], _name: String) -> Result<()> {
     let unit: &mut Account<Unit> = &mut ctx.accounts.unit;
     let from_location: &Account<Location> = &ctx.accounts.from_location;
-    let to_location: &Account<Location> = &ctx.accounts.to_location;
+    let to_location: &mut Account<Location> = &mut ctx.accounts.to_location;
 
     require!(unit.at_location_id == from_location.key(), ValidationError::ExperimentalError);
+
+    if to_location.location_type == LocationType::Unexplored {
+        to_location.location_type = LocationType::Space;
+    }
 
     unit.at_location_id = to_location.key();
     
