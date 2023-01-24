@@ -306,14 +306,14 @@ describe("/Initializations", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
-  const programProvider = program.provider as anchor.AnchorProvider;
+  const provider = program.provider as anchor.AnchorProvider;
 
   it("Init resource", async () => {
     const resource = anchor.web3.Keypair.generate();
 
     let result = await initResource(program, resource, "A", []);
     
-    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(result.owner.toBase58()).to.equal(provider.wallet.publicKey.toBase58());
   });
 
   it("Init resource with input", async () => {
@@ -322,7 +322,7 @@ describe("/Initializations", () => {
 
     let result = await initResource(program, resource, "B", [[resourceA as KP, 1]]);
     
-    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(result.owner.toBase58()).to.equal(provider.wallet.publicKey.toBase58());
   });
 
   it("Init location", async () => {
@@ -342,7 +342,7 @@ describe("/Initializations", () => {
 
     let result = await initProcessor(program, producer, resource, 1);
     
-    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(result.owner.toBase58()).to.equal(provider.wallet.publicKey.toBase58());
     expect(result.outputRate.toNumber()).to.equal(1);
     expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
   });
@@ -354,34 +354,24 @@ describe("/Initializations", () => {
 
     let result = await initStorage(program, storage, resource, 5);
     
-    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(result.owner.toBase58()).to.equal(provider.wallet.publicKey.toBase58());
     expect(result.amount.toNumber()).to.equal(0);
     expect(result.capacity.toNumber()).to.equal(5);
     expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
   });
 
   it("Init unit", async () => {
-    /*const p1: KP = anchor.web3.Keypair.generate();
+    const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
     let startPos: [number, number] = [1, 1];
-    let startLocationPda = await initLocation2(program, "loc1", startPos, 10);
-    let targetPos: [number, number] = [2, 1];
-    let targetLocationPda = await initLocation2(program, "loc2", targetPos, 10);
+    let startLocationPda = await initLocation2(program, "loc1", startPos, 10, {space:{}});
+    let unitName = "s1";
 
-    await initUnit(program, "spaceship", startPos);
-    let unitBeforeMove = await fetchUnitState(program, pk);
+    await initUnit(program, unitName, startPos);
+    let unitBeforeMove = await fetchUnitState(program, pk, unitName);
 
-    expect(unitBeforeMove.name).equal("spaceship")
+    expect(unitBeforeMove.name).equal(unitName)
     expect(unitBeforeMove.atLocationId.toBase58()).equal(startLocationPda.toBase58(), "Start location")
-
-    await moveUnit(program, unitBeforeMove, targetPos);
-    let unitAfterMove = await fetchUnitState(program, pk);
-    let unitLocationAfterMove = await fetchLocationStatePK(program, unitAfterMove.atLocationId);
-    expect(unitAfterMove.atLocationId.toBase58()).equal(targetLocationPda.toBase58(), "Target location")
-    expect(unitLocationAfterMove.posX).equal(2);
-    expect(unitLocationAfterMove.posY).equal(1);
-    */
-    failNotImplemented();
   });
 
 
