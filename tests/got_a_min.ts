@@ -859,25 +859,26 @@ describe("/Location", () => {
     expect(location2Result.occupiedSpace.toNumber()).equal(1);
   });  
 
-/*  it("init stuff", async () => {
-    const account = anchor.web3.Keypair.generate();
-    console.log("account: ", account.publicKey.toBase58());
+  it("init_stuff", async () => {
+    let num = new anchor.BN(2);
+    num.toBuffer();
+    let buffer = num.toArray('le', 8);
+    console.log("stuff. num: ", num, ", toArray().len: ", buffer.length);
+    buffer.forEach((i) => {
+      console.log("i: ", i);
+    });
 
     await program.methods
-    .stuff()
+    .stuff(num)
     .accounts({
-      stuff: account.publicKey,
       owner: programProvider.wallet.publicKey,
       systemProgram: anchor.web3.SystemProgram.programId,
     })
-    .signers([account])
     .rpc();
 
-    let res = await program.account.stuff.fetch(account.publicKey);
-    expect(res.number.toNumber()).equal(123);
   });
 
-  it("update stuff", async () => {
+/*  it("update stuff", async () => {
     let key = new anchor.web3.PublicKey("FCHm4Ef3b1aKpBPTk6XkKsQwf8Z3zUhkh6VbZuSrwDi8");
     console.log("Updating: ", key.toBase58());
 
