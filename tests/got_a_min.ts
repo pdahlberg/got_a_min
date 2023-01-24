@@ -18,7 +18,7 @@ before("Init", async () => {
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   //const programProvider = program.provider as anchor.AnchorProvider;
 
-  //DEFAULT_LOCATION = await initDefaultLocation(program);
+  DEFAULT_LOCATION = await initDefaultLocation(program);
 });
 
 async function createGameTile(program, pk, x, y, ) {
@@ -1079,24 +1079,9 @@ async function createLocation(program: Program<GotAMin>, name: string, position:
 }
 
 async function initDefaultLocation(program: Program<GotAMin>) {
-  try {
-    console.log("initDefaultLocation - 1");
-    const programProvider = program.provider as anchor.AnchorProvider;
-    let pk = programProvider.wallet.publicKey;
-    let pos: [number, number] = [255, 255];
-    let locationPda = getLocationPda(program, pk, pos);
-    let state = await fetchLocationStatePK(program, locationPda);
-    console.log("initDefaultLocation - 5");
-    if(state.posX != 255) {
-      return initLocation2(program, 'default', pos, 999);
-    } else {
-      return locationPda;
-    }
-  }
-  catch(e){
-    console.log("initDefaultLocation - 10");
-    return DEFAULT_LOCATION;
-  }
+  const provider = program.provider as anchor.AnchorProvider;
+  let pos: [number, number] = [9999, 9999];
+  return initLocation2(program, 'default', pos, 999);
 }
 
 async function initLocation(program: Program<GotAMin>, location, name: string, position: [number, number], capacity: number) {
