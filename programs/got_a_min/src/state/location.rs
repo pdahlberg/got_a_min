@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::errors::ValidationError;
+use crate::{errors::ValidationError, instructions::location::fake_rng};
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct OwnershipRef {
@@ -67,7 +67,28 @@ impl Location {
     }
 
     pub fn distance(&self, other_location: &Location) -> i64 {
+        let diff_x = match self.pos_x > other_location.pos_x {
+            true => self.pos_x - other_location.pos_x,
+            false => other_location.pos_x - self.pos_x,
+        };
+        let diff_y = match self.pos_y > other_location.pos_y {
+            true => self.pos_y - other_location.pos_y,
+            false => other_location.pos_y - self.pos_y,
+        };
+        //diff_x + diff_y
         1
+    }
+
+    pub fn explore(&mut self) {
+        self.location_type = match fake_rng(self.owner) {
+            0 => LocationType::Planet,
+            1 => LocationType::Moon,
+            2 => LocationType::Moon,
+            3 => LocationType::Asteroid,
+            4 => LocationType::Asteroid,
+            5 => LocationType::Asteroid,
+            _ => LocationType::Space,
+        };
     }
 }
 

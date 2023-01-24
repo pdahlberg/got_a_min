@@ -63,7 +63,7 @@ pub fn move_unit(ctx: Context<MoveUnit>, _from_pos: [u8; 2], _to_pos: [u8; 2], _
     require!(unit.at_location_id == from_location.key(), ValidationError::ExperimentalError);
 
     if to_location.location_type == LocationType::Unexplored {
-        to_location.location_type = LocationType::Space;
+        to_location.explore();
     }
 
     unit.at_location_id = to_location.key();

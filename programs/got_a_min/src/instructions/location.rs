@@ -1,4 +1,6 @@
 use anchor_lang::prelude::*;
+use std::hash::{Hasher, Hash};
+use std::collections::hash_map::DefaultHasher;
 use crate::state::location::*;
 use crate::errors::ValidationError;
 
@@ -34,6 +36,13 @@ pub fn same_location_id(location_id_1: Option<Pubkey>, location_id_2: Option<Pub
         (Some(l1), Some(l2)) => l1 == l2,
         _ => false,
     }
+}
+
+pub fn fake_rng(key: Pubkey) -> u8 {
+    let bytes = &key.to_bytes();
+    let mut hasher = DefaultHasher::new();
+    bytes.hash(&mut hasher);
+    (hasher.finish() % 256) as u8
 }
 
 #[derive(Accounts)]
