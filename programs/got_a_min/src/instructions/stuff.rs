@@ -19,7 +19,7 @@ pub struct InitStuff<'info> {
             b"map-location", 
             owner.key().as_ref(),
             &position,
-            //&num.to_le_bytes(),
+            &num.to_le_bytes(),
         ],
         bump = location.bump,
     )]

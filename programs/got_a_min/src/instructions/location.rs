@@ -4,7 +4,7 @@ use std::collections::hash_map::DefaultHasher;
 use crate::state::location::*;
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitLocation>, name: String, position: [u8; 2], capacity: i64, location_type: Option<LocationType>) -> Result<()> {
+pub fn init(ctx: Context<InitLocation>, name: String, position: [u8; 2], num: i64, capacity: i64, location_type: Option<LocationType>) -> Result<()> {
     let location: &mut Account<Location> = &mut ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
 
@@ -45,8 +45,17 @@ pub fn fake_rng(key: Pubkey) -> u8 {
     (hasher.finish() % 256) as u8
 }
 
+fn le(num: i64) -> [u8; 8] {
+    let arr = num.to_le_bytes();
+
+    msg!("num: {}", &num);
+    arr.iter().for_each(|i| msg!("> i: {}", i));
+
+    arr
+}
+
 #[derive(Accounts)]
-#[instruction(name: String, position: [u8; 2], capacity: i64)]
+#[instruction(name: String, position: [u8; 2], num: i64, capacity: i64)]
 pub struct InitLocation<'info> {
     #[account(
         init, 
@@ -56,6 +65,7 @@ pub struct InitLocation<'info> {
             b"map-location", 
             owner.key().as_ref(),
             &position,
+            &le(num),
         ],
         bump,
     )]

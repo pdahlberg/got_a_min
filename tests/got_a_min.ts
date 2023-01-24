@@ -93,8 +93,25 @@ function getMapTilePda(program, pk, x, y) {
   return pda;
 }
 
-function getLocationPda(program, pk, pos: [number, number]): PublicKey {
-  return getPda(program, pk, "map-location", new Uint8Array(pos));
+function getLocationPda(program, pk, pos: [number, number], num: number = 999): PublicKey {
+  return getPda(program, pk, "map-location", new Uint8Array(pos), num);
+}
+
+function getPda(program, pk: PublicKey, key, extraSeeds: Uint8Array, num2: number): PublicKey {
+  let num = new anchor.BN(num2);
+  let buffer = num.toArray('le', 8);
+  let arr = new Uint8Array(buffer);
+
+  const [pda, _] = PublicKey.findProgramAddressSync(
+    [
+      anchor.utils.bytes.utf8.encode(key),
+      pk.toBuffer(),
+      extraSeeds,
+      arr,
+    ],
+    program.programId,
+  );
+  return pda;
 }
 
 function getUnitPda(program, pk: PublicKey, name: string): PublicKey {
@@ -108,24 +125,6 @@ function getUnitPda(program, pk: PublicKey, name: string): PublicKey {
   );
   return pda;
 }
-
-function getPda(program, pk: PublicKey, key, extraSeeds: Uint8Array): PublicKey {
-  let num = new anchor.BN(999);
-  let buffer = num.toArray('le', 8);
-  let arr = new Uint8Array(buffer);
-
-  const [pda, _] = PublicKey.findProgramAddressSync(
-    [
-      anchor.utils.bytes.utf8.encode(key),
-      pk.toBuffer(),
-      extraSeeds,
-      //arr,
-    ],
-    program.programId,
-  );
-  return pda;
-}
-
 
 async function fetchMapTileState(program, pk, x, y) {
   let pda = getMapTilePda(program, pk, x, y);
@@ -865,17 +864,17 @@ describe("/Location", () => {
   });  
 
   it("init_stuff", async () => {
-    let pos: [number, number] = [1, 2];
     const program = anchor.workspace.GotAMin as Program<GotAMin>;
     const provider = program.provider as anchor.AnchorProvider;
     let pk = provider.wallet.publicKey;
 
-
-    let locPda = getLocationPda(program, pk, pos);
+    let num2 = 999;
+    let pos: [number, number] = [1, 2];
+    let locPda = getLocationPda(program, pk, pos, num2);
+    console.log("pda", locPda.toBase58());
     let loc = await initLocation2(program, "loc1", pos, 10, {space:{}});
 
-    let num = new anchor.BN(999);
-    num.toBuffer();
+    let num = new anchor.BN(num2);
     let buffer = num.toArray('le', 8);
     console.log("stuff. num: ", num, ", toArray().len: ", buffer.length);
     buffer.forEach((i) => {
@@ -1115,12 +1114,14 @@ async function initLocation2(program: Program<GotAMin>, name: string, position: 
   const provider = program.provider as anchor.AnchorProvider;
   let pk = provider.wallet.publicKey;
 
-  let locationPda = getLocationPda(program, pk, position);
+  let num = 999;
+  let locationPda = getLocationPda(program, pk, position, num);
+  console.log("initLocation2.pda: ", locationPda.toBase58());
   
   const pdaInfo = await provider.connection.getAccountInfo(locationPda);
   if(pdaInfo == null) {
     await program.methods
-      .initLocation(name, position, new anchor.BN(capacity), locationType)
+      .initLocation(name, position, new anchor.BN(num), new anchor.BN(capacity), locationType)
       .accounts({
         location: locationPda,
         owner: pk,
