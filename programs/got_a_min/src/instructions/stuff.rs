@@ -2,14 +2,14 @@ use anchor_lang::prelude::*;
 use crate::state::{stuff::*, Location};
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitStuff>, position: [u8; 2], x: i64, y: i64) -> Result<()> {
+pub fn init(ctx: Context<InitStuff>, x: i64, y: i64) -> Result<()> {
     //msg!("num: {}", num);
     //num.to_le_bytes().iter().for_each(|i| msg!("i: {}", i));
     Ok(())
 }
 
 #[derive(Accounts)]
-#[instruction(position: [u8; 2], x: i64, y: i64)]
+#[instruction(x: i64, y: i64)]
 pub struct InitStuff<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -18,7 +18,6 @@ pub struct InitStuff<'info> {
         seeds = [
             b"map-location", 
             owner.key().as_ref(),
-            &position,
             &x.to_le_bytes(),
             &y.to_le_bytes(),
         ],

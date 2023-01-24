@@ -96,10 +96,10 @@ function getMapTilePda(program, pk, x, y) {
 function getLocationPda(program, pk, pos: [number, number]): PublicKey {
   let x = pos[0];
   let y = pos[1];
-  return getPda(program, pk, "map-location", new Uint8Array(pos), x, y);
+  return getPda(program, pk, "map-location", x, y);
 }
 
-function getPda(program, pk: PublicKey, key, extraSeeds: Uint8Array, x: number, y: number): PublicKey {
+function getPda(program, pk: PublicKey, key, x: number, y: number): PublicKey {
   let arrX = new Uint8Array(new anchor.BN(x).toArray('le', 8));
   let arrY = new Uint8Array(new anchor.BN(y).toArray('le', 8));
 
@@ -107,7 +107,6 @@ function getPda(program, pk: PublicKey, key, extraSeeds: Uint8Array, x: number, 
     [
       anchor.utils.bytes.utf8.encode(key),
       pk.toBuffer(),
-      extraSeeds,
       arrX,
       arrY,
     ],
@@ -888,7 +887,7 @@ describe("/Location", () => {
     });
 
     await program.methods
-    .stuff(pos, new anchor.BN(1), new anchor.BN(2))
+    .stuff(new anchor.BN(1), new anchor.BN(2))
     .accounts({
       owner: programProvider.wallet.publicKey,
       location: locPda,
@@ -1124,7 +1123,7 @@ async function initLocation2(program: Program<GotAMin>, name: string, position: 
   const pdaInfo = await provider.connection.getAccountInfo(locationPda);
   if(pdaInfo == null) {
     await program.methods
-      .initLocation(name, position, new anchor.BN(x), new anchor.BN(y), new anchor.BN(capacity), locationType)
+      .initLocation(name, new anchor.BN(x), new anchor.BN(y), new anchor.BN(capacity), locationType)
       .accounts({
         location: locationPda,
         owner: pk,

@@ -4,14 +4,14 @@ use std::collections::hash_map::DefaultHasher;
 use crate::state::location::*;
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitLocation>, name: String, position: [u8; 2], x: i64, y: i64, capacity: i64, location_type: Option<LocationType>) -> Result<()> {
+pub fn init(ctx: Context<InitLocation>, name: String, x: i64, y: i64, capacity: i64, location_type: Option<LocationType>) -> Result<()> {
     let location: &mut Account<Location> = &mut ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
 
     location.owner = *owner.key;
     location.name = name;
-    location.pos_x = position[0];
-    location.pos_y = position[1];
+    location.pos_x = x;
+    location.pos_y = y;
     location.occupied_space = 0;
     location.capacity = capacity;
     location.occupied_by = vec!();
@@ -55,7 +55,7 @@ fn le(num: i64) -> [u8; 8] {
 }
 
 #[derive(Accounts)]
-#[instruction(name: String, position: [u8; 2], x: i64, y: i64, capacity: i64)]
+#[instruction(name: String, x: i64, y: i64, capacity: i64)]
 pub struct InitLocation<'info> {
     #[account(
         init, 
@@ -64,9 +64,8 @@ pub struct InitLocation<'info> {
         seeds = [
             b"map-location", 
             owner.key().as_ref(),
-            &position,
-            &le(x),
-            &le(y),
+            &x.to_le_bytes(),
+            &y.to_le_bytes(),
         ],
         bump,
     )]

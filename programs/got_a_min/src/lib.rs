@@ -24,12 +24,12 @@ pub mod got_a_min {
         game::explore_game_tile(ctx, xy)
     }
 
-    pub fn init_location(ctx: Context<InitLocation>, name: String, position: [u8; 2], x: i64, y: i64, capacity: i64, location_type: Option<LocationType>) -> Result<()> {
-        location::init(ctx, name, position, x, y, capacity, location_type)
+    pub fn init_location(ctx: Context<InitLocation>, name: String, x: i64, y: i64, capacity: i64, location_type: Option<LocationType>) -> Result<()> {
+        location::init(ctx, name, x, y, capacity, location_type)
     }
 
-    pub fn stuff(ctx: Context<InitStuff>, position: [u8; 2], x: i64, y: i64) -> Result<()> {
-        stuff::init(ctx, position, x, y)
+    pub fn stuff(ctx: Context<InitStuff>, x: i64, y: i64) -> Result<()> {
+        stuff::init(ctx, x, y)
     }
 
     pub fn update_stuff(ctx: Context<UpdateStuff>, number: i64) -> Result<()> {
