@@ -1,23 +1,29 @@
 use anchor_lang::prelude::*;
-use crate::state::stuff::*;
+use crate::state::{stuff::*, Location};
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitStuff>) -> Result<()> {
-    let stuff: &mut Account<Stuff> = &mut ctx.accounts.stuff;
-
-    stuff.number = 123;
-
-    require!(stuff.number <= 1234, ValidationError::ExperimentalError);
-
+pub fn init(ctx: Context<InitStuff>, x: i64, y: i64) -> Result<()> {
+    //msg!("num: {}", num);
+    //num.to_le_bytes().iter().for_each(|i| msg!("i: {}", i));
     Ok(())
 }
 
 #[derive(Accounts)]
+#[instruction(x: i64, y: i64)]
 pub struct InitStuff<'info> {
-    #[account(init, payer = owner, space = Stuff::LEN)]
-    pub stuff: Account<'info, Stuff>,
     #[account(mut)]
     pub owner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [
+            b"map-location", 
+            owner.key().as_ref(),
+            &x.to_le_bytes(),
+            &y.to_le_bytes(),
+        ],
+        bump = location.bump,
+    )]
+    pub location: Account<'info, Location>,
     pub system_program: Program<'info, System>,
 }
 

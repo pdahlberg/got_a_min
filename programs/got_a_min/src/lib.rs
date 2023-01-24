@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use instructions::*;
 use crate::state::MobilityType;
 use crate::state::ProcessorType;
+use crate::state::LocationType;
 
 pub mod errors;
 pub mod state;
@@ -23,12 +24,12 @@ pub mod got_a_min {
         game::explore_game_tile(ctx, xy)
     }
 
-    pub fn init_location(ctx: Context<InitLocation>, name: String, position: [u8; 2], capacity: i64) -> Result<()> {
-        location::init(ctx, name, position, capacity)
+    pub fn init_location(ctx: Context<InitLocation>, name: String, x: i64, y: i64, capacity: i64, location_type: Option<LocationType>) -> Result<()> {
+        location::init(ctx, name, x, y, capacity, location_type)
     }
 
-    pub fn stuff(ctx: Context<InitStuff>) -> Result<()> {
-        stuff::init(ctx)
+    pub fn stuff(ctx: Context<InitStuff>, x: i64, y: i64) -> Result<()> {
+        stuff::init(ctx, x, y)
     }
 
     pub fn update_stuff(ctx: Context<UpdateStuff>, number: i64) -> Result<()> {
@@ -49,9 +50,10 @@ pub mod got_a_min {
         capacity: i64, 
         mobility_type: MobilityType,
         movement_speed: i64,
-        position: [u8; 2],
+        x: i64,
+        y: i64,
     ) -> Result<()> {
-        storage::init(ctx, resource_id, capacity, mobility_type, movement_speed, position)
+        storage::init(ctx, resource_id, capacity, mobility_type, movement_speed, x, y)
     }
 
     pub fn simple_init_storage(
@@ -87,6 +89,14 @@ pub mod got_a_min {
 
     pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>) -> Result<()> {
         processor::produce_with_two_inputs(ctx)
+    }
+
+    pub fn init_unit(ctx: Context<InitUnit>, name: String, x: i64, y: i64) -> Result<()> {
+        unit::init(ctx, name, x, y)
+    }
+
+    pub fn move_unit(ctx: Context<MoveUnit>, from_x: i64, from_y: i64, to_x: i64, to_y: i64, name: String) -> Result<()> {
+        unit::move_unit(ctx, from_x, from_y, to_x, to_y, name)
     }
 }
 

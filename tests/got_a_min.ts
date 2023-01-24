@@ -18,7 +18,7 @@ before("Init", async () => {
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   //const programProvider = program.provider as anchor.AnchorProvider;
 
-  //DEFAULT_LOCATION = await initDefaultLocation(program);
+  DEFAULT_LOCATION = await initDefaultLocation(program);
 });
 
 async function createGameTile(program, pk, x, y, ) {
@@ -94,11 +94,33 @@ function getMapTilePda(program, pk, x, y) {
 }
 
 function getLocationPda(program, pk, pos: [number, number]): PublicKey {
+  let x = pos[0];
+  let y = pos[1];
+  return getPda(program, pk, "map-location", x, y);
+}
+
+function getPda(program, pk: PublicKey, key, x: number, y: number): PublicKey {
+  let arrX = new Uint8Array(new anchor.BN(x).toArray('le', 8));
+  let arrY = new Uint8Array(new anchor.BN(y).toArray('le', 8));
+
   const [pda, _] = PublicKey.findProgramAddressSync(
     [
-      anchor.utils.bytes.utf8.encode("map-location"),
+      anchor.utils.bytes.utf8.encode(key),
       pk.toBuffer(),
-      new Uint8Array(pos),
+      arrX,
+      arrY,
+    ],
+    program.programId,
+  );
+  return pda;
+}
+
+function getUnitPda(program, pk: PublicKey, name: string): PublicKey {
+  const [pda, _] = PublicKey.findProgramAddressSync(
+    [
+      anchor.utils.bytes.utf8.encode("unit"),
+      pk.toBuffer(),
+      anchor.utils.bytes.utf8.encode(name),
     ],
     program.programId,
   );
@@ -117,6 +139,15 @@ async function fetchLocationStatePK(program, pos: PublicKey) {
 async function fetchLocationState(program, pk, pos: [number, number]) {
   let pda = getLocationPda(program, pk, pos);
   return await fetchLocationStatePK(program, pda);
+}
+
+async function fetchUnitStatePK(program, unitPda: PublicKey) {
+  return await program.account.unit.fetch(unitPda);
+}
+
+async function fetchUnitState(program, pk, name) {
+  let pda = getUnitPda(program, pk, name);
+  return await fetchUnitStatePK(program, pda);
 }
 
 function printMap(map, debug = false) {
@@ -275,14 +306,14 @@ describe("/Initializations", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
-  const programProvider = program.provider as anchor.AnchorProvider;
+  const provider = program.provider as anchor.AnchorProvider;
 
   it("Init resource", async () => {
     const resource = anchor.web3.Keypair.generate();
 
     let result = await initResource(program, resource, "A", []);
     
-    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(result.owner.toBase58()).to.equal(provider.wallet.publicKey.toBase58());
   });
 
   it("Init resource with input", async () => {
@@ -291,7 +322,7 @@ describe("/Initializations", () => {
 
     let result = await initResource(program, resource, "B", [[resourceA as KP, 1]]);
     
-    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(result.owner.toBase58()).to.equal(provider.wallet.publicKey.toBase58());
   });
 
   it("Init location", async () => {
@@ -311,7 +342,7 @@ describe("/Initializations", () => {
 
     let result = await initProcessor(program, producer, resource, 1);
     
-    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(result.owner.toBase58()).to.equal(provider.wallet.publicKey.toBase58());
     expect(result.outputRate.toNumber()).to.equal(1);
     expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
   });
@@ -323,10 +354,82 @@ describe("/Initializations", () => {
 
     let result = await initStorage(program, storage, resource, 5);
     
-    expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(result.owner.toBase58()).to.equal(provider.wallet.publicKey.toBase58());
     expect(result.amount.toNumber()).to.equal(0);
     expect(result.capacity.toNumber()).to.equal(5);
     expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
+  });
+
+  it("Init unit", async () => {
+    const p1: KP = anchor.web3.Keypair.generate();
+    let pk = provider.wallet.publicKey;
+    let startPos: [number, number] = [1, 1];
+    let startLocationPda = await initLocation2(program, "loc1", startPos, 10, {space:{}});
+    let unitName = "s1";
+
+    await initUnit(program, unitName, startPos);
+    let unitBeforeMove = await fetchUnitState(program, pk, unitName);
+
+    expect(unitBeforeMove.name).equal(unitName)
+    expect(unitBeforeMove.atLocationId.toBase58()).equal(startLocationPda.toBase58(), "Start location")
+  });
+
+
+});
+
+describe("/Unit", () => {
+  let provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
+  const program = anchor.workspace.GotAMin as Program<GotAMin>;
+  const programProvider = program.provider as anchor.AnchorProvider;
+  
+  it("Init and move unit", async () => {
+    const p1: KP = anchor.web3.Keypair.generate();
+    let pk = provider.wallet.publicKey;
+    let startPos: [number, number] = [1, 1];
+    let startLocationPda = await initLocation2(program, "loc1", startPos, 10, {space:{}});
+    let targetPos: [number, number] = [2, 1];
+    let targetLocationPda = await initLocation2(program, "loc2", targetPos, 10, {space:{}});
+    let unitName = "s1";
+
+    await initUnit(program, unitName, startPos);
+    let unitBeforeMove = await fetchUnitState(program, pk, unitName);
+
+    expect(unitBeforeMove.name).equal(unitName)
+    expect(unitBeforeMove.atLocationId.toBase58()).equal(startLocationPda.toBase58(), "Start location")
+
+    await moveUnit(program, unitBeforeMove, targetPos);
+    let unitAfterMove = await fetchUnitState(program, pk, unitName);
+    let unitLocationAfterMove = await fetchLocationStatePK(program, unitAfterMove.atLocationId);
+    expect(unitAfterMove.atLocationId.toBase58()).equal(targetLocationPda.toBase58(), "Target location")
+    expect(unitLocationAfterMove.posX.toNumber()).equal(2);
+    expect(unitLocationAfterMove.posY.toNumber()).equal(1);
+    
+  });
+
+  it("Move and explore", async () => {
+    const p1: KP = anchor.web3.Keypair.generate();
+    let pk = provider.wallet.publicKey;
+    let startPos: [number, number] = [10, 2];
+    let startLocationPda = await initLocation2(program, "loc10", startPos, 10, {space:{}});
+    let targetPos: [number, number] = [11, 2];
+    let targetLocationPda = await initLocation2(program, "loc11", targetPos, 10);
+    let unitName = "s2";
+
+    await initUnit(program, unitName, startPos);
+    let unitBeforeMove = await fetchUnitState(program, pk, unitName);
+    let unitLocationBeforeMove = await fetchLocationStatePK(program, unitBeforeMove.atLocationId);
+
+    expect(unitBeforeMove.name).equal(unitName)
+    expect(unitLocationBeforeMove.posX.toNumber()).equal(10, "Start location")
+    expect(unitLocationBeforeMove.posY.toNumber()).equal(2, "Start location")
+
+    await moveUnit(program, unitBeforeMove, targetPos);
+    let unitAfterMove = await fetchUnitState(program, pk, unitName);
+    let unitLocationAfterMove = await fetchLocationStatePK(program, unitAfterMove.atLocationId);
+    expect(unitLocationAfterMove.posX.toNumber()).equal(11);
+    expect(unitLocationAfterMove.posY.toNumber()).equal(2);
+    expect(JSON.stringify(unitLocationAfterMove.locationType)).to.equal(JSON.stringify({space:{}}));
   });
 
 });
@@ -752,25 +855,40 @@ describe("/Location", () => {
     expect(location2Result.occupiedSpace.toNumber()).equal(1);
   });  
 
-/*  it("init stuff", async () => {
-    const account = anchor.web3.Keypair.generate();
-    console.log("account: ", account.publicKey.toBase58());
+  it("init_stuff", async () => {
+    const program = anchor.workspace.GotAMin as Program<GotAMin>;
+    const provider = program.provider as anchor.AnchorProvider;
+    let pk = provider.wallet.publicKey;
+
+    let num2 = 999;
+    let pos: [number, number] = [1, 2];
+    let locPda = getLocationPda(program, pk, pos);
+    console.log("pda", locPda.toBase58());
+    let loc = await initLocation2(program, "loc1", pos, 10, {space:{}});
+
+    let num = new anchor.BN(num2);
+    let buffer = num.toArray('le', 8);
+    console.log("stuff. num: ", num, ", toArray().len: ", buffer.length);
+    buffer.forEach((i) => {
+      console.log("buffer: ", i);
+    });
+    let uint8: Uint8Array = new Uint8Array(buffer);
+    uint8.forEach((i) => {
+      console.log("uint8: ", i);
+    });
 
     await program.methods
-    .stuff()
+    .stuff(new anchor.BN(1), new anchor.BN(2))
     .accounts({
-      stuff: account.publicKey,
       owner: programProvider.wallet.publicKey,
+      location: locPda,
       systemProgram: anchor.web3.SystemProgram.programId,
     })
-    .signers([account])
     .rpc();
 
-    let res = await program.account.stuff.fetch(account.publicKey);
-    expect(res.number.toNumber()).equal(123);
   });
 
-  it("update stuff", async () => {
+/*  it("update stuff", async () => {
     let key = new anchor.web3.PublicKey("FCHm4Ef3b1aKpBPTk6XkKsQwf8Z3zUhkh6VbZuSrwDi8");
     console.log("Updating: ", key.toBase58());
 
@@ -890,9 +1008,10 @@ async function initStorageNew(
   speed: number = 1,
 ) {
   const programProvider = program.provider as anchor.AnchorProvider;
+  let locationState = await fetchLocationStatePK(program, location);
 
   await program.methods
-    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType, new anchor.BN(speed), [0, 0])
+    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType, new anchor.BN(speed), locationState.posX, locationState.posY)
     .accounts({
       storage: storage.publicKey,
       location: location,
@@ -940,10 +1059,9 @@ async function initStorage(
 ) {
   const programProvider = program.provider as anchor.AnchorProvider;
   let locationState = await fetchLocationStatePK(program, location);
-  let pos = [locationState.posX, locationState.posY];
 
   await program.methods
-    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType, new anchor.BN(speed), pos)
+    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType, new anchor.BN(speed), locationState.posX, locationState.posY)
     .accounts({
       storage: storage.publicKey,
       location: location,
@@ -961,39 +1079,26 @@ async function createLocation(program: Program<GotAMin>, name: string, position:
 }
 
 async function initDefaultLocation(program: Program<GotAMin>) {
-  try {
-    console.log("initDefaultLocation - 1");
-    const programProvider = program.provider as anchor.AnchorProvider;
-    let pk = programProvider.wallet.publicKey;
-    let pos: [number, number] = [255, 255];
-    let locationPda = getLocationPda(program, pk, pos);
-    let state = await fetchLocationStatePK(program, locationPda);
-    console.log("initDefaultLocation - 5");
-    if(state.posX != 255) {
-      return initLocation2(program, 'default', pos, 999);
-    } else {
-      return locationPda;
-    }
-  }
-  catch(e){
-    console.log("initDefaultLocation - 10");
-    return DEFAULT_LOCATION;
-  }
+  const provider = program.provider as anchor.AnchorProvider;
+  let pos: [number, number] = [9999, 9999];
+  return initLocation2(program, 'default', pos, 999);
 }
 
 async function initLocation(program: Program<GotAMin>, location, name: string, position: [number, number], capacity: number) {
   return initLocation2(program, name, position, capacity);
 }
-async function initLocation2(program: Program<GotAMin>, name: string, position: [number, number], capacity: number): Promise<PublicKey> {
+async function initLocation2(program: Program<GotAMin>, name: string, position: [number, number], capacity: number, locationType = null): Promise<PublicKey> {
   const provider = program.provider as anchor.AnchorProvider;
   let pk = provider.wallet.publicKey;
 
+  let x = position[0];
+  let y = position[1];
   let locationPda = getLocationPda(program, pk, position);
   
   const pdaInfo = await provider.connection.getAccountInfo(locationPda);
   if(pdaInfo == null) {
     await program.methods
-      .initLocation(name, position, new anchor.BN(capacity))
+      .initLocation(name, new anchor.BN(x), new anchor.BN(y), new anchor.BN(capacity), locationType)
       .accounts({
         location: locationPda,
         owner: pk,
@@ -1002,6 +1107,56 @@ async function initLocation2(program: Program<GotAMin>, name: string, position: 
   }
 
   return locationPda;
+}
+
+async function moveUnit(program: Program<GotAMin>, unit, toPos): Promise<PublicKey> {
+  const provider = program.provider as anchor.AnchorProvider;
+  let pk = provider.wallet.publicKey;
+
+  let unitPda = getUnitPda(program, pk, unit.name);
+  let currentLocation = await fetchLocationStatePK(program, unit.atLocationId);
+  let fromPos: [number, number] = [currentLocation.posX, currentLocation.posY];
+  let toLocationPda = getLocationPda(program, pk, toPos);
+  let fromX = new anchor.BN(currentLocation.posX);
+  let fromY = new anchor.BN(currentLocation.posY);
+  let toX = new anchor.BN(toPos[0]);
+  let toY = new anchor.BN(toPos[1]);
+  
+  await program.methods
+    .moveUnit(fromX, fromY, toX, toY, unit.name)
+    .accounts({
+      unit: unitPda,
+      fromLocation: unit.atLocationId,
+      toLocation: toLocationPda,
+      owner: pk,
+    })
+    .rpc();
+
+  return unit;
+}
+
+async function initUnit(program: Program<GotAMin>, name: string, pos: [number, number]): Promise<PublicKey> {
+  const provider = program.provider as anchor.AnchorProvider;
+  let pk = provider.wallet.publicKey;
+  let x = pos[0];
+  let y = pos[1];
+
+  let unitPda = getUnitPda(program, pk, name);
+  let locationPda = getLocationPda(program, pk, pos);
+  
+  const pdaInfo = await provider.connection.getAccountInfo(unitPda);
+  if(pdaInfo == null) {
+    await program.methods
+      .initUnit(name, new anchor.BN(x), new anchor.BN(y))
+      .accounts({
+        unit: unitPda,
+        location: locationPda,
+        owner: pk,
+      })
+      .rpc();
+  }
+
+  return unitPda;
 }
 
 async function produce_without_input(program: Program<GotAMin>, producer, storage, resource) {
