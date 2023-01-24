@@ -90,12 +90,12 @@ pub mod got_a_min {
         processor::produce_with_two_inputs(ctx)
     }
 
-    pub fn init_unit(ctx: Context<InitUnit>, name: String, position: [u8; 2]) -> Result<()> {
-        unit::init(ctx, name, position)
+    pub fn init_unit(ctx: Context<InitUnit>, name: String, x: i64, y: i64) -> Result<()> {
+        unit::init(ctx, name, x, y)
     }
 
-    pub fn move_unit(ctx: Context<MoveUnit>, from_pos: [u8; 2], to_pos: [u8; 2], name: String) -> Result<()> {
-        unit::move_unit(ctx, from_pos, to_pos, name)
+    pub fn move_unit(ctx: Context<MoveUnit>, from_x: i64, from_y: i64, to_x: i64, to_y: i64, name: String) -> Result<()> {
+        unit::move_unit(ctx, from_x, from_y, to_x, to_y, name)
     }
 }
 

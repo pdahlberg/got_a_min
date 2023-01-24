@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use crate::state::{unit::*, Location, LocationType};
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitUnit>, name: String, _position: [u8; 2]) -> Result<()> {
+pub fn init(ctx: Context<InitUnit>, name: String, _x: i64, _y: i64) -> Result<()> {
     let unit: &mut Account<Unit> = &mut ctx.accounts.unit;
     let location: &Account<Location> = &ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
@@ -26,7 +26,7 @@ fn string_to_seed(value: &str) -> &[u8] {
 }
 
 #[derive(Accounts)]
-#[instruction(name: String, position: [u8; 2],)]
+#[instruction(name: String, x: i64, y: i64)]
 pub struct InitUnit<'info> {
     #[account(
         init, 
@@ -45,7 +45,8 @@ pub struct InitUnit<'info> {
         seeds = [
             b"map-location", 
             owner.key().as_ref(),
-            &position,
+            &x.to_le_bytes(),
+            &y.to_le_bytes(),
         ],
         bump = location.bump,
     )]
@@ -55,7 +56,7 @@ pub struct InitUnit<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn move_unit(ctx: Context<MoveUnit>, _from_pos: [u8; 2], _to_pos: [u8; 2], _name: String) -> Result<()> {
+pub fn move_unit(ctx: Context<MoveUnit>, _from_x: i64, _from_y: i64, _to_x: i64, _to_y: i64, _name: String) -> Result<()> {
     let unit: &mut Account<Unit> = &mut ctx.accounts.unit;
     let from_location: &Account<Location> = &ctx.accounts.from_location;
     let to_location: &mut Account<Location> = &mut ctx.accounts.to_location;
@@ -72,7 +73,7 @@ pub fn move_unit(ctx: Context<MoveUnit>, _from_pos: [u8; 2], _to_pos: [u8; 2], _
 }
 
 #[derive(Accounts)]
-#[instruction(from_pos: [u8; 2], to_pos: [u8; 2], name: String)]
+#[instruction(from_x: i64, from_y: i64, to_x: i64, to_y: i64, name: String)]
 pub struct MoveUnit<'info> {
     #[account(
         mut,
@@ -89,7 +90,8 @@ pub struct MoveUnit<'info> {
         seeds = [
             b"map-location", 
             owner.key().as_ref(),
-            &from_pos,
+            &from_x.to_le_bytes(),
+            &from_y.to_le_bytes(),
         ],
         bump = from_location.bump,
     )]
@@ -99,7 +101,8 @@ pub struct MoveUnit<'info> {
         seeds = [
             b"map-location", 
             owner.key().as_ref(),
-            &to_pos,
+            &to_x.to_le_bytes(),
+            &to_y.to_le_bytes(),
         ],
         bump = to_location.bump,
     )]
