@@ -1119,7 +1119,6 @@ async function initLocation2(program: Program<GotAMin>, name: string, position: 
   let x = position[0];
   let y = position[1];
   let locationPda = getLocationPda(program, pk, position);
-  console.log("initLocation2.pda: ", locationPda.toBase58());
   
   const pdaInfo = await provider.connection.getAccountInfo(locationPda);
   if(pdaInfo == null) {
