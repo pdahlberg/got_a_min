@@ -1,17 +1,29 @@
 use anchor_lang::prelude::*;
-use crate::state::stuff::*;
+use crate::state::{stuff::*, Location};
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitStuff>, num: i64) -> Result<()> {
+pub fn init(ctx: Context<InitStuff>, position: [u8; 2], num: i64) -> Result<()> {
     msg!("num: {}", num);
     num.to_le_bytes().iter().for_each(|i| msg!("i: {}", i));
     Ok(())
 }
 
 #[derive(Accounts)]
+#[instruction(position: [u8; 2], num: i64)]
 pub struct InitStuff<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [
+            b"map-location", 
+            owner.key().as_ref(),
+            &position,
+            //&num.to_le_bytes(),
+        ],
+        bump = location.bump,
+    )]
+    pub location: Account<'info, Location>,
     pub system_program: Program<'info, System>,
 }
 

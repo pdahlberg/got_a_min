@@ -110,11 +110,16 @@ function getUnitPda(program, pk: PublicKey, name: string): PublicKey {
 }
 
 function getPda(program, pk: PublicKey, key, extraSeeds: Uint8Array): PublicKey {
+  let num = new anchor.BN(999);
+  let buffer = num.toArray('le', 8);
+  let arr = new Uint8Array(buffer);
+
   const [pda, _] = PublicKey.findProgramAddressSync(
     [
       anchor.utils.bytes.utf8.encode(key),
       pk.toBuffer(),
       extraSeeds,
+      //arr,
     ],
     program.programId,
   );
@@ -860,18 +865,32 @@ describe("/Location", () => {
   });  
 
   it("init_stuff", async () => {
-    let num = new anchor.BN(2);
+    let pos: [number, number] = [1, 2];
+    const program = anchor.workspace.GotAMin as Program<GotAMin>;
+    const provider = program.provider as anchor.AnchorProvider;
+    let pk = provider.wallet.publicKey;
+
+
+    let locPda = getLocationPda(program, pk, pos);
+    let loc = await initLocation2(program, "loc1", pos, 10, {space:{}});
+
+    let num = new anchor.BN(999);
     num.toBuffer();
     let buffer = num.toArray('le', 8);
     console.log("stuff. num: ", num, ", toArray().len: ", buffer.length);
     buffer.forEach((i) => {
-      console.log("i: ", i);
+      console.log("buffer: ", i);
+    });
+    let uint8: Uint8Array = new Uint8Array(buffer);
+    uint8.forEach((i) => {
+      console.log("uint8: ", i);
     });
 
     await program.methods
-    .stuff(num)
+    .stuff(pos, num)
     .accounts({
       owner: programProvider.wallet.publicKey,
+      location: locPda,
       systemProgram: anchor.web3.SystemProgram.programId,
     })
     .rpc();

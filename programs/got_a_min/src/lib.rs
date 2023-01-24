@@ -28,8 +28,8 @@ pub mod got_a_min {
         location::init(ctx, name, position, capacity, location_type)
     }
 
-    pub fn stuff(ctx: Context<InitStuff>, num: i64) -> Result<()> {
-        stuff::init(ctx, num)
+    pub fn stuff(ctx: Context<InitStuff>, position: [u8; 2], num: i64) -> Result<()> {
+        stuff::init(ctx, position, num)
     }
 
     pub fn update_stuff(ctx: Context<UpdateStuff>, number: i64) -> Result<()> {
