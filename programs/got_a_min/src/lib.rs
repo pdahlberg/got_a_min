@@ -50,9 +50,10 @@ pub mod got_a_min {
         capacity: i64, 
         mobility_type: MobilityType,
         movement_speed: i64,
-        position: [u8; 2],
+        x: i64,
+        y: i64,
     ) -> Result<()> {
-        storage::init(ctx, resource_id, capacity, mobility_type, movement_speed, position)
+        storage::init(ctx, resource_id, capacity, mobility_type, movement_speed, x, y)
     }
 
     pub fn simple_init_storage(

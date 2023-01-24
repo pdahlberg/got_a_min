@@ -10,7 +10,8 @@ pub fn init(
     capacity: i64,
     mobility_type: MobilityType,
     movement_speed: i64,
-    position: [u8; 2],
+    _x: i64,
+    _y: i64,
 ) -> Result<()> {
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let location: &mut Account<Location> = &mut ctx.accounts.location;
@@ -34,7 +35,8 @@ pub fn init(
     capacity: i64,
     mobility_type: MobilityType,
     movement_speed: i64,
-    position: [u8; 2],
+    x: i64,
+    y: i64,
 )]
 pub struct InitStorage<'info> {
     #[account(init, payer = owner, space = Storage::LEN)]
@@ -44,7 +46,8 @@ pub struct InitStorage<'info> {
         seeds = [
             b"map-location", 
             owner.key().as_ref(),
-            &position,
+            &x.to_le_bytes(),
+            &y.to_le_bytes(),
         ],
         bump = location.bump,
     )]

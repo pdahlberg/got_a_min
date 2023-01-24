@@ -1008,9 +1008,10 @@ async function initStorageNew(
   speed: number = 1,
 ) {
   const programProvider = program.provider as anchor.AnchorProvider;
+  let locationState = await fetchLocationStatePK(program, location);
 
   await program.methods
-    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType, new anchor.BN(speed), [0, 0])
+    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType, new anchor.BN(speed), locationState.posX, locationState.posY)
     .accounts({
       storage: storage.publicKey,
       location: location,
@@ -1058,10 +1059,9 @@ async function initStorage(
 ) {
   const programProvider = program.provider as anchor.AnchorProvider;
   let locationState = await fetchLocationStatePK(program, location);
-  let pos = [locationState.posX, locationState.posY];
 
   await program.methods
-    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType, new anchor.BN(speed), pos)
+    .initStorage(resource.publicKey, new anchor.BN(capacity), mobilityType, new anchor.BN(speed), locationState.posX, locationState.posY)
     .accounts({
       storage: storage.publicKey,
       location: location,
