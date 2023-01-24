@@ -93,21 +93,23 @@ function getMapTilePda(program, pk, x, y) {
   return pda;
 }
 
-function getLocationPda(program, pk, pos: [number, number], num: number = 999): PublicKey {
-  return getPda(program, pk, "map-location", new Uint8Array(pos), num);
+function getLocationPda(program, pk, pos: [number, number]): PublicKey {
+  let x = pos[0];
+  let y = pos[1];
+  return getPda(program, pk, "map-location", new Uint8Array(pos), x, y);
 }
 
-function getPda(program, pk: PublicKey, key, extraSeeds: Uint8Array, num2: number): PublicKey {
-  let num = new anchor.BN(num2);
-  let buffer = num.toArray('le', 8);
-  let arr = new Uint8Array(buffer);
+function getPda(program, pk: PublicKey, key, extraSeeds: Uint8Array, x: number, y: number): PublicKey {
+  let arrX = new Uint8Array(new anchor.BN(x).toArray('le', 8));
+  let arrY = new Uint8Array(new anchor.BN(y).toArray('le', 8));
 
   const [pda, _] = PublicKey.findProgramAddressSync(
     [
       anchor.utils.bytes.utf8.encode(key),
       pk.toBuffer(),
       extraSeeds,
-      arr,
+      arrX,
+      arrY,
     ],
     program.programId,
   );
@@ -870,7 +872,7 @@ describe("/Location", () => {
 
     let num2 = 999;
     let pos: [number, number] = [1, 2];
-    let locPda = getLocationPda(program, pk, pos, num2);
+    let locPda = getLocationPda(program, pk, pos);
     console.log("pda", locPda.toBase58());
     let loc = await initLocation2(program, "loc1", pos, 10, {space:{}});
 
@@ -886,7 +888,7 @@ describe("/Location", () => {
     });
 
     await program.methods
-    .stuff(pos, num)
+    .stuff(pos, new anchor.BN(1), new anchor.BN(2))
     .accounts({
       owner: programProvider.wallet.publicKey,
       location: locPda,
@@ -1114,14 +1116,15 @@ async function initLocation2(program: Program<GotAMin>, name: string, position: 
   const provider = program.provider as anchor.AnchorProvider;
   let pk = provider.wallet.publicKey;
 
-  let num = 999;
-  let locationPda = getLocationPda(program, pk, position, num);
+  let x = position[0];
+  let y = position[1];
+  let locationPda = getLocationPda(program, pk, position);
   console.log("initLocation2.pda: ", locationPda.toBase58());
   
   const pdaInfo = await provider.connection.getAccountInfo(locationPda);
   if(pdaInfo == null) {
     await program.methods
-      .initLocation(name, position, new anchor.BN(num), new anchor.BN(capacity), locationType)
+      .initLocation(name, position, new anchor.BN(x), new anchor.BN(y), new anchor.BN(capacity), locationType)
       .accounts({
         location: locationPda,
         owner: pk,

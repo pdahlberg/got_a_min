@@ -2,14 +2,14 @@ use anchor_lang::prelude::*;
 use crate::state::{stuff::*, Location};
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitStuff>, position: [u8; 2], num: i64) -> Result<()> {
-    msg!("num: {}", num);
-    num.to_le_bytes().iter().for_each(|i| msg!("i: {}", i));
+pub fn init(ctx: Context<InitStuff>, position: [u8; 2], x: i64, y: i64) -> Result<()> {
+    //msg!("num: {}", num);
+    //num.to_le_bytes().iter().for_each(|i| msg!("i: {}", i));
     Ok(())
 }
 
 #[derive(Accounts)]
-#[instruction(position: [u8; 2], num: i64)]
+#[instruction(position: [u8; 2], x: i64, y: i64)]
 pub struct InitStuff<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -19,7 +19,8 @@ pub struct InitStuff<'info> {
             b"map-location", 
             owner.key().as_ref(),
             &position,
-            &num.to_le_bytes(),
+            &x.to_le_bytes(),
+            &y.to_le_bytes(),
         ],
         bump = location.bump,
     )]
