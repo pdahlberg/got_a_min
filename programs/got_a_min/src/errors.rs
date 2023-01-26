@@ -19,6 +19,7 @@ pub enum ValidationError {
     #[msg("Storage type static cannot be moved.")]                              StorageTypeNotMovable,
     #[msg("This is not allowed while moving.")]                                 NotAllowedWhileMoving,
     #[msg("Processor type 'producer' required.")]                               InvalidProcessorType,
+    #[msg("Fuel not supplied to processor.")]                                   FuelNotSupplied,
     #[msg("Location has not yet been explored.")]                               LocationUnexplored,
     #[msg("Invalid input parameter.")]                                          InvalidInput,
     #[msg("Trying stuff out and failing quite deliberately.")]                  ExperimentalError,
