@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use instructions::*;
 use crate::state::MobilityType;
 use crate::state::ProcessorType;
+use crate::state::FuelCostType;
 use crate::state::LocationType;
 
 pub mod errors;
@@ -14,6 +15,8 @@ declare_id!("3113AWybUqHaSKaEmUXnUFwXu4EUp1VDpqQFCvY7oajN");
 
 #[program]
 pub mod got_a_min {
+    use crate::state::FuelCostType;
+
     use super::*;
 
     pub fn create_game_tile(ctx: Context<CreateGameTile>, xy: [u8; 2]) -> Result<()> {
@@ -36,8 +39,9 @@ pub mod got_a_min {
         stuff::update(ctx, number)
     }
 
-    pub fn init_processor(ctx: Context<InitProcessor>, processor_type: ProcessorType, resource_id: Pubkey, output_rate: i64, processing_duration: i64) -> Result<()> {
-        processor::init(ctx, processor_type, resource_id, output_rate, processing_duration)
+    pub fn init_processor(ctx: Context<InitProcessor>, processor_type: ProcessorType, fuel_resource_id: Pubkey, output_resource_id: Pubkey, output_rate: i64, processing_duration: i64, fuel_cost_type: FuelCostType) -> Result<()> {
+        let current_timestamp = Clock::get()?.unix_timestamp;
+        processor::init(ctx, processor_type, fuel_resource_id, output_resource_id, output_rate, processing_duration, fuel_cost_type, current_timestamp)
     }
 
     pub fn init_resource(ctx: Context<InitResource>, name: String, inputs: Vec<Pubkey>, input_amounts: Vec<i64>) -> Result<()> {
@@ -91,12 +95,30 @@ pub mod got_a_min {
         processor::produce_with_two_inputs(ctx)
     }
 
+    pub fn send(ctx: Context<ProcessesResourceWith1Input>, send_amount: Option<i64>) -> Result<()> {
+        let current_timestamp = Clock::get()?.unix_timestamp;
+        processor::send(ctx, send_amount, current_timestamp)
+    }
+
     pub fn init_unit(ctx: Context<InitUnit>, name: String, x: i64, y: i64) -> Result<()> {
         unit::init(ctx, name, x, y)
     }
 
     pub fn move_unit(ctx: Context<MoveUnit>, from_x: i64, from_y: i64, to_x: i64, to_y: i64, name: String) -> Result<()> {
         unit::move_unit(ctx, from_x, from_y, to_x, to_y, name)
+    }
+
+    // -- debug --
+    pub fn debug_set_storage_amount(ctx: Context<DebugSetStorageAmount>, amount: i64) -> Result<()> {
+        debug::set_storage_amount(ctx, amount)
+    }
+
+    pub fn debug_send(ctx: Context<ProcessesResourceWith1Input>, send_amount: Option<i64>, current_timestamp: i64) -> Result<()> {
+        processor::send(ctx, send_amount, current_timestamp)
+    }
+
+    pub fn debug_init_processor(ctx: Context<InitProcessor>, processor_type: ProcessorType, fuel_resource_id: Pubkey, output_resource_id: Pubkey, output_rate: i64, processing_duration: i64, fuel_cost_type: FuelCostType, current_timestamp: i64) -> Result<()> {
+        processor::init(ctx, processor_type, fuel_resource_id, output_resource_id, output_rate, processing_duration, fuel_cost_type, current_timestamp)
     }
 }
 

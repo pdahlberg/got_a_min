@@ -27,10 +27,18 @@ impl Storage {
     ;
 
     pub fn add(&mut self, amount: i64, from_location_id: Pubkey) -> Result<()> {
+        self.add_impl(amount, from_location_id, true)
+    }
+
+    pub fn add_impl(&mut self, amount: i64, from_location_id: Pubkey, verify_location: bool) -> Result<()> {
         self.amount += amount;
         
         require!(self.amount <= self.capacity, ValidationError::StorageFull);
-        require!(self.location_id == from_location_id, ValidationError::DifferentLocations);
+
+        if verify_location {
+            // Hmm... not location_id(timestamp)... 
+            require!(self.location_id == from_location_id, ValidationError::DifferentLocations);
+        }
     
         Ok(())
     }

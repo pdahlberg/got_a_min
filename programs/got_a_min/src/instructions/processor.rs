@@ -7,20 +7,21 @@ use crate::state::resource::*;
 use crate::state::storage::*;
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitProcessor>, processor_type: ProcessorType, resource_id: Pubkey, output_rate: i64, processing_duration: i64) -> Result<()> {
+pub fn init(ctx: Context<InitProcessor>, processor_type: ProcessorType, fuel_resource_id: Pubkey, output_resource_id: Pubkey, output_rate: i64, processing_duration: i64, fuel_cost_type: FuelCostType, current_timestamp: i64) -> Result<()> {
     let processor: &mut Account<Processor> = &mut ctx.accounts.processor;
     let location: &mut Account<Location> = &mut ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
-    let clock = Clock::get()?;
 
     processor.owner = *owner.key;
-    processor.resource_id = resource_id;
     processor.location_id = location.key();
+    processor.fuel_resource_id = fuel_resource_id;
+    processor.output_resource_id = output_resource_id;
     processor.output_rate = output_rate;
     processor.processing_duration = processing_duration;
     processor.awaiting_units = 0;
-    processor.claimed_at = clock.unix_timestamp;
+    processor.claimed_at = current_timestamp;
     processor.processor_type = processor_type;
+    processor.fuel_cost_type = fuel_cost_type;
 
     require!(processor.output_rate > 0, ValidationError::InvalidInput);
     require!(processor.processing_duration > 0, ValidationError::InvalidInput);
@@ -29,33 +30,52 @@ pub fn init(ctx: Context<InitProcessor>, processor_type: ProcessorType, resource
 }
 
 // claim any units "done" waiting
-fn move_awaiting(processor: &mut Account<Processor>, storage: &mut Account<Storage>, current_timestamp: i64) -> Result<()> {
-    require!(processor.processor_type == ProcessorType::Producer, ValidationError::InvalidProcessorType);
-    require!(processor.location_id == storage.location_id, ValidationError::DifferentLocations);
+fn move_awaiting(processor: &mut Account<Processor>, storage_out: &mut Account<Storage>, current_timestamp: i64, limit: Option<i64>) -> Result<()> {
+    require!(processor.processing_duration > 0, ValidationError::ExperimentalError);
+    
+    let previous_claim_at = processor.claimed_at;
+    let diff_time = current_timestamp - previous_claim_at;
+    let prod_slots_during_diff_time = diff_time / processor.processing_duration;
+    let prod_during_diff_time = prod_slots_during_diff_time * processor.output_rate;
 
-    let withdraw_awaiting = match processor.processing_duration == 0 {
-        true => processor.awaiting_units,
-        false => {
-            let previous_claim_at = processor.claimed_at;
-            let diff_time = current_timestamp - previous_claim_at;
-            let prod_slots_during_diff_time = diff_time / processor.processing_duration;
-            let prod_during_diff_time = prod_slots_during_diff_time * processor.output_rate;
-            let withdraw_awaiting = match processor.awaiting_units >= prod_during_diff_time {
-                true => prod_during_diff_time,
-                false => processor.awaiting_units,
-            };
-            withdraw_awaiting
-        }
+    require!(previous_claim_at >= 0, ValidationError::ExperimentalError);
+    require!(diff_time >= 0, ValidationError::ExperimentalError);
+    require!(prod_slots_during_diff_time >= 0, ValidationError::ExperimentalError);
+    require!(prod_during_diff_time >= 0, ValidationError::ExperimentalError);
+
+    let limited_prod = match limit {
+        Some(l) if prod_during_diff_time > l => l,
+        _ => prod_during_diff_time,
     };
 
-    let available_capacity = storage.capacity - storage.amount;
+    require!(processor.awaiting_units >= 0, ValidationError::ExperimentalError);
+    require!(limited_prod >= 0, ValidationError::ExperimentalError);
+
+    let withdraw_awaiting = match processor.awaiting_units >= limited_prod {
+        true => limited_prod,
+        false => processor.awaiting_units,
+    };
+
+    let available_capacity = match storage_out.capacity - storage_out.amount {
+        diff if diff > 0 => diff,
+        _ => 0,
+    };
+
+    require!(available_capacity >= 0, ValidationError::ExperimentalError);
+    require!(withdraw_awaiting >= 0, ValidationError::ExperimentalError);
+
     let withdraw_awaiting_within_capacity = match available_capacity > withdraw_awaiting {
         true => withdraw_awaiting,
         false => available_capacity,
     };
 
-    storage.add(withdraw_awaiting_within_capacity, processor.location_id)?;
+    match processor.processor_type {
+        ProcessorType::Producer => storage_out.add(withdraw_awaiting_within_capacity, processor.location_id)?,
+        ProcessorType::Sender => storage_out.add_impl(withdraw_awaiting_within_capacity, processor.location_id, false)?,
+    };
+
     processor.awaiting_units -= withdraw_awaiting_within_capacity;
+    processor.claimed_at += (processor.processing_duration * withdraw_awaiting_within_capacity) / processor.output_rate;
 
     Ok(())
 }
@@ -74,7 +94,7 @@ pub fn claim_production(ctx: Context<ProcessesResource>) -> Result<()> {
     producer.awaiting_units = calc_awaiting("claim_prod", current_timestamp, producer);
 
     if producer.awaiting_units > 0 {
-        move_awaiting(producer, storage, current_timestamp)?;
+        move_awaiting(producer, storage, current_timestamp, None)?;
     }
 
     producer.claimed_at = current_timestamp;
@@ -94,13 +114,19 @@ fn calc_awaiting(label: &str, current_timestamp: i64, processor: &Account<Proces
     prod_during_diff_time
 }
 
-fn validate_by_type(processor: &Account<Processor>, storage: &Account<Storage>, storage_input: &Account<Storage>, current_timestamp: i64) -> Result<()> {
+fn validate_by_type(processor: &Account<Processor>, storage_out: &Account<Storage>, storage_in: &Account<Storage>, storage_fuel: Option<&Account<Storage>>, current_timestamp: i64) -> Result<()> {
+    require!(location::same_location_id(Some(processor.location_id), storage_in.location_id(current_timestamp)), ValidationError::DifferentLocations);
+
+    if processor.fuel_cost_type != FuelCostType::Nothing {
+        let fuel_location = storage_fuel.map(|s| s.location_id(current_timestamp)).flatten();
+        require!(location::same_location_id(Some(processor.location_id), fuel_location), ValidationError::DifferentLocations);
+    }
+
     match processor.processor_type { 
         ProcessorType::Producer => {
-            require!(location::same_location_id(storage.location_id(current_timestamp), storage_input.location_id(current_timestamp)), ValidationError::DifferentLocations);
+            require!(location::same_location_id(storage_out.location_id(current_timestamp), storage_in.location_id(current_timestamp)), ValidationError::DifferentLocations);
         },
         ProcessorType::Sender => {
-            // Sender should have enough to pay the sending cost, i.e. enough energy in a local storage to send.
         },
     }    
     Ok(())
@@ -111,40 +137,87 @@ pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>) -> Resu
     let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let storage_in: &mut Account<Storage> = &mut ctx.accounts.storage_input;
+    let storage_fuel: &mut Account<Storage> = &mut ctx.accounts.storage_fuel;
     let current_timestamp = Clock::get()?.unix_timestamp;
 
     msg!("produce_with_one_input/");
     
+    require!(processor.processor_type == ProcessorType::Producer, ValidationError::InvalidProcessorType);
     require!(resource_to_produce.key().eq(&storage.resource_id), ValidationError::InputStorageNotSupplied);
 
-    validate_by_type(&processor, storage, storage_in, current_timestamp)?;
+    validate_by_type(&processor, storage, storage_in, Some(&storage_fuel), current_timestamp)?;
 
-    let input_exists: Option<usize> = match processor.processor_type { 
-        ProcessorType::Producer => resource_to_produce.input.iter()
-            .position(|input| input.key().eq(&storage_in.resource_id)),
+    let calculated_awaiting = calc_awaiting("prod_1", current_timestamp, &processor);
+
+    let required_input_amount = match processor.processor_type { 
+        ProcessorType::Producer => {
+            let input_exists = resource_to_produce.input.iter()
+                .position(|input| input.key().eq(&storage_in.resource_id));
+
+            require!(input_exists.is_some(), ValidationError::InputStorageNotSupplied);
+
+            let index = input_exists.unwrap();
+            resource_to_produce.input_amount[index]
+        },
 
         ProcessorType::Sender => {
-            require!(false, ValidationError::FuelNotSupplied);
-            None
+            let fuel_cost: i64 = 2; // distance between source and target * consumption
+            require!(storage_fuel.amount >= fuel_cost, ValidationError::FuelNotEnough);
+            storage_fuel.amount -= fuel_cost;
+            
+            match calculated_awaiting > storage_in.amount {
+                true => storage_in.amount,
+                false => calculated_awaiting,
+            }
         },
     };
 
-    require!(input_exists.is_some(), ValidationError::InputStorageNotSupplied);
-
-    let index = input_exists.unwrap();
-    let required_input_amount = resource_to_produce.input_amount[index];
     require!(storage_in.amount >= required_input_amount, ValidationError::InputStorageAmountTooLow);
 
     storage_in.amount -= required_input_amount;
-    processor.awaiting_units += calc_awaiting("prod_1", current_timestamp, &processor);
+    processor.awaiting_units += calculated_awaiting;
 
     if processor.awaiting_units > 0 {
-        move_awaiting(processor, storage, current_timestamp)?;
+        move_awaiting(processor, storage, current_timestamp, Some(required_input_amount))?;
     }
 
-    processor.claimed_at = current_timestamp;
-
     msg!("/produce_with_one_input");
+
+    Ok(())
+}
+
+pub fn send(ctx: Context<ProcessesResourceWith1Input>, send_amount: Option<i64>, current_timestamp: i64) -> Result<()> {
+    let processor = &mut ctx.accounts.processor;
+    let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
+    let storage_to: &mut Account<Storage> = &mut ctx.accounts.storage;
+    let storage_from: &mut Account<Storage> = &mut ctx.accounts.storage_input;
+    let storage_fuel: &mut Account<Storage> = &mut ctx.accounts.storage_fuel;
+
+    msg!("send/");
+    
+    require!(processor.processor_type == ProcessorType::Sender, ValidationError::InvalidProcessorType);
+    require!(resource_to_produce.key().eq(&storage_to.resource_id), ValidationError::InputStorageNotSupplied);
+
+    require!(location::same_location_id(Some(processor.location_id), storage_from.location_id(current_timestamp)), ValidationError::DifferentLocations);
+
+    /*if processor.fuel_cost_type != FuelCostType::Nothing {
+        let fuel_location = storage_fuel.map(|s| s.location_id(current_timestamp)).flatten();
+        require!(location::same_location_id(Some(processor.location_id), fuel_location), ValidationError::DifferentLocations);
+    }*/
+
+    let calculated_awaiting = match send_amount {
+        Some(amount) if amount <= storage_from.amount => amount,
+        _ => storage_from.amount,
+    };
+    
+    storage_from.amount -= calculated_awaiting;
+    require!(storage_from.amount >= 0, ValidationError::InputStorageAmountTooLow);
+
+    //storage_to.amount += calculated_awaiting;
+    processor.awaiting_units += calculated_awaiting;
+    move_awaiting(processor, storage_to, current_timestamp, None)?;
+
+    msg!("/send");
 
     Ok(())
 }
@@ -162,8 +235,8 @@ pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>) -> Re
     let input_pos_2 = resource_to_produce.input.iter().position(|input| input.key().eq(&storage_in_2.resource_id));
     require!(input_pos_2.is_some(), ValidationError::InputStorage2NotSupplied);
 
-    validate_by_type(&processor, storage, storage_in_1, current_timestamp)?;
-    validate_by_type(&processor, storage, storage_in_2, current_timestamp)?;
+    validate_by_type(&processor, storage, storage_in_1, None, current_timestamp)?;
+    validate_by_type(&processor, storage, storage_in_2, None, current_timestamp)?;
 
     let index_1 = input_pos_1.unwrap();
     let input_1_amount = resource_to_produce.input_amount[index_1];
@@ -178,10 +251,8 @@ pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>) -> Re
     processor.awaiting_units += processor.output_rate;
 
     if processor.awaiting_units > 0 {
-        move_awaiting(processor, storage, current_timestamp)?;
+        move_awaiting(processor, storage, current_timestamp, None)?;
     }
-
-    processor.claimed_at = current_timestamp;
 
     Ok(())
 }
@@ -217,6 +288,8 @@ pub struct ProcessesResourceWith1Input<'info> {
     pub storage: Account<'info, Storage>,
     #[account(mut)]
     pub storage_input: Account<'info, Storage>,
+    #[account(mut)]
+    pub storage_fuel: Account<'info, Storage>,
 }
 
 #[derive(Accounts)]

@@ -20,6 +20,7 @@ pub enum ValidationError {
     #[msg("This is not allowed while moving.")]                                 NotAllowedWhileMoving,
     #[msg("Processor type 'producer' required.")]                               InvalidProcessorType,
     #[msg("Fuel not supplied to processor.")]                                   FuelNotSupplied,
+    #[msg("Not enough fuel.")]                                                  FuelNotEnough,
     #[msg("Location has not yet been explored.")]                               LocationUnexplored,
     #[msg("Invalid input parameter.")]                                          InvalidInput,
     #[msg("Trying stuff out and failing quite deliberately.")]                  ExperimentalError,
