@@ -219,8 +219,8 @@ pub fn send(ctx: Context<SendResource>, send_amount: i64, current_timestamp: i64
             FuelCostType::Nothing => 0,
             FuelCostType::Distance => {
                 let distance = from_location.distance(&to_location);
-                let fuel_cost = distance.pow(2);
-                fuel_cost
+                let fuel_cost_per_unit = distance.pow(2);
+                fuel_cost_per_unit * calculated_awaiting
             },
             FuelCostType::Output => 0,
         };

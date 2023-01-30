@@ -621,7 +621,7 @@ describe("/Sending", () => {
 
   it("Send 1 resource A #send1A", async () => {
     let location1 = await createLocation2(program, 'loc1', [1, 0], 9999);
-    let location2 = await createLocation2(program, 'loc2', [2, 0], 9999);
+    let location2 = await createLocation2(program, 'loc2', [12, 3], 9999);
     let resource = await createResource2(program, 'A', []);
     let sender = await (await createProcessor3(resource, 5, 6, location1, {sender:{}}, {distance:{}}))
       .withName("Sender");
@@ -634,12 +634,13 @@ describe("/Sending", () => {
     let fuelStorage = await (await createStorage3(program, DEFAULT_FUEL_RES.keyPair, 10, location1))
       .withName("fuel_storage");
 
-    await debugStorage(fuelStorage, 1000);
+    await debugStorage(fuelStorage, 2000);
 
     await debugStorage(localStorage, 10);
     (await sender.refresh()).log();
     (await localStorage.refresh()).log();
     (await remoteStorage.refresh()).log();
+    (await fuelStorage.refresh()).log();
 
     console.log("Send");
 
