@@ -45,15 +45,6 @@ pub fn fake_rng(key: Pubkey) -> u8 {
     (hasher.finish() % 256) as u8
 }
 
-fn le(num: i64) -> [u8; 8] {
-    let arr = num.to_le_bytes();
-
-    msg!("num: {}", &num);
-    arr.iter().for_each(|i| msg!("> i: {}", i));
-
-    arr
-}
-
 #[derive(Accounts)]
 #[instruction(name: String, x: i64, y: i64, capacity: i64)]
 pub struct InitLocation<'info> {

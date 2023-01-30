@@ -186,12 +186,14 @@ pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>) -> Resu
     Ok(())
 }
 
-pub fn send(ctx: Context<ProcessesResourceWith1Input>, send_amount: Option<i64>, current_timestamp: i64) -> Result<()> {
+pub fn send(ctx: Context<SendResource>, send_amount: Option<i64>, current_timestamp: i64, from_x: i64, from_y: i64, to_x: i64, to_y: i64) -> Result<()> {
     let processor = &mut ctx.accounts.processor;
     let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
     let storage_to: &mut Account<Storage> = &mut ctx.accounts.storage;
     let storage_from: &mut Account<Storage> = &mut ctx.accounts.storage_input;
     let storage_fuel: &mut Account<Storage> = &mut ctx.accounts.storage_fuel;
+    //let from_location: &Account<Location> = &ctx.accounts.from_location;
+    //let to_location: &Account<Location> = &ctx.accounts.to_location;
 
     msg!("send/");
     
@@ -199,11 +201,6 @@ pub fn send(ctx: Context<ProcessesResourceWith1Input>, send_amount: Option<i64>,
     require!(resource_to_produce.key().eq(&storage_to.resource_id), ValidationError::InputStorageNotSupplied);
 
     require!(location::same_location_id(Some(processor.location_id), storage_from.location_id(current_timestamp)), ValidationError::DifferentLocations);
-
-    /*if processor.fuel_cost_type != FuelCostType::Nothing {
-        let fuel_location = storage_fuel.map(|s| s.location_id(current_timestamp)).flatten();
-        require!(location::same_location_id(Some(processor.location_id), fuel_location), ValidationError::DifferentLocations);
-    }*/
 
     let calculated_awaiting = match send_amount {
         Some(amount) if amount <= storage_from.amount => amount,
@@ -216,6 +213,25 @@ pub fn send(ctx: Context<ProcessesResourceWith1Input>, send_amount: Option<i64>,
     //storage_to.amount += calculated_awaiting;
     processor.awaiting_units += calculated_awaiting;
     move_awaiting(processor, storage_to, current_timestamp, None)?;
+
+    let fuel_cost = match processor.fuel_cost_type {
+        FuelCostType::Nothing => 0,
+        FuelCostType::Distance => {
+            let distance = 1; //from_location.distance(&to_location);
+            let fuel_cost = distance * calculated_awaiting;
+            fuel_cost
+        },
+        FuelCostType::Output => 0,
+    };
+
+    if fuel_cost > 0 {
+        let fuel_location = storage_fuel.location_id(current_timestamp);
+        require!(location::same_location_id(Some(processor.location_id), fuel_location), ValidationError::DifferentLocations);
+
+        require!(storage_fuel.amount >= fuel_cost, ValidationError::FuelNotEnough);
+
+        storage_fuel.amount -= fuel_cost
+    }
 
     msg!("/send");
 
@@ -305,3 +321,48 @@ pub struct ProcessesResourceWith2Inputs<'info> {
     #[account(mut)]
     pub storage_input_2: Account<'info, Storage>,
 }
+
+#[derive(Accounts)]
+#[instruction(
+    from_x: i64,
+    from_y: i64,
+    to_x: i64,
+    to_y: i64,
+)]
+pub struct SendResource<'info> {
+    #[account(mut)]
+    pub processor: Account<'info, Processor>,
+    #[account(mut)]
+    pub resource_to_produce: Account<'info, Resource>,
+    #[account(mut)]
+    pub storage: Account<'info, Storage>,
+    #[account(mut)]
+    pub storage_input: Account<'info, Storage>,
+    #[account(mut)]
+    pub storage_fuel: Account<'info, Storage>,
+    /*#[account(
+        mut,
+        seeds = [
+            b"map-location", 
+            storage.key().as_ref(),
+            &from_x.to_le_bytes(),
+            &from_y.to_le_bytes(),
+        ],
+        bump = from_location.bump,
+    )]
+    pub from_location: Account<'info, Location>,*/
+    /*#[account(
+        mut,
+        seeds = [
+            b"map-location", 
+            owner.key().as_ref(),
+            &to_x.to_le_bytes(),
+            &to_y.to_le_bytes(),
+        ],
+        bump = to_location.bump,
+    )]
+    pub to_location: Account<'info, Location>,*/
+    #[account(mut)]
+    pub owner: Signer<'info>,
+}
+
