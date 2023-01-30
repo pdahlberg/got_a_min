@@ -95,9 +95,9 @@ pub mod got_a_min {
         processor::produce_with_two_inputs(ctx)
     }
 
-    pub fn send(ctx: Context<ProcessesResourceWith1Input>, send_amount: Option<i64>) -> Result<()> {
+    pub fn send(ctx: Context<SendResource>, send_amount: i64, from_x: i64, from_y: i64, to_x: i64, to_y: i64) -> Result<()> {
         let current_timestamp = Clock::get()?.unix_timestamp;
-        processor::send(ctx, send_amount, current_timestamp)
+        processor::send(ctx, send_amount, current_timestamp, from_x, from_y, to_x, to_y)
     }
 
     pub fn init_unit(ctx: Context<InitUnit>, name: String, x: i64, y: i64) -> Result<()> {
@@ -113,8 +113,8 @@ pub mod got_a_min {
         debug::set_storage_amount(ctx, amount)
     }
 
-    pub fn debug_send(ctx: Context<ProcessesResourceWith1Input>, send_amount: Option<i64>, current_timestamp: i64) -> Result<()> {
-        processor::send(ctx, send_amount, current_timestamp)
+    pub fn debug_send(ctx: Context<SendResource>, send_amount: i64, current_timestamp: i64, from_x: i64, from_y: i64, to_x: i64, to_y: i64) -> Result<()> {
+        processor::send(ctx, send_amount, current_timestamp, from_x, from_y, to_x, to_y)
     }
 
     pub fn debug_init_processor(ctx: Context<InitProcessor>, processor_type: ProcessorType, fuel_resource_id: Pubkey, output_resource_id: Pubkey, output_rate: i64, processing_duration: i64, fuel_cost_type: FuelCostType, current_timestamp: i64) -> Result<()> {
