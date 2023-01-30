@@ -623,7 +623,7 @@ describe("/Sending", () => {
     let location1 = await createLocation2(program, 'loc1', [1, 0], 9999);
     let location2 = await createLocation2(program, 'loc2', [2, 0], 9999);
     let resource = await createResource2(program, 'A', []);
-    let sender = await (await createProcessor3(resource, 5, 6, location1, {sender:{}}))
+    let sender = await (await createProcessor3(resource, 5, 6, location1, {sender:{}}, {distance:{}}))
       .withName("Sender");
     let localStorage = (await createStorage3(program, resource.keyPair, 100, location1))
       .withName("local_storage")
@@ -993,7 +993,7 @@ async function createProcessor2(program: Program<GotAMin>, output_resource, outp
   return processor;
 }
 
-async function createProcessor3(output_resource: ResourceState, outputRate, processingDuration = 5, location: LocationState = DEFAULT_LOCATION, type: ProcessorType = {producer:{}}, fuel_resource = DEFAULT_FUEL_RES, fuelCostType: FuelCostType = {nothing:{}}): Promise<ProcessorState> {
+async function createProcessor3(output_resource: ResourceState, outputRate, processingDuration = 5, location: LocationState = DEFAULT_LOCATION, type: ProcessorType = {producer:{}}, fuelCostType: FuelCostType = {nothing:{}}, fuel_resource = DEFAULT_FUEL_RES): Promise<ProcessorState> {
   let program = output_resource.program;
   const keyPair = anchor.web3.Keypair.generate();
   await initProcessor(keyPair, fuel_resource, output_resource, outputRate, processingDuration, location, type, fuelCostType);
