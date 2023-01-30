@@ -192,8 +192,8 @@ pub fn send(ctx: Context<SendResource>, send_amount: Option<i64>, current_timest
     let storage_to: &mut Account<Storage> = &mut ctx.accounts.storage;
     let storage_from: &mut Account<Storage> = &mut ctx.accounts.storage_input;
     let storage_fuel: &mut Account<Storage> = &mut ctx.accounts.storage_fuel;
-    //let from_location: &Account<Location> = &ctx.accounts.from_location;
-    //let to_location: &Account<Location> = &ctx.accounts.to_location;
+    let from_location: &Account<Location> = &ctx.accounts.from_location;
+    let to_location: &Account<Location> = &ctx.accounts.to_location;
 
     msg!("send/");
     
@@ -217,7 +217,7 @@ pub fn send(ctx: Context<SendResource>, send_amount: Option<i64>, current_timest
     let fuel_cost = match processor.fuel_cost_type {
         FuelCostType::Nothing => 0,
         FuelCostType::Distance => {
-            let distance = 1; //from_location.distance(&to_location);
+            let distance = from_location.distance(&to_location);
             let fuel_cost = distance * calculated_awaiting;
             fuel_cost
         },
@@ -324,6 +324,8 @@ pub struct ProcessesResourceWith2Inputs<'info> {
 
 #[derive(Accounts)]
 #[instruction(
+    send_amount: Option<i64>, 
+    current_timestamp: i64,
     from_x: i64,
     from_y: i64,
     to_x: i64,
@@ -340,18 +342,18 @@ pub struct SendResource<'info> {
     pub storage_input: Account<'info, Storage>,
     #[account(mut)]
     pub storage_fuel: Account<'info, Storage>,
-    /*#[account(
+    #[account(
         mut,
         seeds = [
             b"map-location", 
-            storage.key().as_ref(),
+            owner.key().as_ref(),
             &from_x.to_le_bytes(),
             &from_y.to_le_bytes(),
         ],
         bump = from_location.bump,
     )]
-    pub from_location: Account<'info, Location>,*/
-    /*#[account(
+    pub from_location: Account<'info, Location>,
+    #[account(
         mut,
         seeds = [
             b"map-location", 
@@ -361,7 +363,7 @@ pub struct SendResource<'info> {
         ],
         bump = to_location.bump,
     )]
-    pub to_location: Account<'info, Location>,*/
+    pub to_location: Account<'info, Location>,
     #[account(mut)]
     pub owner: Signer<'info>,
 }

@@ -1445,8 +1445,8 @@ async function debug_send(sender: ProcessorState, toStorage: StorageState, resou
       resourceToProduce: resourceToProduce.getPubKey(),
       storageInput: fromStorage.getPubKey(),
       storageFuel: storageFuel.getPubKey(),
-      //fromLocation: from.getPubKey(),
-      //toLocation: to.getPubKey(),
+      fromLocation: from.getPubKey(),
+      toLocation: to.getPubKey(),
     })
     .rpc();
 }
