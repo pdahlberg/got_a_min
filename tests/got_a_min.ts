@@ -1438,7 +1438,7 @@ async function debug_send(sender: ProcessorState, toStorage: StorageState, resou
   let program = sender.program;
 
   await program.methods
-    .debugSend(null, new anchor.BN(current_timestamp), from.xBN, from.yBN, to.xBN, to.yBN)
+    .debugSend(new anchor.BN(999), new anchor.BN(current_timestamp), from.xBN, from.yBN, to.xBN, to.yBN)
     .accounts({
       processor: sender.getPubKey(),
       storage: toStorage.getPubKey(),

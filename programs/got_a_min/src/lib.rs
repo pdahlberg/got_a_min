@@ -95,7 +95,7 @@ pub mod got_a_min {
         processor::produce_with_two_inputs(ctx)
     }
 
-    pub fn send(ctx: Context<SendResource>, send_amount: Option<i64>, from_x: i64, from_y: i64, to_x: i64, to_y: i64) -> Result<()> {
+    pub fn send(ctx: Context<SendResource>, send_amount: i64, from_x: i64, from_y: i64, to_x: i64, to_y: i64) -> Result<()> {
         let current_timestamp = Clock::get()?.unix_timestamp;
         processor::send(ctx, send_amount, current_timestamp, from_x, from_y, to_x, to_y)
     }
@@ -113,7 +113,7 @@ pub mod got_a_min {
         debug::set_storage_amount(ctx, amount)
     }
 
-    pub fn debug_send(ctx: Context<SendResource>, send_amount: Option<i64>, current_timestamp: i64, from_x: i64, from_y: i64, to_x: i64, to_y: i64) -> Result<()> {
+    pub fn debug_send(ctx: Context<SendResource>, send_amount: i64, current_timestamp: i64, from_x: i64, from_y: i64, to_x: i64, to_y: i64) -> Result<()> {
         processor::send(ctx, send_amount, current_timestamp, from_x, from_y, to_x, to_y)
     }
 
