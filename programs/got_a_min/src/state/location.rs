@@ -67,16 +67,9 @@ impl Location {
     }
 
     pub fn distance(&self, other_location: &Location) -> i64 {
-        let diff_x = match self.pos_x > other_location.pos_x {
-            true => self.pos_x - other_location.pos_x,
-            false => other_location.pos_x - self.pos_x,
-        };
-        let diff_y = match self.pos_y > other_location.pos_y {
-            true => self.pos_y - other_location.pos_y,
-            false => other_location.pos_y - self.pos_y,
-        };
-        //diff_x + diff_y
-        1
+        let diff_x = (self.pos_x - other_location.pos_x).abs();
+        let diff_y = (self.pos_y - other_location.pos_y).abs();
+        diff_x + diff_y
     }
 
     pub fn explore(&mut self) {

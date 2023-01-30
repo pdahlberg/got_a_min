@@ -214,23 +214,25 @@ pub fn send(ctx: Context<SendResource>, send_amount: i64, current_timestamp: i64
     processor.awaiting_units += calculated_awaiting;
     move_awaiting(processor, storage_to, current_timestamp, None)?;
 
-    let fuel_cost = match processor.fuel_cost_type {
-        FuelCostType::Nothing => 0,
-        FuelCostType::Distance => {
-            let distance = from_location.distance(&to_location);
-            let fuel_cost = distance * calculated_awaiting;
-            fuel_cost
-        },
-        FuelCostType::Output => 0,
-    };
+    if calculated_awaiting > 0 {
+        let fuel_cost = match processor.fuel_cost_type {
+            FuelCostType::Nothing => 0,
+            FuelCostType::Distance => {
+                let distance = from_location.distance(&to_location);
+                let fuel_cost = distance.pow(2);
+                fuel_cost
+            },
+            FuelCostType::Output => 0,
+        };
 
-    if fuel_cost > 0 {
-        let fuel_location = storage_fuel.location_id(current_timestamp);
-        require!(location::same_location_id(Some(processor.location_id), fuel_location), ValidationError::DifferentLocations);
+        if fuel_cost > 0 {
+            let fuel_location = storage_fuel.location_id(current_timestamp);
+            require!(location::same_location_id(Some(processor.location_id), fuel_location), ValidationError::DifferentLocations);
 
-        require!(storage_fuel.amount >= fuel_cost, ValidationError::FuelNotEnough);
+            require!(storage_fuel.amount >= fuel_cost, ValidationError::FuelNotEnough);
 
-        storage_fuel.amount -= fuel_cost
+            storage_fuel.amount -= fuel_cost
+        }
     }
 
     msg!("/send");
