@@ -132,13 +132,12 @@ fn validate_by_type(processor: &Account<Processor>, storage_out: &Account<Storag
     Ok(())
 }
 
-pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>) -> Result<()> {
+pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>, current_timestamp: i64) -> Result<()> {
     let processor = &mut ctx.accounts.processor;
     let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let storage_in: &mut Account<Storage> = &mut ctx.accounts.storage_input;
     let storage_fuel: &mut Account<Storage> = &mut ctx.accounts.storage_fuel;
-    let current_timestamp = Clock::get()?.unix_timestamp;
 
     msg!("produce_with_one_input/");
     
@@ -240,13 +239,12 @@ pub fn send(ctx: Context<SendResource>, send_amount: i64, current_timestamp: i64
     Ok(())
 }
 
-pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>) -> Result<()> {
+pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>, current_timestamp: i64) -> Result<()> {
     let processor = &mut ctx.accounts.processor;
     let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let storage_in_1: &mut Account<Storage> = &mut ctx.accounts.storage_input_1;
     let storage_in_2: &mut Account<Storage> = &mut ctx.accounts.storage_input_2;
-    let current_timestamp = Clock::get()?.unix_timestamp; 
 
     let input_pos_1 = resource_to_produce.input.iter().position(|input| input.key().eq(&storage_in_1.resource_id));
     require!(input_pos_1.is_some(), ValidationError::InputStorage1NotSupplied);

@@ -87,12 +87,13 @@ pub mod got_a_min {
     }
 
     pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>) -> Result<()> {
-        processor::produce_with_one_input(ctx)
-        //Ok(())
+        let current_timestamp = Clock::get()?.unix_timestamp;
+        processor::produce_with_one_input(ctx, current_timestamp)
     }
 
     pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>) -> Result<()> {
-        processor::produce_with_two_inputs(ctx)
+        let current_timestamp = Clock::get()?.unix_timestamp;
+        processor::produce_with_two_inputs(ctx, current_timestamp)
     }
 
     pub fn send(ctx: Context<SendResource>, send_amount: i64, from_x: i64, from_y: i64, to_x: i64, to_y: i64) -> Result<()> {
