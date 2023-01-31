@@ -182,17 +182,19 @@ pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>, curre
     validate_by_type(&processor, storage, storage_in_2, None, current_timestamp)?;
 
     let index_1 = input_pos_1.unwrap();
-    let input_1_amount = resource_to_produce.input_amount[index_1];
-    require!(storage_in_1.amount >= input_1_amount, ValidationError::InputStorageAmountTooLow);
+    let input_1_amount_per_unit = resource_to_produce.input_amount[index_1];
+    require!(storage_in_1.amount >= input_1_amount_per_unit, ValidationError::InputStorageAmountTooLow);
 
     let index_2 = input_pos_2.unwrap();
-    let input_2_amount = resource_to_produce.input_amount[index_2];
-    require!(storage_in_2.amount >= input_2_amount, ValidationError::InputStorageAmountTooLow);
+    let input_2_amount_per_unit = resource_to_produce.input_amount[index_2];
+    require!(storage_in_2.amount >= input_2_amount_per_unit, ValidationError::InputStorageAmountTooLow);
 
-    storage_in_1.amount -= input_1_amount;
-    storage_in_2.amount -= input_2_amount;
-    
     let calculated_awaiting = calc_awaiting("prod_2", current_timestamp, &processor);
+    let input_1_amount_total = input_1_amount_per_unit * calculated_awaiting;
+    let input_2_amount_total = input_2_amount_per_unit * calculated_awaiting;
+
+    storage_in_1.amount -= input_1_amount_total;
+    storage_in_2.amount -= input_2_amount_total;    
     processor.awaiting_units += calculated_awaiting;
 
     if processor.awaiting_units > 0 {
