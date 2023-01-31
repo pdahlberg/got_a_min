@@ -143,36 +143,22 @@ pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>, current
 
     let calculated_awaiting = calc_awaiting("prod_1", current_timestamp, &processor);
 
-    let required_input_amount = match processor.processor_type { 
-        ProcessorType::Producer => {
-            let input_exists = resource_to_produce.input.iter()
-                .position(|input| input.key().eq(&storage_in.resource_id));
+    let input_exists = resource_to_produce.input.iter()
+        .position(|input| input.key().eq(&storage_in.resource_id));
 
-            require!(input_exists.is_some(), ValidationError::InputStorageNotSupplied);
+    require!(input_exists.is_some(), ValidationError::InputStorageNotSupplied);
 
-            let index = input_exists.unwrap();
-            resource_to_produce.input_amount[index]
-        },
+    let index = input_exists.unwrap();
+    let input_per_output_unit = resource_to_produce.input_amount[index];
+    let total_input = input_per_output_unit * calculated_awaiting;
 
-        ProcessorType::Sender => {
-            let fuel_cost: i64 = 2; // distance between source and target * consumption
-            require!(storage_fuel.amount >= fuel_cost, ValidationError::FuelNotEnough);
-            storage_fuel.amount -= fuel_cost;
-            
-            match calculated_awaiting > storage_in.amount {
-                true => storage_in.amount,
-                false => calculated_awaiting,
-            }
-        },
-    };
+    require!(storage_in.amount >= total_input, ValidationError::InputStorageAmountTooLow);
 
-    require!(storage_in.amount >= required_input_amount, ValidationError::InputStorageAmountTooLow);
-
-    storage_in.amount -= required_input_amount;
+    storage_in.amount -= total_input;
     processor.awaiting_units += calculated_awaiting;
 
     if processor.awaiting_units > 0 {
-        move_awaiting(processor, storage, current_timestamp, Some(required_input_amount))?;
+        move_awaiting(processor, storage, current_timestamp, Some(total_input))?;
     }
 
     msg!("/produce_with_one_input");
