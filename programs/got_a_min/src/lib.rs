@@ -83,16 +83,18 @@ pub mod got_a_min {
     }
 
     pub fn produce_without_input(ctx: Context<ProcessesResource>) -> Result<()> {
-        processor::claim_production(ctx)
+        let current_timestamp = Clock::get()?.unix_timestamp;
+        processor::claim_production(ctx, current_timestamp)
     }
 
     pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>) -> Result<()> {
-        processor::produce_with_one_input(ctx)
-        //Ok(())
+        let current_timestamp = Clock::get()?.unix_timestamp;
+        processor::produce_with_one_input(ctx, current_timestamp)
     }
 
     pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>) -> Result<()> {
-        processor::produce_with_two_inputs(ctx)
+        let current_timestamp = Clock::get()?.unix_timestamp;
+        processor::produce_with_two_inputs(ctx, current_timestamp)
     }
 
     pub fn send(ctx: Context<SendResource>, send_amount: i64, from_x: i64, from_y: i64, to_x: i64, to_y: i64) -> Result<()> {
@@ -115,6 +117,18 @@ pub mod got_a_min {
 
     pub fn debug_send(ctx: Context<SendResource>, send_amount: i64, current_timestamp: i64, from_x: i64, from_y: i64, to_x: i64, to_y: i64) -> Result<()> {
         processor::send(ctx, send_amount, current_timestamp, from_x, from_y, to_x, to_y)
+    }
+
+    pub fn debug_produce_without_input(ctx: Context<ProcessesResource>, current_timestamp: i64) -> Result<()> {
+        processor::claim_production(ctx, current_timestamp)
+    }
+
+    pub fn debug_produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>, current_timestamp: i64) -> Result<()> {
+        processor::produce_with_one_input(ctx, current_timestamp)
+    }
+
+    pub fn debug_produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>, current_timestamp: i64) -> Result<()> {
+        processor::produce_with_two_inputs(ctx, current_timestamp)
     }
 
     pub fn debug_init_processor(ctx: Context<InitProcessor>, processor_type: ProcessorType, fuel_resource_id: Pubkey, output_resource_id: Pubkey, output_rate: i64, processing_duration: i64, fuel_cost_type: FuelCostType, current_timestamp: i64) -> Result<()> {
