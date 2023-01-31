@@ -30,23 +30,15 @@ pub fn init(ctx: Context<InitProcessor>, processor_type: ProcessorType, fuel_res
 }
 
 // claim any units "done" waiting
-fn move_awaiting(processor: &mut Account<Processor>, storage_out: &mut Account<Storage>, current_timestamp: i64, limit: Option<i64>) -> Result<()> {
+fn move_awaiting(processor: &mut Account<Processor>, storage_out: &mut Account<Storage>, current_timestamp: i64, max_output: i64) -> Result<()> {
     require!(processor.processing_duration > 0, ValidationError::ExperimentalError);
     
-    let prod_during_diff_time = calc_awaiting("move_awt", current_timestamp, processor);
-
-    let limited_prod = match limit {
-        Some(l) if prod_during_diff_time > l => l,
-        _ => prod_during_diff_time,
-    };
+    let prod_during_diff_time = calc_awaiting("move_awt", current_timestamp, processor, max_output);
 
     require!(processor.awaiting_units >= 0, ValidationError::ExperimentalError);
-    require!(limited_prod >= 0, ValidationError::ExperimentalError);
+    require!(prod_during_diff_time >= 0, ValidationError::ExperimentalError);
 
-    let withdraw_awaiting = match processor.awaiting_units >= limited_prod {
-        true => limited_prod,
-        false => processor.awaiting_units,
-    };
+    let withdraw_awaiting = processor.awaiting_units.min(prod_during_diff_time);
 
     let available_capacity = match storage_out.capacity - storage_out.amount {
         diff if diff > 0 => diff,
@@ -56,10 +48,7 @@ fn move_awaiting(processor: &mut Account<Processor>, storage_out: &mut Account<S
     require!(available_capacity >= 0, ValidationError::ExperimentalError);
     require!(withdraw_awaiting >= 0, ValidationError::ExperimentalError);
 
-    let withdraw_awaiting_within_capacity = match available_capacity > withdraw_awaiting {
-        true => withdraw_awaiting,
-        false => available_capacity,
-    };
+    let withdraw_awaiting_within_capacity = available_capacity.min(withdraw_awaiting);
 
     match processor.processor_type {
         ProcessorType::Producer => storage_out.add(withdraw_awaiting_within_capacity, processor.location_id)?,
@@ -82,10 +71,10 @@ pub fn claim_production(ctx: Context<ProcessesResource>, current_timestamp: i64)
 
     msg!("claim_production/");
 
-    producer.awaiting_units = calc_awaiting("claim_prod", current_timestamp, producer);
+    producer.awaiting_units = calc_awaiting("claim_prod", current_timestamp, producer, i64::MAX);
 
     if producer.awaiting_units > 0 {
-        move_awaiting(producer, storage, current_timestamp, None)?;
+        move_awaiting(producer, storage, current_timestamp, i64::MAX)?;
     }
 
     msg!("/claim_production");
@@ -101,12 +90,12 @@ pub fn claim_production(ctx: Context<ProcessesResource>, current_timestamp: i64)
     let prod_during_diff_time = prod_slots_during_diff_time * processor.output_rate;
 */
 
-fn calc_awaiting(label: &str, current_timestamp: i64, processor: &Account<Processor>) -> i64 {
+fn calc_awaiting(label: &str, current_timestamp: i64, processor: &Account<Processor>, max_output: i64) -> i64 {
     let diff_time = current_timestamp - processor.claimed_at;
     let prod_slots_during_diff_time = diff_time / processor.processing_duration;
     let prod_during_diff_time = prod_slots_during_diff_time * processor.output_rate;
     msg!("{} [{} / {}] slots: {}, prod: {}", label, current_timestamp, diff_time, prod_slots_during_diff_time, prod_during_diff_time);
-    prod_during_diff_time
+    prod_during_diff_time.min(max_output)
 }
 
 fn validate_by_type(processor: &Account<Processor>, storage_out: &Account<Storage>, storage_in: &Account<Storage>, storage_fuel: Option<&Account<Storage>>, current_timestamp: i64) -> Result<()> {
@@ -141,8 +130,6 @@ pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>, current
 
     validate_by_type(&processor, storage, storage_in, Some(&storage_fuel), current_timestamp)?;
 
-    let calculated_awaiting = calc_awaiting("prod_1", current_timestamp, &processor);
-
     let input_exists = resource_to_produce.input.iter()
         .position(|input| input.key().eq(&storage_in.resource_id));
 
@@ -150,6 +137,9 @@ pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>, current
 
     let index = input_exists.unwrap();
     let input_per_output_unit = resource_to_produce.input_amount[index];
+    let limit_output_based_on_input_available = storage_in.amount / input_per_output_unit;
+
+    let calculated_awaiting = calc_awaiting("prod_1", current_timestamp, &processor, limit_output_based_on_input_available);
     let total_input = input_per_output_unit * calculated_awaiting;
 
     require!(storage_in.amount >= total_input, ValidationError::InputStorageAmountTooLow);
@@ -158,7 +148,7 @@ pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>, current
     processor.awaiting_units += calculated_awaiting;
 
     if processor.awaiting_units > 0 {
-        move_awaiting(processor, storage, current_timestamp, Some(total_input))?;
+        move_awaiting(processor, storage, current_timestamp, total_input)?;
     }
 
     msg!("/produce_with_one_input");
@@ -184,12 +174,16 @@ pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>, curre
     let index_1 = input_pos_1.unwrap();
     let input_1_amount_per_unit = resource_to_produce.input_amount[index_1];
     require!(storage_in_1.amount >= input_1_amount_per_unit, ValidationError::InputStorageAmountTooLow);
+    let input_1_max_units = storage_in_1.amount / input_1_amount_per_unit;
 
     let index_2 = input_pos_2.unwrap();
     let input_2_amount_per_unit = resource_to_produce.input_amount[index_2];
     require!(storage_in_2.amount >= input_2_amount_per_unit, ValidationError::InputStorageAmountTooLow);
+    let input_2_max_units = storage_in_2.amount / input_2_amount_per_unit;
 
-    let calculated_awaiting = calc_awaiting("prod_2", current_timestamp, &processor);
+    let input_max_units = input_1_max_units.min(input_2_max_units);
+
+    let calculated_awaiting = calc_awaiting("prod_2", current_timestamp, &processor, input_max_units);
     let input_1_amount_total = input_1_amount_per_unit * calculated_awaiting;
     let input_2_amount_total = input_2_amount_per_unit * calculated_awaiting;
 
@@ -198,7 +192,7 @@ pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>, curre
     processor.awaiting_units += calculated_awaiting;
 
     if processor.awaiting_units > 0 {
-        move_awaiting(processor, storage, current_timestamp, None)?;
+        move_awaiting(processor, storage, current_timestamp, input_max_units)?;
     }
 
     Ok(())
@@ -279,7 +273,7 @@ pub fn send(ctx: Context<SendResource>, send_amount: i64, current_timestamp: i64
 
     //storage_to.amount += calculated_awaiting;
     processor.awaiting_units += calculated_awaiting;
-    move_awaiting(processor, storage_to, current_timestamp, None)?;
+    move_awaiting(processor, storage_to, current_timestamp, i64::MAX)?;
 
     if calculated_awaiting > 0 {
         let fuel_cost = match processor.fuel_cost_type {

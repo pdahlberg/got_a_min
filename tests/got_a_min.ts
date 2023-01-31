@@ -503,7 +503,12 @@ describe("/Production", () => {
     await storageA.refresh();
     expect(storageA.amount).to.equal(5);
 
-    let time = 2;
+    let time = 0;
+    await (await producer.refresh()).log(time);
+    await (await storageA.refresh()).log(time);
+    await (await storageB.refresh()).log(time);
+
+    time = 3;
     await debug_produce_with_1_input(producer, storageB, resourceB, storageA, storageFuel, time);
     
     await (await producer.refresh()).log(time);
