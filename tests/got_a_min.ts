@@ -655,11 +655,10 @@ describe("/Location", () => {
   it("Move between Storage in different locations", async () => {
     let resource = await createResource2(program, 'A', []);
     let locationA = await createLocation2(program, 'locA', [0, 0], 10);
-    let [producerA, _2] = await createProcessor(program, resource, 10, 0, locationA);
     let storageAFrom = await createStorage4(resource, 10, locationA);
     let locationB = await createLocation2(program, 'locB', [1, 0], 10);
     let storageBTo = await createStorage4(resource, 100, locationB);
-    await produce_without_input(producerA, storageAFrom, resource);
+    await debugStorage(storageAFrom, 10);
 
     try {
       await move_between_storage(storageAFrom, storageBTo, 1);
@@ -673,7 +672,7 @@ describe("/Location", () => {
   it("Producer and Storage in different locations", async () => {
     let resource = await createResource2(program, 'A', []);
     let location = await createLocation2(program, 'locA', [0, 0], 10);
-    let [producer, _2] = await createProcessor(program, resource, 10, 0);
+    let producer = await createProcessor3(resource, 10, 1);
     let storage = await createStorage4(resource, 10, location);
 
     try {
@@ -689,7 +688,7 @@ describe("/Location", () => {
     let resource = await createResource2(program, 'A', []);
     let location1 = await createLocation2(program, 'loc1', [0, 0], 10);
     let storage = await createStorage4(resource, 10, location1);
-    let location2 = await createLocation(program, 'loc2', [1, 0], 10);
+    let location2 = await createLocation2(program, 'loc2', [1, 0], 10);
 
     try {
       await move_storage(program, storage, location1, location2);
@@ -702,9 +701,9 @@ describe("/Location", () => {
 
   it("Move Storage to full Location fails", async () => {
     let resource = await createResource2(program, 'A', []);
-    let location1 = await createLocation2(program, 'loc1', [0, 0], 10);
+    let location1 = await createLocation2(program, 'loc1', [60, 0], 10);
     let storage = await createStorage4(resource, 10, location1, {movable:{}});
-    let location2 = await createLocation(program, 'loc2', [1, 0], 0);
+    let location2 = await createLocation2(program, 'loc2', [61, 0], 0);
 
     try {
       await move_storage(program, storage, location1, location2);
@@ -717,9 +716,9 @@ describe("/Location", () => {
 
   it("Move Storage to new Location", async () => {
     let resource = await createResource2(program, 'A', []);
-    let location1 = await createLocation2(program, 'loc1', [0, 0], 10);
+    let location1 = await createLocation2(program, 'loc1', [50, 0], 10);
     let storage = await createStorage4(resource, 10, location1, {movable:{}});
-    let location2 = await createLocation2(program, 'loc2', [1, 0], 10);
+    let location2 = await createLocation2(program, 'loc2', [51, 0], 10);
 
     await move_storage(program, storage, location1, location2);
     await storage.refresh();
@@ -731,7 +730,7 @@ describe("/Location", () => {
     expect(location2.occupiedSpace).equal(1);
   });  
 
-  it("init_stuff", async () => {
+  /*it("init_stuff", async () => {
     const program = anchor.workspace.GotAMin as Program<GotAMin>;
     const provider = program.provider as anchor.AnchorProvider;
     let pk = provider.wallet.publicKey;
@@ -762,7 +761,7 @@ describe("/Location", () => {
     })
     .rpc();
 
-  });
+  });*/
 
 /*  it("update stuff", async () => {
     let key = new anchor.web3.PublicKey("FCHm4Ef3b1aKpBPTk6XkKsQwf8Z3zUhkh6VbZuSrwDi8");
