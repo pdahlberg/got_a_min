@@ -36,12 +36,12 @@ fn move_awaiting(processor: &mut Account<Processor>, storage_out: &mut Account<S
     let previous_claim_at = processor.claimed_at;
     let diff_time = current_timestamp - previous_claim_at;
     let prod_slots_during_diff_time = diff_time / processor.processing_duration;
-    let prod_during_diff_time = prod_slots_during_diff_time * processor.output_rate;
+    let prod_during_diff_time = processor.awaiting_units;
 
-    require!(previous_claim_at >= 0, ValidationError::ExperimentalError);
-    require!(diff_time >= 0, ValidationError::ExperimentalError);
-    require!(prod_slots_during_diff_time >= 0, ValidationError::ExperimentalError);
-    require!(prod_during_diff_time >= 0, ValidationError::ExperimentalError);
+    //require!(previous_claim_at >= 0, ValidationError::ExperimentalError);
+    //require!(diff_time >= 0, ValidationError::ExperimentalError);
+    //require!(prod_slots_during_diff_time >= 0, ValidationError::ExperimentalError);
+    //require!(prod_during_diff_time >= 0, ValidationError::ExperimentalError);
 
     let limited_prod = match limit {
         Some(l) if prod_during_diff_time > l => l,
