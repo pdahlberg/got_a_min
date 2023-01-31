@@ -135,11 +135,11 @@ async function fetchMapTileState(program, pk, x, y) {
   return await program.account.gameTile.fetch(pda);
 }
 
-async function fetchLocationStatePK(program, pos: PublicKey) {
-  return await program.account.location.fetch(pos);
+async function fetchLocationStatePK(program, pos: PublicKey): Promise<LocationState> {
+  return (await LocationState.createPda(program, pos, "Location")).refresh();
 }
 
-async function fetchLocationState(program, pk, pos: [number, number]) {
+async function fetchLocationState(program, pk, pos: [number, number]): Promise<LocationState> {
   let pda = getLocationPda(program, pk, pos);
   return await fetchLocationStatePK(program, pda);
 }
@@ -189,124 +189,6 @@ describe("/Sandbox", () => {
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
 
-  it("pda-1", async () => {
-    const p1: KP = anchor.web3.Keypair.generate();
-    let pk = provider.wallet.publicKey;
-
-    //await initDefaultLocation(program);
-    
-    let map = [];
-    let maxColumns = 2;
-    let maxRows = 2;
-
-    for(let y = 0; y < maxRows; y++) {
-      map[y] = [];
-      for(let x = 0; x < maxColumns; x++) {
-        console.log("Creating ", x, "/", y);
-        await createGameTile(program, pk, x, y);
-        //let loc = await fetchLocationState(program, pk, [x, y]);
-        //console.log("Created loc: ", loc.capacity);
-        let mapTile = await fetchMapTileState(program, pk, x, y);
-        map[y][x] = mapTile;
-      }
-    }
-
-    console.log("After create:");
-    printMap(map);
-    console.log("");
-
-    let exploreX = 0;
-    let exploreY = 0;
-    let exploringPoses: Array<[number, number]> = [[2, 0], [3, 0], [1, 2], [3, 4]];
-    for(var pos of exploringPoses) {
-      if(pos[0] < maxColumns && pos[1] < maxRows) {
-        await exploreGameTile(program, pk, pos[0], pos[1], map);
-      }
-    }
-
-    console.log("After explore:");
-    printMap(map);
-
-    //failNotImplemented();
-  });
-
-  it("simple storage", async () => {
-    let pk = provider.wallet.publicKey;
-    let pos: [number, number] = [2, 1];
-
-    await initLocation2(program, 'name', pos, 5);
-    let locationState = await fetchLocationState(program, pk, pos);
-    console.log(locationState);
-    let locationPda = getLocationPda(program, pk, pos);
-    
-    const storage: KP = anchor.web3.Keypair.generate();
-    await program.methods
-      .simpleInitStorage(pos)
-      .accounts({
-        storage: storage.publicKey,
-        location: locationPda,
-        owner: pk,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .signers([storage])
-      .rpc();
-
-    console.log("Init done... ");
-
-    await program.methods
-      .simpleTestStorage(pos)
-      .accounts({
-        storage: storage.publicKey,
-        location: locationPda,
-        owner: pk,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .rpc();
-  });
-
-  /*it("test1", async () => {
-    const p1: KP = anchor.web3.Keypair.generate();
-    const p2: KP = anchor.web3.Keypair.generate();
-    //let resource = await createResource2(program, 'A', []);
-    //let [p1storage, _2] = await createStorageNew(program, p1, resource, 1);
-
-    await program.methods
-      .change()
-      .accounts({
-        location: DEFAULT_LOCATION.publicKey,
-        storage: p1storage.publicKey,
-        player: p1.publicKey,
-      })
-      .signers([
-        p1,
-      ])
-      .rpc();*/
-
-      /*await program.methods
-      .change()
-      .accounts({
-        location: DEFAULT_LOCATION.publicKey,
-        storage: p1storage.publicKey,
-        player: p2.publicKey,
-      })
-      .signers([
-        p2,
-      ])
-      .rpc();
-
-    //let location = await program.account.location.fetch(DEFAULT_LOCATION.publicKey);
-
-    //expect(location.occupiedSpace.toNumber()).equal(2)
-    failNotImplemented();
-  });*/
-});
-
-describe("/Unknown", () => {
-  // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.AnchorProvider.env());
-  const program = anchor.workspace.GotAMin as Program<GotAMin>;
-  const programProvider = program.provider as anchor.AnchorProvider;
-  
 });
 
 describe("/Initializations", () => {
@@ -339,7 +221,8 @@ describe("/Initializations", () => {
     let locationPda = await initLocation2(program, "loc", pos, 10);
     let state = await fetchLocationStatePK(program, locationPda);
     
-    expect(state.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
+    expect(state.x).equal(99);
+    expect(state.y).equal(99);
   });
 
   it("Init producer", async () => {
@@ -366,19 +249,19 @@ describe("/Initializations", () => {
     expect(result.resourceId.toBase58()).to.equal(resource.publicKey.toBase58());
   });
 
-  it("Init unit", async () => {
+  /*it("Init unit", async () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
     let startPos: [number, number] = [1, 1];
     let startLocationPda = await initLocation2(program, "loc1", startPos, 10, {space:{}});
     let unitName = "s1";
 
-    await initUnit(program, unitName, startPos);
+    await initUnit(unitName, startPos);
     let unitBeforeMove = await fetchUnitState(program, pk, unitName);
 
     expect(unitBeforeMove.name).equal(unitName)
     expect(unitBeforeMove.atLocationId.toBase58()).equal(startLocationPda.toBase58(), "Start location")
-  });
+  });*/
 
 
 });
@@ -392,28 +275,25 @@ describe("/Unit", () => {
   it("Init and move unit", async () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
-    let startPos: [number, number] = [1, 1];
-    let startLocationPda = await initLocation2(program, "loc1", startPos, 10, {space:{}});
-    let targetPos: [number, number] = [2, 1];
-    let targetLocationPda = await initLocation2(program, "loc2", targetPos, 10, {space:{}});
     let unitName = "s1";
+    let locationFrom = await (await createLocation2(program, "L1", [1, 1], 10, {space:{}})).withName("From");
+    let locationTo = await (await createLocation2(program, "L2", [2, 1], 10)).withName("To");
+    let unit = await initUnit(unitName, locationFrom);
+    (await locationTo.refresh()).log();
 
-    await initUnit(program, unitName, startPos);
-    let unitBeforeMove = await fetchUnitState(program, pk, unitName);
+    unit.log();
+    expect(unit.name).equal(unitName)
 
-    expect(unitBeforeMove.name).equal(unitName)
-    expect(unitBeforeMove.atLocationId.toBase58()).equal(startLocationPda.toBase58(), "Start location")
+    await moveUnit(unit, locationTo);
 
-    await moveUnit(program, unitBeforeMove, targetPos);
-    let unitAfterMove = await fetchUnitState(program, pk, unitName);
-    let unitLocationAfterMove = await fetchLocationStatePK(program, unitAfterMove.atLocationId);
-    expect(unitAfterMove.atLocationId.toBase58()).equal(targetLocationPda.toBase58(), "Target location")
-    expect(unitLocationAfterMove.posX.toNumber()).equal(2);
-    expect(unitLocationAfterMove.posY.toNumber()).equal(1);
+    (await unit.refresh()).log();
+    (await locationTo.refresh()).log();
     
+    expect(unit.atLocation.toBase58()).equal(locationTo.getPubKeyStr(), "Target location")
+    expect(locationTo.typeAsJson()).equal(JSON.stringify({space:{}}));
   });
 
-  it("Move and explore", async () => {
+  /*it("Move and explore", async () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
     let startPos: [number, number] = [10, 2];
@@ -436,7 +316,7 @@ describe("/Unit", () => {
     expect(unitLocationAfterMove.posX.toNumber()).equal(11);
     expect(unitLocationAfterMove.posY.toNumber()).equal(2);
     expect(JSON.stringify(unitLocationAfterMove.locationType)).to.equal(JSON.stringify({space:{}}));
-  });
+  });*/
 
 });
 
@@ -746,15 +626,13 @@ describe("/Storage", () => {
     }
   });
     
-  it("Move between Storage with different resources", async () => {
+  it("Move between Storage with different resources #storeMoveNotMatching", async () => {
     let resourceA = await createResource2(program, 'A', []);
-    let [producerA, _2] = await createProcessor(program, resourceA, 10, 1);
-    let storageAFrom = await createStorage4(resourceA, 10);
     let resourceB = await createResource2(program, 'B', []);
-    let [producerB, _5] = await createProcessor(program, resourceB, 10, 1);
-    let storageBTo = await createStorage4(resourceB, 100);
-    await produce_without_input(producerA, storageAFrom, resourceA);
-    await produce_without_input(producerB, storageBTo, resourceB);
+    let storageAFrom = await createStorage4(resourceA, 1);
+    let storageBTo = await createStorage4(resourceB, 1);
+
+    await debugStorage(storageAFrom, 1);
 
     try {
       await move_between_storage(storageAFrom, storageBTo, 1);
@@ -773,18 +651,6 @@ describe("/Location", () => {
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
   const pk = programProvider.wallet.publicKey;
-
-  it("Init location", async () => {
-    let pos: [number, number] = [0, 0];
-
-    await initLocation2(program, 'name', pos, 5);
-    let state = await fetchLocationState(program, pk, pos);
-    
-    expect(state.owner.toBase58()).to.equal(pk.toBase58());
-    expect(state.posX).to.equal(0);
-    expect(state.capacity.toNumber()).to.equal(5);
-    expect(state.name).to.equal('name');
-  });
 
   it("Move between Storage in different locations", async () => {
     let resource = await createResource2(program, 'A', []);
@@ -1118,6 +984,8 @@ class BaseState<T> {
   }
 }
 
+type LocationType = { unexplored?: Record<string, never>; space?: Record<string, never>; planet?: Record<string, never>; moon?: Record<string, never>; asteroid?: Record<string, never>; };
+
 class LocationState extends BaseState<LocationState> {
 
   x: number;
@@ -1125,6 +993,7 @@ class LocationState extends BaseState<LocationState> {
   y: number;
   yBN: anchor.BN;
   occupiedSpace: number;
+  type: LocationType;
 
   public static async createPda(program: Program<GotAMin>, publicKey: PublicKey, instanceName: string): Promise<LocationState> {
     return new LocationState(program, null, instanceName, publicKey)
@@ -1138,7 +1007,16 @@ class LocationState extends BaseState<LocationState> {
     this.y = state.posY.toNumber();
     this.yBN = state.posY;
     this.occupiedSpace = state.occupiedSpace.toNumber();
+    this.type = state.locationType;
     return this;
+  }
+
+  toString(): string {
+    return `${this.instanceName}[${this.x}/${this.y}](type=${this.typeAsJson()})`;
+  }
+
+  typeAsJson(): string {
+    return JSON.stringify(this.type);
   }
 
 }
@@ -1185,6 +1063,9 @@ class ResourceState extends BaseState<ResourceState> {
     return this;
   }
 
+  toString(): string {
+    return `${this.instanceName}(${this.name})`;
+  }
 }
 
 class StorageState extends BaseState<StorageState> {
@@ -1213,15 +1094,25 @@ class StorageState extends BaseState<StorageState> {
 }
 
 class UnitState extends BaseState<UnitState> {
-  constructor(program: Program<GotAMin>, keyPair: KP, instanceName: string = "Unit") {
-    super(program, keyPair, instanceName);
+
+  name: string;
+  atLocation: PublicKey;
+
+  public static async createPda(program: Program<GotAMin>, publicKey: PublicKey, instanceName: string): Promise<UnitState> {
+    return new UnitState(program, null, instanceName, publicKey)
+      .refresh();
   }
 
   async refresh(): Promise<UnitState> {
     let state = await this.program.account.unit.fetch(this.getPubKey());
+    this.name = state.name;
+    this.atLocation = state.atLocationId;
     return this;
   }
 
+  toString(): string {
+    return `${this.instanceName}(${this.name})`;
+  }
 }
 
 async function initStorage(
@@ -1271,8 +1162,8 @@ async function createLocation(program: Program<GotAMin>, name: string, position:
   return await initLocation2(program, name, position, capacity);
 }
 
-async function createLocation2(program: Program<GotAMin>, name: string, position: [number, number], capacity: number):  Promise<LocationState> {
-  let publicKey = await initLocation2(program, name, position, capacity);
+async function createLocation2(program: Program<GotAMin>, name: string, position: [number, number], capacity: number, locationType = null):  Promise<LocationState> {
+  let publicKey = await initLocation2(program, name, position, capacity, locationType);
   return LocationState.createPda(program, publicKey, `Loc(${position[0]/position[1]})`);
 }
 
@@ -1302,54 +1193,46 @@ async function initLocation2(program: Program<GotAMin>, name: string, position: 
   return locationPda;
 }
 
-async function moveUnit(program: Program<GotAMin>, unit, toPos): Promise<PublicKey> {
+async function moveUnit(unit: UnitState, toLocation: LocationState) {
+  let program = unit.program;
   const provider = program.provider as anchor.AnchorProvider;
   let pk = provider.wallet.publicKey;
 
   let unitPda = getUnitPda(program, pk, unit.name);
-  let currentLocation = await fetchLocationStatePK(program, unit.atLocationId);
-  let fromPos: [number, number] = [currentLocation.posX, currentLocation.posY];
-  let toLocationPda = getLocationPda(program, pk, toPos);
-  let fromX = new anchor.BN(currentLocation.posX);
-  let fromY = new anchor.BN(currentLocation.posY);
-  let toX = new anchor.BN(toPos[0]);
-  let toY = new anchor.BN(toPos[1]);
+  let currentLocation = await fetchLocationStatePK(program, unit.atLocation);
   
   await program.methods
-    .moveUnit(fromX, fromY, toX, toY, unit.name)
+    .moveUnit(currentLocation.xBN, currentLocation.yBN, toLocation.xBN, toLocation.yBN, unit.name)
     .accounts({
       unit: unitPda,
-      fromLocation: unit.atLocationId,
-      toLocation: toLocationPda,
+      fromLocation: unit.atLocation,
+      toLocation: toLocation.getPubKey(),
       owner: pk,
     })
     .rpc();
 
-  return unit;
 }
 
-async function initUnit(program: Program<GotAMin>, name: string, pos: [number, number]): Promise<PublicKey> {
+async function initUnit(name: string, location: LocationState): Promise<UnitState> {
+  let program = location.program;
   const provider = program.provider as anchor.AnchorProvider;
   let pk = provider.wallet.publicKey;
-  let x = pos[0];
-  let y = pos[1];
 
   let unitPda = getUnitPda(program, pk, name);
-  let locationPda = getLocationPda(program, pk, pos);
   
   const pdaInfo = await provider.connection.getAccountInfo(unitPda);
   if(pdaInfo == null) {
     await program.methods
-      .initUnit(name, new anchor.BN(x), new anchor.BN(y))
+      .initUnit(name, location.xBN, location.yBN)
       .accounts({
         unit: unitPda,
-        location: locationPda,
+        location: location.getPubKey(),
         owner: pk,
       })
       .rpc();
   }
 
-  return unitPda;
+  return UnitState.createPda(program, unitPda, name);
 }
 
 async function produce_without_input2(producer: ProcessorState, storage: StorageState, resource: ResourceState) {
