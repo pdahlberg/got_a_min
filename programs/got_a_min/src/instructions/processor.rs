@@ -180,60 +180,6 @@ pub fn produce_with_one_input(ctx: Context<ProcessesResourceWith1Input>, current
     Ok(())
 }
 
-pub fn send(ctx: Context<SendResource>, send_amount: i64, current_timestamp: i64, from_x: i64, from_y: i64, to_x: i64, to_y: i64) -> Result<()> {
-    let processor = &mut ctx.accounts.processor;
-    let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
-    let storage_to: &mut Account<Storage> = &mut ctx.accounts.storage;
-    let storage_from: &mut Account<Storage> = &mut ctx.accounts.storage_input;
-    let storage_fuel: &mut Account<Storage> = &mut ctx.accounts.storage_fuel;
-    let from_location: &Account<Location> = &ctx.accounts.from_location;
-    let to_location: &Account<Location> = &ctx.accounts.to_location;
-
-    msg!("send/");
-    
-    require!(processor.processor_type == ProcessorType::Sender, ValidationError::InvalidProcessorType);
-    require!(resource_to_produce.key().eq(&storage_to.resource_id), ValidationError::InputStorageNotSupplied);
-
-    require!(location::same_location_id(Some(processor.location_id), storage_from.location_id(current_timestamp)), ValidationError::DifferentLocations);
-
-    let calculated_awaiting = match send_amount {
-        //Some(amount) if amount <= storage_from.amount => amount,
-        _ => storage_from.amount,
-    };
-    
-    storage_from.amount -= calculated_awaiting;
-    require!(storage_from.amount >= 0, ValidationError::InputStorageAmountTooLow);
-
-    //storage_to.amount += calculated_awaiting;
-    processor.awaiting_units += calculated_awaiting;
-    move_awaiting(processor, storage_to, current_timestamp, None)?;
-
-    if calculated_awaiting > 0 {
-        let fuel_cost = match processor.fuel_cost_type {
-            FuelCostType::Nothing => 0,
-            FuelCostType::Distance => {
-                let distance = from_location.distance(&to_location);
-                let fuel_cost_per_unit = distance.pow(2);
-                fuel_cost_per_unit * calculated_awaiting
-            },
-            FuelCostType::Output => 0,
-        };
-
-        if fuel_cost > 0 {
-            let fuel_location = storage_fuel.location_id(current_timestamp);
-            require!(location::same_location_id(Some(processor.location_id), fuel_location), ValidationError::DifferentLocations);
-
-            require!(storage_fuel.amount >= fuel_cost, ValidationError::FuelNotEnough);
-
-            storage_fuel.amount -= fuel_cost
-        }
-    }
-
-    msg!("/send");
-
-    Ok(())
-}
-
 pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>, current_timestamp: i64) -> Result<()> {
     let processor = &mut ctx.accounts.processor;
     let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
@@ -259,7 +205,9 @@ pub fn produce_with_two_inputs(ctx: Context<ProcessesResourceWith2Inputs>, curre
 
     storage_in_1.amount -= input_1_amount;
     storage_in_2.amount -= input_2_amount;
-    processor.awaiting_units += processor.output_rate;
+    
+    let calculated_awaiting = calc_awaiting("prod_2", current_timestamp, &processor);
+    processor.awaiting_units += calculated_awaiting;
 
     if processor.awaiting_units > 0 {
         move_awaiting(processor, storage, current_timestamp, None)?;
@@ -315,6 +263,60 @@ pub struct ProcessesResourceWith2Inputs<'info> {
     pub storage_input_1: Account<'info, Storage>,
     #[account(mut)]
     pub storage_input_2: Account<'info, Storage>,
+}
+
+pub fn send(ctx: Context<SendResource>, send_amount: i64, current_timestamp: i64, from_x: i64, from_y: i64, to_x: i64, to_y: i64) -> Result<()> {
+    let processor = &mut ctx.accounts.processor;
+    let resource_to_produce: &mut Account<Resource> = &mut ctx.accounts.resource_to_produce;
+    let storage_to: &mut Account<Storage> = &mut ctx.accounts.storage;
+    let storage_from: &mut Account<Storage> = &mut ctx.accounts.storage_input;
+    let storage_fuel: &mut Account<Storage> = &mut ctx.accounts.storage_fuel;
+    let from_location: &Account<Location> = &ctx.accounts.from_location;
+    let to_location: &Account<Location> = &ctx.accounts.to_location;
+
+    msg!("send/");
+    
+    require!(processor.processor_type == ProcessorType::Sender, ValidationError::InvalidProcessorType);
+    require!(resource_to_produce.key().eq(&storage_to.resource_id), ValidationError::InputStorageNotSupplied);
+
+    require!(location::same_location_id(Some(processor.location_id), storage_from.location_id(current_timestamp)), ValidationError::DifferentLocations);
+
+    let calculated_awaiting = match send_amount {
+        //Some(amount) if amount <= storage_from.amount => amount,
+        _ => storage_from.amount,
+    };
+    
+    storage_from.amount -= calculated_awaiting;
+    require!(storage_from.amount >= 0, ValidationError::InputStorageAmountTooLow);
+
+    //storage_to.amount += calculated_awaiting;
+    processor.awaiting_units += calculated_awaiting;
+    move_awaiting(processor, storage_to, current_timestamp, None)?;
+
+    if calculated_awaiting > 0 {
+        let fuel_cost = match processor.fuel_cost_type {
+            FuelCostType::Nothing => 0,
+            FuelCostType::Distance => {
+                let distance = from_location.distance(&to_location);
+                let fuel_cost_per_unit = distance.pow(2);
+                fuel_cost_per_unit * calculated_awaiting
+            },
+            FuelCostType::Output => 0,
+        };
+
+        if fuel_cost > 0 {
+            let fuel_location = storage_fuel.location_id(current_timestamp);
+            require!(location::same_location_id(Some(processor.location_id), fuel_location), ValidationError::DifferentLocations);
+
+            require!(storage_fuel.amount >= fuel_cost, ValidationError::FuelNotEnough);
+
+            storage_fuel.amount -= fuel_cost
+        }
+    }
+
+    msg!("/send");
+
+    Ok(())
 }
 
 #[derive(Accounts)]

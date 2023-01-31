@@ -503,13 +503,14 @@ describe("/Production", () => {
     await storageA.refresh();
     expect(storageA.amount).to.equal(5);
 
-    await debug_produce_with_1_input(producer, storageB, resourceB, storageA, storageFuel, 1);
+    let time = 2;
+    await debug_produce_with_1_input(producer, storageB, resourceB, storageA, storageFuel, time);
     
-    await (await producer.refresh()).log();
-    await (await storageA.refresh()).log();
-    await (await storageB.refresh()).log();
-    expect(storageB.amount, "Storage B amount").to.equal(1);
-    expect(storageA.amount, "Storage A amount").to.equal(3);    
+    await (await producer.refresh()).log(time);
+    await (await storageA.refresh()).log(time);
+    await (await storageB.refresh()).log(time);
+    expect(storageB.amount, "Storage B amount").to.equal(2);
+    expect(storageA.amount, "Storage A amount").to.equal(1);    
   });
 
   it("Produce 1 resource B from 2 A from a different location fails", async () => {
