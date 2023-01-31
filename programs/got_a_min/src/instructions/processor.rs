@@ -33,15 +33,7 @@ pub fn init(ctx: Context<InitProcessor>, processor_type: ProcessorType, fuel_res
 fn move_awaiting(processor: &mut Account<Processor>, storage_out: &mut Account<Storage>, current_timestamp: i64, limit: Option<i64>) -> Result<()> {
     require!(processor.processing_duration > 0, ValidationError::ExperimentalError);
     
-    let previous_claim_at = processor.claimed_at;
-    let diff_time = current_timestamp - previous_claim_at;
-    let prod_slots_during_diff_time = diff_time / processor.processing_duration;
-    let prod_during_diff_time = processor.awaiting_units;
-
-    //require!(previous_claim_at >= 0, ValidationError::ExperimentalError);
-    //require!(diff_time >= 0, ValidationError::ExperimentalError);
-    //require!(prod_slots_during_diff_time >= 0, ValidationError::ExperimentalError);
-    //require!(prod_during_diff_time >= 0, ValidationError::ExperimentalError);
+    let prod_during_diff_time = calc_awaiting("move_awt", current_timestamp, processor);
 
     let limited_prod = match limit {
         Some(l) if prod_during_diff_time > l => l,
