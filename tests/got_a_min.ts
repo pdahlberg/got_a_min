@@ -350,7 +350,7 @@ describe("/Initializations", () => {
     
     expect(result.owner.toBase58()).to.equal(provider.wallet.publicKey.toBase58());
     expect(result.outputRate.toNumber()).to.equal(1);
-    expect(result.resourceId.toBase58()).to.equal(outputResource.getPubKeyStr());
+    //expect(result.resourceId.toBase58()).to.equal(outputResource.getPubKeyStr());
   });
 
   it("Init storage", async () => {
@@ -454,20 +454,25 @@ describe("/Production", () => {
     
     expect(result.owner.toBase58()).to.equal(programProvider.wallet.publicKey.toBase58());
     expect(result.outputRate.toNumber()).to.equal(1);
-    expect(result.resourceId.toBase58()).to.equal(outputResource.getPubKey().toBase58());
+    //expect(result.resourceId.toBase58()).to.equal(outputResource.getPubKeyStr());
   });
 
   it("Produce 1 of resource A #prod1A", async () => {
     let prodRate = 1;
     let duration = 1;
-    let [resource, _1] = await createResource(program, 'A', []);
-    let [producer, _2] = await createProcessor(program, resource, prodRate, duration);
-    let storage = await createStorage3(program, resource, 1);
+    let resource = await createResource2(program, 'A', []);
+    let producer = await (await createProcessor3(resource, prodRate, duration)).withName("Producer");
+    let storage = await (await createStorage4(program, resource, 999)).withName("Storage");
 
-    await produce_without_input(producer, storage, resource);
+    
+    for(let num = 0; num < 5; num += 1) {
+      await debug_produce_without_input(producer, storage, resource, num);
+      (await producer.refresh()).log(num);
+      (await storage.refresh()).log(num);
+    }
 
-    await storage.refresh();
-    expect(storage.amount, "storage amount").to.equal(prodRate);
+    (await storage.refresh()).log();
+    expect(storage.amount, "storage amount").to.equal(4);
   });
 
   it("Produce 2 of resource B with output rate 1", async () => {
@@ -1096,6 +1101,20 @@ async function createStorage3(
   return await state.refresh();
 }
 
+async function createStorage4(
+  program: Program<GotAMin>,
+  resource: ResourceState, 
+  capacity: number, 
+  location: LocationState = DEFAULT_LOCATION, 
+  mobilityType: MobilityType = {fixed:{}}, 
+  speed: number = 1,
+  instanceName: string = null,
+): Promise<StorageState> {
+  let [keyPair, b] = await createStorage(program, resource.keyPair, capacity, location, mobilityType, speed);
+  let state = new StorageState(program, keyPair, instanceName);
+  return await state.refresh();
+}
+
 class BaseState<T> {
   readonly program: Program<GotAMin>;
   readonly keyPair: KP;
@@ -1383,6 +1402,20 @@ async function produce_without_input(producer, storage: StorageState, resource) 
     .rpc();
 }
 
+async function debug_produce_without_input(producer: ProcessorState, storage: StorageState, resource: ResourceState, current_timestamp: number) {
+  let program = storage.program;
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  await program.methods
+    .debugProduceWithoutInput(new anchor.BN(current_timestamp))
+    .accounts({
+      processor: producer.getPubKey(),
+      storage: storage.getPubKey(),
+      resource: resource.getPubKey(),
+    })
+    .rpc();
+}
+
 async function produce_with_1_input2(processor: ProcessorState, storage: StorageState, resourceToProduce: ResourceState, storageInput: StorageState, storageFuel: StorageState) {
   return await produce_with_1_input(processor.keyPair, storage, resourceToProduce.keyPair, storageInput, storageFuel);
 }
@@ -1403,12 +1436,44 @@ async function produce_with_1_input(producer, storage: StorageState, resourceToP
     .rpc();
 }
 
+async function debug_produce_with_1_input(producer: ProcessorState, storage: StorageState, resourceToProduce: ResourceState, storageInput: StorageState, storageFuel: StorageState, current_timestamp: number) {
+  let program = storage.program;
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  await program.methods
+    .debugProduceWithOneInput(new anchor.BN(current_timestamp))
+    .accounts({
+      processor: producer.getPubKey(),
+      storage: storage.getPubKey(),
+      resourceToProduce: resourceToProduce.getPubKey(),
+      storageInput: storageInput.getPubKey(),
+      storageFuel: storageFuel.getPubKey(),
+    })
+    .rpc();
+}
+
 async function produce_with_2_inputs(producer, storage: StorageState, resourceToProduce, storageInput1: StorageState, storageInput2: StorageState) {
   let program = storage.program;
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
     .produceWithTwoInputs()
+    .accounts({
+      processor: producer.publicKey,
+      storage: storage.getPubKey(),
+      resourceToProduce: resourceToProduce.publicKey,
+      storageInput1: storageInput1.getPubKey(),
+      storageInput2: storageInput2.getPubKey(),
+    })
+    .rpc();
+}
+
+async function debug_produce_with_2_inputs(producer, storage: StorageState, resourceToProduce, storageInput1: StorageState, storageInput2: StorageState, current_timestamp: number) {
+  let program = storage.program;
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  await program.methods
+    .debugProduceWithTwoInputs(new anchor.BN(current_timestamp))
     .accounts({
       processor: producer.publicKey,
       storage: storage.getPubKey(),

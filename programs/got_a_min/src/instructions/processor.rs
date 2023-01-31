@@ -80,7 +80,7 @@ fn move_awaiting(processor: &mut Account<Processor>, storage_out: &mut Account<S
     Ok(())
 }
 
-pub fn claim_production(ctx: Context<ProcessesResource>) -> Result<()> {
+pub fn claim_production(ctx: Context<ProcessesResource>, current_timestamp: i64) -> Result<()> {
     let producer = &mut ctx.accounts.processor;
     let resource = &ctx.accounts.resource;
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
@@ -90,14 +90,11 @@ pub fn claim_production(ctx: Context<ProcessesResource>) -> Result<()> {
 
     msg!("claim_production/");
 
-    let current_timestamp = Clock::get()?.unix_timestamp;
     producer.awaiting_units = calc_awaiting("claim_prod", current_timestamp, producer);
 
     if producer.awaiting_units > 0 {
         move_awaiting(producer, storage, current_timestamp, None)?;
     }
-
-    producer.claimed_at = current_timestamp;
 
     msg!("/claim_production");
 
@@ -105,6 +102,12 @@ pub fn claim_production(ctx: Context<ProcessesResource>) -> Result<()> {
 
     Ok(())
 }
+
+/*
+    let diff_time = current_timestamp - processor.claimed_at;
+    let prod_slots_during_diff_time = diff_time / processor.processing_duration;
+    let prod_during_diff_time = prod_slots_during_diff_time * processor.output_rate;
+*/
 
 fn calc_awaiting(label: &str, current_timestamp: i64, processor: &Account<Processor>) -> i64 {
     let diff_time = current_timestamp - processor.claimed_at;
