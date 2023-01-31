@@ -539,23 +539,18 @@ describe("/Production", () => {
     }
   });
 
-  it("Produce resource B with input A fails when A is empty", async () => {
+  it("Produce resource B with input A gets no output when A is empty #noProdBFromA", async () => {
     let location = await createLocation2(program, 'locA', [0, 0], 10); // Why is DEFAULT_LOCATION not working?
     let resourceA = await createResource2(program, 'A', []);
-    let storageA = await createStorage4(resourceA, 1, location);
     let resourceB = await createResource2(program, 'B', [[resourceA, 1]]);
-    let [producerB, _4] = await createProcessor(program, resourceB, 2, 1, location);
-    let storageB = await createStorage4(resourceB, 1, location);
+    let storageIn = await createStorage4(resourceA, 1, location);
+    let storageOut = await createStorage4(resourceB, 1, location);
     let storageFuel = await createStorage4(DEFAULT_FUEL_RES, 10, location);
+    let producer = await createProcessor3(resourceB, 2, 1, location);
 
-    // await expect(stuff(program, producerB, resourceB, resourceA)).should.be.rejectedWith("I AM THE EXPECTED ERROR");
-    try {
-      await produce_with_1_input(producerB, storageB, resourceB, storageA, storageFuel);
+    await debug_produce_with_1_input(producer, storageOut, resourceB, storageIn, storageFuel, 1);
       
-      assert(false, "Expected to fail");
-    } catch(e) {
-      assertAnchorError(e, "InputStorageAmountTooLow");
-    }
+    expect(storageOut.amount).equal(0);
   });
 
   it("Produce 1 resource C from 1 A + 1 B #prod1CFrom1A1B", async () => {
