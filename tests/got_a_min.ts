@@ -191,6 +191,23 @@ describe("/Sandbox", () => {
 
 });
 
+describe("/Map", () => {
+  let provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
+  const program = anchor.workspace.GotAMin as Program<GotAMin>;
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  it("Init map", async () => {
+    let result = await initMap(program);
+
+    await result.refresh();
+    
+    expect(result.initialized).equal(true);
+  });
+
+
+});
+
 describe("/Initializations", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
@@ -945,6 +962,7 @@ class BaseState<T> {
   readonly keyPair: KP;
   readonly publicKey: anchor.web3.PublicKey;
   instanceName: string;
+  initialized: boolean = false;
 
   constructor(program: Program<GotAMin>, keyPair: KP, instanceName: string, publicKey: PublicKey = null) {
     this.program = program;
@@ -1105,6 +1123,19 @@ class UnitState extends BaseState<UnitState> {
 
   toString(): string {
     return `${this.instanceName}(${this.name})`;
+  }
+}
+
+class MapState extends BaseState<MapState> {
+
+  async refresh(): Promise<MapState> {
+    let state = await this.program.account.map.fetch(this.getPubKey());
+    this.initialized = true;
+    return this;
+  }
+
+  toString(): string {
+    return `${this.instanceName}(?)`;
   }
 }
 
@@ -1434,4 +1465,21 @@ async function getStorageState(id: [Program<GotAMin>, KP]): Promise<any> {
 
 function failNotImplemented() {
   expect(false, "Not implemented").to.equal(true);
+}
+
+async function initMap(program: Program<GotAMin>): Promise<MapState> {
+  const provider = program.provider as anchor.AnchorProvider;
+  let pk = provider.wallet.publicKey;
+  const key: anchor.web3.Keypair = anchor.web3.Keypair.generate();
+
+  await program.methods
+    .initMap()
+    .accounts({
+      map: key.publicKey,
+      owner: pk,
+    })
+    .signers([key])
+    .rpc();
+
+  return new MapState(program, key, "Map");
 }
