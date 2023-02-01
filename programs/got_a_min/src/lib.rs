@@ -75,11 +75,13 @@ pub mod got_a_min {
     }
 
     pub fn update_storage_move_status(ctx: Context<UpdateStorageMoveStatus>) -> Result<()> {
-        storage::update_move_status(ctx)
+        let current_timestamp = Clock::get()?.unix_timestamp;
+        storage::update_move_status(ctx, current_timestamp)
     }
 
     pub fn move_storage(ctx: Context<MoveStorage>) -> Result<()> {
-        storage::move_to_location(ctx)
+        let current_timestamp = Clock::get()?.unix_timestamp;
+        storage::move_to_location(ctx, current_timestamp)
     }
 
     pub fn produce_without_input(ctx: Context<ProcessesResource>) -> Result<()> {
@@ -107,7 +109,8 @@ pub mod got_a_min {
     }
 
     pub fn move_unit(ctx: Context<MoveUnit>, from_x: i64, from_y: i64, to_x: i64, to_y: i64, name: String) -> Result<()> {
-        unit::move_unit(ctx, from_x, from_y, to_x, to_y, name)
+        let current_timestamp = Clock::get()?.unix_timestamp;
+        unit::move_unit(ctx, from_x, from_y, to_x, to_y, name, current_timestamp)
     }
 
     // -- debug --
@@ -134,6 +137,20 @@ pub mod got_a_min {
     pub fn debug_init_processor(ctx: Context<InitProcessor>, processor_type: ProcessorType, fuel_resource_id: Pubkey, output_resource_id: Pubkey, output_rate: i64, processing_duration: i64, fuel_cost_type: FuelCostType, current_timestamp: i64) -> Result<()> {
         processor::init(ctx, processor_type, fuel_resource_id, output_resource_id, output_rate, processing_duration, fuel_cost_type, current_timestamp)
     }
+
+    pub fn debug_move_unit(ctx: Context<MoveUnit>, from_x: i64, from_y: i64, to_x: i64, to_y: i64, name: String, current_timestamp: i64) -> Result<()> {
+        unit::move_unit(ctx, from_x, from_y, to_x, to_y, name, current_timestamp)
+    }
+
+    pub fn debug_update_storage_move_status(ctx: Context<UpdateStorageMoveStatus>, current_timestamp: i64) -> Result<()> {
+        storage::update_move_status(ctx, current_timestamp)
+    }
+
+    pub fn debug_move_storage(ctx: Context<MoveStorage>, current_timestamp: i64) -> Result<()> {
+        storage::move_to_location(ctx, current_timestamp)
+    }
+
+
 }
 
 

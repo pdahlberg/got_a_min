@@ -81,23 +81,22 @@ pub struct MoveBetweenStorage<'info> {
     pub owner: Signer<'info>,
 }
 
-pub fn move_to_location(ctx: Context<MoveStorage>) -> Result<()> {
+pub fn move_to_location(ctx: Context<MoveStorage>, current_timestamp: i64) -> Result<()> {
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
     let from_location: &mut Account<Location> = &mut ctx.accounts.from_location;
     let to_location: &mut Account<Location> = &mut ctx.accounts.to_location;
     let owner: &Signer = &ctx.accounts.owner;
-    let now = (Clock::get()?).unix_timestamp;
 
     require!(storage.mobility_type == MobilityType::Movable, ValidationError::StorageTypeNotMovable);
     require!(storage.movement_speed > 0, ValidationError::StorageTypeNotMovable);
-    require!(!storage.is_moving(now), ValidationError::NotAllowedWhileMoving);
+    require!(!storage.is_moving(current_timestamp), ValidationError::NotAllowedWhileMoving);
 
     storage.location_id = to_location.key();
     let distance = from_location.distance(to_location);
     let travel_time = distance / storage.movement_speed;
     storage.arrives_at = match travel_time {
         0 => 0,
-        _ => now + travel_time,
+        _ => current_timestamp + travel_time,
     };
 
 
@@ -116,14 +115,13 @@ pub struct MoveStorage<'info> {
     pub owner: Signer<'info>,
 }
 
-pub fn update_move_status(ctx: Context<UpdateStorageMoveStatus>) -> Result<()> {
+pub fn update_move_status(ctx: Context<UpdateStorageMoveStatus>, current_timestamp: i64) -> Result<()> {
     let storage: &mut Account<Storage> = &mut ctx.accounts.storage;
-    let now = (Clock::get()?).unix_timestamp;
 
     require!(storage.mobility_type == MobilityType::Movable, ValidationError::StorageTypeNotMovable);
     require!(storage.movement_speed > 0, ValidationError::StorageTypeNotMovable);
     
-    if storage.has_arrived(now) {
+    if storage.has_arrived(current_timestamp) {
         storage.arrives_at = 0;
     }
 

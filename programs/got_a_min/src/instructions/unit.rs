@@ -56,7 +56,7 @@ pub struct InitUnit<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn move_unit(ctx: Context<MoveUnit>, _from_x: i64, _from_y: i64, _to_x: i64, _to_y: i64, _name: String) -> Result<()> {
+pub fn move_unit(ctx: Context<MoveUnit>, _from_x: i64, _from_y: i64, _to_x: i64, _to_y: i64, _name: String, current_timestamp: i64) -> Result<()> {
     let unit: &mut Account<Unit> = &mut ctx.accounts.unit;
     let from_location: &Account<Location> = &ctx.accounts.from_location;
     let to_location: &mut Account<Location> = &mut ctx.accounts.to_location;

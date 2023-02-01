@@ -533,45 +533,39 @@ describe("/Transportation", () => {
     let resource = await createResource2(program, 'A', []);
     let location1 = await createLocation2(program, 'loc1', [0, 0], 10);
     let storage = await createStorage4(resource, 10, location1, {movable:{}}, 2);
-    let location2 = await createLocation(program, 'loc2', [2, 0], 10);
+    let location2 = await createLocation2(program, 'loc2', [2, 0], 10);
 
-    await move_storage(program, storage, location1, location2);
+    await debugMoveStorage(storage, location1, location2, 1);
 
     await storage.refresh();
-    expect(storage.locationId.toBase58()).to.equal(location2.toBase58());
+    expect(storage.locationId.toBase58()).to.equal(location2.getPubKeyStr());
     expect(storage.arrivesAt).to.greaterThan(0);
 
-    // Production is done after delay
-    await new Promise(f => setTimeout(f, 5001)); // todo: delay 5+ seconds... 
-
-    await updateStorageMoveStatus(program, storage);
+    await updateStorageMoveStatus(storage);
 
     await storage.refresh();
-    expect(storage.locationId.toBase58()).to.equal(location2.toBase58());
+    expect(storage.locationId.toBase58()).to.equal(location2.getPubKeyStr());
     expect(storage.arrivesAt).to.equal(0);
   });
 
   it("Add to Storage while moving should fail", async () => {
     let resource = await createResource2(program, 'A', []);
     let location1 = await createLocation2(program, 'loc1', [0, 0], 10);
-    let [producer, _2] = await createProcessor(program, resource, 10, 1, location1);
+    let producer = await createProcessor3(resource, 10, 1, location1);
     let storage = await createStorage4(resource, 10, location1, {movable:{}});
-    let location2 = await createLocation(program, 'loc2', [10, 0], 10);
-    await move_storage(program, storage, location1, location2);
+    let location2 = await createLocation2(program, 'loc2', [10, 0], 10);
+    await debugMoveStorage(storage, location1, location2, 1);
   
     try {
-      await produce_without_input(producer, storage, resource);
+      await debug_produce_without_input(producer, storage, resource, 1);
 
       assert(false, "Expected to fail");
     } catch(e) {
       assertAnchorError(e, "DifferentLocations");
     }
 
-    // Production is done after delay
-    await new Promise(f => setTimeout(f, 3001)); // todo: delay 5+ seconds... 
-
     await storage.refresh();
-    expect(storage.locationId.toBase58()).to.equal(location2.toBase58());
+    expect(storage.locationId.toBase58()).to.equal(location2.getPubKeyStr());
   });
 });
 
@@ -691,7 +685,7 @@ describe("/Location", () => {
     let location2 = await createLocation2(program, 'loc2', [1, 0], 10);
 
     try {
-      await move_storage(program, storage, location1, location2);
+      await debugMoveStorage(storage, location1, location2, 1);
 
       assert(false, "Expected to fail");
     } catch(e) {
@@ -706,7 +700,7 @@ describe("/Location", () => {
     let location2 = await createLocation2(program, 'loc2', [61, 0], 0);
 
     try {
-      await move_storage(program, storage, location1, location2);
+      await debugMoveStorage(storage, location1, location2, 1);
 
       assert(false, "Expected to fail");
     } catch(e) {
@@ -720,7 +714,7 @@ describe("/Location", () => {
     let storage = await createStorage4(resource, 10, location1, {movable:{}});
     let location2 = await createLocation2(program, 'loc2', [51, 0], 10);
 
-    await move_storage(program, storage, location1, location2);
+    await debugMoveStorage(storage, location1, location2, 1);
     await storage.refresh();
     await location1.refresh();
     await location2.refresh();
@@ -1381,7 +1375,8 @@ async function move_between_storage(storageFrom: StorageState, storageTo, amount
     .rpc();
 }
 
-async function move_storage(program: Program<GotAMin>, storage: StorageState, fromLocation, toLocation) {
+async function moveStorage(storage: StorageState, fromLocation, toLocation) {
+  let program = storage.program;
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
@@ -1394,11 +1389,38 @@ async function move_storage(program: Program<GotAMin>, storage: StorageState, fr
     .rpc();
 }
 
-async function updateStorageMoveStatus(program: Program<GotAMin>, storage: StorageState) {
+async function debugMoveStorage(storage: StorageState, fromLocation: LocationState, toLocation: LocationState, current_timestamp: number) {
+  let program = storage.program;
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  await program.methods
+    .debugMoveStorage(new anchor.BN(current_timestamp))
+    .accounts({
+      storage: storage.getPubKey(),
+      fromLocation: fromLocation.getPubKey(),
+      toLocation: toLocation.getPubKey(),
+    })
+    .rpc();
+}
+
+async function updateStorageMoveStatus(storage: StorageState) {
+  let program = storage.program;
   const programProvider = program.provider as anchor.AnchorProvider;
 
   await program.methods
     .updateStorageMoveStatus()
+    .accounts({
+      storage: storage.getPubKey(),
+    })
+    .rpc();
+}
+
+async function debugUpdateStorageMoveStatus(storage: StorageState, current_timestamp: number) {
+  let program = storage.program;
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  await program.methods
+    .debugUpdateStorageMoveStatus(new anchor.BN(current_timestamp))
     .accounts({
       storage: storage.getPubKey(),
     })
