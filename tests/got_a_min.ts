@@ -198,11 +198,11 @@ describe("/Map", () => {
   const programProvider = program.provider as anchor.AnchorProvider;
 
   it("Init map", async () => {
-    let result = await initMap(program);
+    let map = await initMap(program);
 
-    await result.refresh();
+    await (await map.refresh()).log();
     
-    expect(result.initialized).equal(true);
+    expect(map.initialized).equal(true);
   });
 
 
@@ -1126,16 +1126,143 @@ class UnitState extends BaseState<UnitState> {
   }
 }
 
+function anchorBNtoNum(val: anchor.BN){
+  return val.toNumber()
+}
+
+class CompressedSparseMatrix {
+  width: number;
+  height: number;
+  compressedValue: number = 0;
+  rowPtrs: Array<number>;
+  columns: Array<number>;
+  values: Array<number>;
+  
+  constructor(rowPtrs: Array<number>, columns: Array<number>, values: Array<number>) {
+      this.rowPtrs = rowPtrs;
+      this.columns = columns;
+      this.values = values;
+  }
+
+  static fromMatrix(matrix: Array<Array<number>>, compressValue: number = 0): CompressedSparseMatrix {
+      let ptrs = new Array<number>();
+      let cols = new Array<number>();
+      let vals = new Array<number>();
+  
+      let prevPtr = -1;
+      for(let y = 0; y < matrix[0].length; y++) {
+          for(let x = 0; x < matrix.length; x++) {
+              let mvalue = matrix[x][y];
+              if(mvalue != compressValue) {
+                  if(y != prevPtr) {
+                      ptrs.push(cols.length);
+                      prevPtr = y;
+                  }
+                  cols.push(x);
+                  vals.push(mvalue);
+              }
+          }
+      }
+
+      return new CompressedSparseMatrix(ptrs, cols, vals);
+  }
+
+  unpack(targetMatrix: Array<Array<number>>, startX: number = 0, startY: number = 0) {
+      let rp = this.rowPtrs[0];
+      let rpNext = this.rowPtrs[1]
+      let rpIdx = 0;
+      for(let c = 0; c < this.columns.length; c++) {
+          let x = this.columns[c];
+          let v = this.values[c];
+  
+          if(rpIdx < this.rowPtrs.length) {
+              rp = this.rowPtrs[rpIdx];
+          }
+          if(rpIdx+1 < this.rowPtrs.length) {
+              rpNext = this.rowPtrs[rpIdx+1];
+          } else {
+              rpNext = rp;
+          }
+  
+          if(c > 0 && c == rpNext) {
+              rpIdx++;
+          }
+  
+          let targetX = startX + x;
+          let targetY = startY + rpIdx;
+
+          targetMatrix[targetX][targetY] = v;
+      }
+  }
+
+}
+
 class MapState extends BaseState<MapState> {
+
+  rowPtrs: Array<number>;
+  columns: Array<number>;
+  values: Array<number>;
 
   async refresh(): Promise<MapState> {
     let state = await this.program.account.map.fetch(this.getPubKey());
     this.initialized = true;
+    this.rowPtrs = state.rowPtrs.map(anchorBNtoNum);
+    this.columns = state.columns.map(anchorBNtoNum);
+    this.values = state.values;
     return this;
   }
 
   toString(): string {
-    return `${this.instanceName}(?)`;
+    return `${this.instanceName}(${this.rowPtrs}) =>\n${this.toMatrix(this.rowPtrs, this.columns, this.values)}`;
+  }
+
+  initMatrix(columns: number, rows: number): Array<Array<number>> {
+    let matrix = new Array<Array<number>>(rows);
+
+    for(let x = 0; x < columns; x++) {
+        matrix[x] = new Array(rows);
+        for(let y = 0; y < rows; y++) {
+            matrix[x][y] = 0;
+        }
+    }
+  
+    return matrix;
+}
+
+  toMatrix(rowPtrs: Array<number>, columns: Array<number>, values: Array<number>): string {
+    let csm = new CompressedSparseMatrix(rowPtrs, columns, values);
+    let matrix = this.initMatrix(20, 12);
+    let costM = (matrix[0].length * 8) * (matrix.length * 8);
+    let costCSM = (rowPtrs.length * 8) + (columns.length * 8) + values.length;
+    //console.log("Matrix cost: " + costM + ", CSM cost: " + costCSM);
+
+    let lines = "\n";
+    lines += "row2: ";
+    rowPtrs.forEach(function(a) { lines += a; });
+    lines += "\n";
+    lines += "col2: ";
+    columns.forEach(function(a) { lines += a; });
+    lines += "\n";
+    lines += "val2: ";
+    values.forEach(function(a) { lines += a; });
+    lines += "\n";
+
+    csm.unpack(matrix, 0, 0);
+
+    let str = "";
+
+    str += lines;
+
+    str += "-- 1 --\n";
+    for(let y = 0; y < matrix[0].length; y++) {
+        for(let x = 0; x < matrix.length; x++) {
+            str += matrix[x][y];
+        }
+        str += "\n";
+    }
+    str += "-- 2 --";
+
+    return str;
   }
 }
 
