@@ -191,6 +191,23 @@ describe("/Sandbox", () => {
 
 });
 
+describe("/Map", () => {
+  let provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
+  const program = anchor.workspace.GotAMin as Program<GotAMin>;
+  const programProvider = program.provider as anchor.AnchorProvider;
+
+  it("Init map", async () => {
+    let map = await initMap(program);
+
+    await (await map.refresh()).log();
+    
+    expect(map.initialized).equal(true);
+  });
+
+
+});
+
 describe("/Initializations", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
@@ -945,6 +962,7 @@ class BaseState<T> {
   readonly keyPair: KP;
   readonly publicKey: anchor.web3.PublicKey;
   instanceName: string;
+  initialized: boolean = false;
 
   constructor(program: Program<GotAMin>, keyPair: KP, instanceName: string, publicKey: PublicKey = null) {
     this.program = program;
@@ -1105,6 +1123,302 @@ class UnitState extends BaseState<UnitState> {
 
   toString(): string {
     return `${this.instanceName}(${this.name})`;
+  }
+}
+
+function anchorBNtoNum(val: anchor.BN){
+  return val.toNumber()
+}
+
+class CompressedSparseMatrix {
+  width: number;
+  height: number;
+  compressedValue: number = 0;
+  rowPtrs: Array<number>;
+  columns: Array<number>;
+  values: Array<number>;
+  
+  constructor(rowPtrs: Array<number>, columns: Array<number>, values: Array<number>, width: number, height: number) {
+      this.rowPtrs = rowPtrs;
+      this.columns = columns;
+      this.values = values;
+      this.width = width;
+      this.height = height;
+  }
+
+  static fromMatrix(matrix: Array<Array<number>>, compressValue: number = 0): CompressedSparseMatrix {
+      let ptrs = new Array<number>();
+      let cols = new Array<number>();
+      let vals = new Array<number>();
+  
+      let prevPtr = -1;
+      for(let y = 0; y < matrix[0].length; y++) {
+          let perRowCounter = 0;
+          for(let x = 0; x < matrix.length; x++) {
+              let mvalue = matrix[x][y];
+              if(mvalue != compressValue) {
+                  if(y != prevPtr) {
+                      ptrs.push(cols.length);
+                      prevPtr = y;
+                      perRowCounter++;
+                  }
+                  cols.push(x);
+                  vals.push(mvalue);
+              }
+          }
+
+          if(perRowCounter == 0) {
+              ptrs.push(cols.length);
+              cols.push(0);
+              vals.push(compressValue);
+      }
+      }
+
+      return new CompressedSparseMatrix(ptrs, cols, vals, matrix[0].length, matrix.length);
+  }
+
+  static initMatrix(columns: number, rows: number): Array<Array<number>> {
+      let matrix = new Array<Array<number>>(rows);
+  
+      for(let x = 0; x < columns; x++) {
+          matrix[x] = new Array(rows);
+          for(let y = 0; y < rows; y++) {
+              matrix[x][y] = 0;
+          }
+      }
+    
+      return matrix;
+  }
+  
+  unpack(targetMatrix: Array<Array<number>>, startX: number = 0, startY: number = 0) {
+      let rp = this.rowPtrs[0];
+      let rpNext = this.rowPtrs[1]
+      let rpIdx = 0;
+      for(let c = 0; c < this.columns.length; c++) {
+          let x = this.columns[c];
+          let v = this.values[c];
+  
+          if(rpIdx < this.rowPtrs.length) {
+              rp = this.rowPtrs[rpIdx];
+          }
+          
+          if(rpIdx+1 < this.rowPtrs.length) {
+              rpNext = this.rowPtrs[rpIdx+1];
+          } else {
+              rpNext = rp;
+          }
+  
+          if(c > 0 && c == rpNext) {
+              rpIdx++;
+          }
+  
+          let targetX = startX + x;
+          let targetY = startY + rpIdx;
+
+          targetMatrix[targetX][targetY] = v;
+      }
+  }
+
+  exists(x: number, y: number): boolean {
+      let [i, _] = this.valuePtr(x, y);
+      if(i >= 0) {
+          return this.get(x, y) != this.compressedValue;
+      } else {
+          return false;
+      }
+  }
+
+  get(x: number, y: number): number {
+      let r = 0;
+      let [i, _] = this.valuePtr(x, y);
+      if(i >= 0) {
+          r = this.values[i];
+      }
+      return r;
+  }
+
+  put(x: number, y: number, newValue: number) {
+      let r = 0;
+      let [i, insertPoint] = this.valuePtr(x, y);
+      if(i >= 0) {
+          this.values[i] = newValue;
+      } else {
+          if(insertPoint >= 0) {
+              this.columns.splice(insertPoint, 0, x);
+              this.values.splice(insertPoint, 0, newValue);
+
+              if(y < this.rowPtrs.length) {
+                  let rpValNext = this.columns.length;
+                  if(y+1 < this.rowPtrs.length) {
+                      rpValNext = this.rowPtrs[y+1];
+                  }
+                  for(let i = y+1; i < this.rowPtrs.length; i++) {
+                      let newRpVal = this.rowPtrs[i] + 1;
+                      this.rowPtrs.splice(i, 1, newRpVal);
+                  }
+              }
+
+              if(x >= this.width) {
+                  this.width = x + 1;
+              }
+          } else {
+              let xDiff = (x + 1) - this.width;
+              if(xDiff > 0) {
+                  this.width += xDiff;
+              }
+
+              let yDiff = (y + 1) - this.height;
+
+              for(let addY = this.height; addY < y+1; addY++) {
+                  this.rowPtrs.push(this.columns.length);
+                  this.columns.push(0);
+                  this.values.push(0);    
+              }
+
+              if(yDiff > 0) {
+                  this.rowPtrs.push(this.columns.length);
+                  this.columns.push(x);
+                  this.values.push(newValue);    
+                  this.height += yDiff;
+              }
+          }
+      }
+      return r;
+  }
+
+  valuePtr(x: number, y: number): [number, number] {
+      let valueIndex = -1;
+      let insertPoint = -1;
+      if(y < this.rowPtrs.length) {
+          let rpVal = this.rowPtrs[y];
+          let rpValNext = this.columns.length;
+          if(y+1 < this.rowPtrs.length) {
+              rpValNext = this.rowPtrs[y+1];
+          }
+          let checkColSubset = false;
+          let xInColumn = 0;
+          //let colSubset = "";
+          for(let colSubsetPos = rpVal; colSubsetPos < rpValNext; colSubsetPos++) {
+              //colSubset += this.columns[colSubsetPos];
+              if(x == this.columns[colSubsetPos]) {
+                  xInColumn = colSubsetPos;
+                  checkColSubset = true;
+                  break;
+              } else if(x < this.columns[colSubsetPos]) {
+                  insertPoint = colSubsetPos;
+                  break;
+              } else if(colSubsetPos == rpValNext - 1) {
+                  //console.log("colSubsetPos end: ", colSubsetPos);
+                  insertPoint = colSubsetPos + 1;
+              }
+          }
+
+          let checkMinimum = xInColumn >= 0 && checkColSubset;
+          let checkMaxPerRowOrEnd = (xInColumn <= rpValNext);
+          if(checkMinimum && checkMaxPerRowOrEnd) {
+              let c = xInColumn;
+              if(c < this.values.length) {
+                  valueIndex = c;
+              }
+          }
+          //console.log("valueIndex", valueIndex, "rpVal", rpVal, "x2", x2, "colSubset", colSubset);
+      }
+      return [valueIndex, insertPoint];
+  }
+  
+  asMatrixToString(): string {
+      let matrix = CompressedSparseMatrix.initMatrix(this.width, this.height);
+      this.unpack(matrix);
+      let str = "";
+      for(let y = 0; y < matrix[0].length; y++) {
+          for(let x = 0; x < matrix.length; x++) {
+              str += matrix[x][y];
+          }
+          str += "\n";
+      }
+      return str;
+  }
+
+  debugCompressedAsString(): string {
+      let lines = this.width + " x " + this.height + "\n";
+      lines += "rowPtr: ";
+      this.rowPtrs.forEach(function(a) { lines += a; });
+      lines += "\n";
+      lines += "col: ";
+      this.columns.forEach(function(a) { lines += a; });
+      lines += "\n";
+      lines += "val: ";
+      this.values.forEach(function(a) { lines += a; });
+      return lines;        
+  }
+}
+
+class MapState extends BaseState<MapState> {
+
+  rowPtrs: Array<number>;
+  columns: Array<number>;
+  values: Array<number>;
+
+  async refresh(): Promise<MapState> {
+    let state = await this.program.account.map.fetch(this.getPubKey());
+    this.initialized = true;
+    this.rowPtrs = state.rowPtrs.map(anchorBNtoNum);
+    this.columns = state.columns.map(anchorBNtoNum);
+    this.values = state.values;
+    return this;
+  }
+
+  toString(): string {
+    return `${this.instanceName}(${this.rowPtrs}) =>\n${this.toMatrix(this.rowPtrs, this.columns, this.values)}`;
+  }
+
+  initMatrix(columns: number, rows: number): Array<Array<number>> {
+    let matrix = new Array<Array<number>>(rows);
+
+    for(let x = 0; x < columns; x++) {
+        matrix[x] = new Array(rows);
+        for(let y = 0; y < rows; y++) {
+            matrix[x][y] = 0;
+        }
+    }
+  
+    return matrix;
+}
+
+  toMatrix(rowPtrs: Array<number>, columns: Array<number>, values: Array<number>): string {
+    let csm = new CompressedSparseMatrix(rowPtrs, columns, values, 6, 5);
+    let matrix = this.initMatrix(20, 12);
+    let costM = (matrix[0].length * 8) * (matrix.length * 8);
+    let costCSM = (rowPtrs.length * 8) + (columns.length * 8) + values.length;
+    //console.log("Matrix cost: " + costM + ", CSM cost: " + costCSM);
+
+    let lines = "\n";
+    lines += "row2: ";
+    rowPtrs.forEach(function(a) { lines += a; });
+    lines += "\n";
+    lines += "col2: ";
+    columns.forEach(function(a) { lines += a; });
+    lines += "\n";
+    lines += "val2: ";
+    values.forEach(function(a) { lines += a; });
+    lines += "\n";
+
+    csm.unpack(matrix, 0, 0);
+
+    let str = "";
+
+    str += lines;
+
+    str += "-- 1 --\n";
+    for(let y = 0; y < matrix[0].length; y++) {
+        for(let x = 0; x < matrix.length; x++) {
+            str += matrix[x][y];
+        }
+        str += "\n";
+    }
+    str += "-- 2 --";
+
+    return str;
   }
 }
 
@@ -1434,4 +1748,21 @@ async function getStorageState(id: [Program<GotAMin>, KP]): Promise<any> {
 
 function failNotImplemented() {
   expect(false, "Not implemented").to.equal(true);
+}
+
+async function initMap(program: Program<GotAMin>): Promise<MapState> {
+  const provider = program.provider as anchor.AnchorProvider;
+  let pk = provider.wallet.publicKey;
+  const key: anchor.web3.Keypair = anchor.web3.Keypair.generate();
+
+  await program.methods
+    .initMap()
+    .accounts({
+      map: key.publicKey,
+      owner: pk,
+    })
+    .signers([key])
+    .rpc();
+
+  return new MapState(program, key, "Map");
 }

@@ -1,4 +1,5 @@
 pub use location::*;
+pub use map::*;
 pub use processor::*;
 pub use resource::*;
 pub use storage::*;
@@ -6,6 +7,7 @@ pub use stuff::*;
 pub use unit::*;
 
 pub mod location;
+pub mod map;
 pub mod processor;
 pub mod resource;
 pub mod storage;

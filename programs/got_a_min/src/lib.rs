@@ -113,6 +113,14 @@ pub mod got_a_min {
         unit::move_unit(ctx, from_x, from_y, to_x, to_y, name, current_timestamp)
     }
 
+    pub fn init_map(ctx: Context<InitMap>) -> Result<()> {
+        map::init(ctx)
+    }
+
+    pub fn map_put(ctx: Context<MapPut>, x: i64, y: i64, num: i64) -> Result<()> {
+        map::put(ctx, x, y, num)
+    }
+
     // -- debug --
     pub fn debug_set_storage_amount(ctx: Context<DebugSetStorageAmount>, amount: i64) -> Result<()> {
         debug::set_storage_amount(ctx, amount)
