@@ -200,7 +200,7 @@ describe("/Map", () => {
   it("Init map", async () => {
     let map = await initMap(program);
 
-    await (await map.refresh()).log();
+    (await map.refresh()).log();
     
     expect(map.initialized).equal(true);
   });
@@ -208,11 +208,12 @@ describe("/Map", () => {
   it("Update map", async () => {
     let map = await initMap(program);
 
-    await (await map.refresh()).log();
+    (await map.refresh()).log();
 
+    await map.put(1, 1, 9);
     
-    
-    expect(map.initialized).equal(true);
+    (await map.refresh()).log();
+    expect(map.get(1, 1)).equal(9);
   });
 
 
@@ -1151,6 +1152,17 @@ class MapState extends BaseState<MapState> {
     return this;
   }
 
+  async put(x: number, y: number, value: number) {
+    await this.program.methods
+    .mapPut(x, y, value)
+    .accounts({map: this.getPubKey()})
+    .rpc();
+  }
+
+  get(x: number, y: number): number {
+    return this.csm.get(x, y);
+  }
+
   toString(): string {
     return `${this.instanceName}(${this.csm.width}x${this.csm.height} matrix=\n${this.csm.asMatrixToString()})`;
   }
@@ -1772,3 +1784,4 @@ async function initMap(program: Program<GotAMin>): Promise<MapState> {
 
   return new MapState(program, key, "Map");
 }
+
