@@ -90,7 +90,7 @@ fn put_2(
     let mut row_ptrs: Vec<u8> = map.row_ptrs.to_vec();
     let mut columns: Vec<u8> = map.columns.to_vec();
     let mut values: Vec<u8> = map.values.to_vec();
-    let xu = x as usize;
+    //let xu = x as usize;
     let yu = y as usize;
     let mut new_width = map.width;
     let mut new_height = map.height;
@@ -127,7 +127,7 @@ fn put_2(
 
             let y_diff = (y + 1) - new_height;
 
-            for add_y in new_height..y + 1 {
+            for _add_y in new_height..y + 1 {
                 row_ptrs.push(columns.len() as u8);
                 columns.push(0);
                 values.push(0);
@@ -150,12 +150,12 @@ fn put_2(
 // Need to limit how much the array can grow
 // Eventually might change the compressed value to space instead of unexplored if count of space > unexplored
 fn value_ptr(row_ptrs: &Vec<u8>, columns: &Vec<u8>, values: &Vec<u8>, x: u8, y: u8) -> (Option<u8>, Option<u8>) {
-/*    let mut value_index = -1;
-    let mut insert_point = -1;
-    if y < row_ptrs.len() as i64 {
+    let mut value_index = None;
+    let mut insert_point = None;
+    if y < row_ptrs.len() as u8 {
         let rp_val = row_ptrs[y as usize];
-        let mut rp_val_next = columns.len() as i64;
-        if y + 1 < row_ptrs.len() as i64 {
+        let mut rp_val_next = columns.len() as u8;
+        if y + 1 < row_ptrs.len() as u8 {
             rp_val_next = row_ptrs[(y + 1) as usize];
         }
         let mut check_col_subset = false;
@@ -166,23 +166,22 @@ fn value_ptr(row_ptrs: &Vec<u8>, columns: &Vec<u8>, values: &Vec<u8>, x: u8, y: 
                 check_col_subset = true;
                 break;
             } else if x < columns[col_subset_pos as usize] {
-                insert_point = col_subset_pos;
+                insert_point = Some(col_subset_pos);
                 break;
             } else if col_subset_pos == rp_val_next - 1 {
-                insert_point = col_subset_pos + 1;
+                insert_point = Some(col_subset_pos + 1);
             }
         }
-        let check_minimum = x_in_column >= 0 && check_col_subset;
+        let check_minimum = check_col_subset;
         let check_max_per_row_or_end = x_in_column <= rp_val_next;
         if check_minimum && check_max_per_row_or_end {
             let c = x_in_column;
-            if c < values.len() as i64 {
-                value_index = c;
+            if c < values.len() as u8 {
+                value_index = Some(c);
             }
         }
     }
-    (value_index, insert_point)*/
-    (None, None)
+    (value_index, insert_point)
 }
 
 
