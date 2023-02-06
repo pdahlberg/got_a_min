@@ -117,7 +117,7 @@ pub mod got_a_min {
         map::init(ctx)
     }
 
-    pub fn map_put(ctx: Context<MapPut>, x: i64, y: i64, num: i64) -> Result<()> {
+    pub fn map_put(ctx: Context<MapPut>, x: u8, y: u8, num: u8) -> Result<()> {
         map::put(ctx, x, y, num)
     }
 
