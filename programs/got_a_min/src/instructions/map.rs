@@ -90,6 +90,7 @@ fn put_2(
     let mut row_ptrs: Vec<u8> = map.row_ptrs.to_vec();
     let mut columns: Vec<u8> = map.columns.to_vec();
     let mut values: Vec<u8> = map.values.to_vec();
+    let mut values_changed = false;
     //let xu = x as usize;
     let yu = y as usize;
     let mut new_width = map.width;
@@ -98,6 +99,7 @@ fn put_2(
     let (i_opt, insert_point_opt) = value_ptr(&row_ptrs, &columns, &values, x, y);
     if i_opt.is_some() {
         values[i_opt.unwrap() as usize] = new_value;
+        values_changed = true;
     } else {
         if insert_point_opt.is_some() {
             let insert_point = insert_point_opt.unwrap() as usize;
@@ -143,6 +145,10 @@ fn put_2(
 
         map.width = new_width;
         map.height = new_height;
+    }
+
+    if values_changed {
+        map.values[..].copy_from_slice(&values[..]);
     }
 }
 
