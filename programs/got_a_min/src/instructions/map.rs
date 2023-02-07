@@ -87,13 +87,24 @@ fn put_2(
     y: u8,
     new_value: u8,
 ) {
-    let mut row_ptrs: Vec<u8> = map.row_ptrs.to_vec();
     let mut row_ptrs_changed = false;
-    let mut columns: Vec<u8> = map.columns.to_vec();
+    let mut row_ptrs = map.row_ptrs.to_vec();
+    if let Some(i) = row_ptrs.iter().rposition(|x| *x != 0) {
+        row_ptrs.truncate(i + 1);
+    }
+
     let mut columns_changed = false;
-    let mut values: Vec<u8> = map.values.to_vec();
+    let mut columns: Vec<u8> = map.columns.to_vec();
+    if let Some(i) = columns.iter().rposition(|x| *x != 0) {
+        columns.truncate(i + 1);
+    }
+
     let mut values_changed = false;
-    //let xu = x as usize;
+    let mut values: Vec<u8> = map.values.to_vec();
+    if let Some(i) = values.iter().rposition(|x| *x != 0) {
+        values.truncate(i + 1);
+    }
+
     let yu = y as usize;
     let mut new_width = map.width;
     let mut new_height = map.height;
@@ -118,9 +129,11 @@ fn put_2(
                     rp_val_next = row_ptrs[(y + 1) as usize];
                 }
                 for i in yu + 1..row_ptrs.len() {
-                    let new_rp_val = row_ptrs[i] + 1;
-                    row_ptrs.splice(i..i + 1, [new_rp_val]);
-                    row_ptrs_changed = true;
+                    if i == 0 || row_ptrs[i] > 0 {
+                        let new_rp_val = row_ptrs[i] + 1;
+                        row_ptrs.splice(i..i + 1, [new_rp_val]);
+                        row_ptrs_changed = true;
+                    }
                 }
             }
 
@@ -162,12 +175,21 @@ fn put_2(
     }
 
     if row_ptrs_changed {
+        if row_ptrs.len() < ROW_PTR_MAX {
+            row_ptrs.extend(vec![0; ROW_PTR_MAX - row_ptrs.len()]);
+        }
         map.row_ptrs[..].copy_from_slice(&row_ptrs[..ROW_PTR_MAX]);
     }
     if columns_changed {
+        if columns.len() < COL_MAX {
+            columns.extend(vec![0; COL_MAX - columns.len()]);
+        }
         map.columns[..].copy_from_slice(&columns[..COL_MAX]);
     }
     if values_changed {
+        if values.len() < COL_MAX {
+            values.extend(vec![0; COL_MAX - values.len()]);
+        }
         map.values[..].copy_from_slice(&values[..COL_MAX]);
     }
 }
@@ -180,10 +202,14 @@ fn value_ptr(row_ptrs: &Vec<u8>, columns: &Vec<u8>, values: &Vec<u8>, x: u8, y: 
     let mut insert_point = None;
     if y < row_ptrs.len() as u8 {
         let rp_val = row_ptrs[y as usize];
-        let mut rp_val_next = columns.len() as u8;
+        let mut rp_val_next = 0;
         if y + 1 < row_ptrs.len() as u8 {
             rp_val_next = row_ptrs[(y + 1) as usize];
         }
+        if rp_val_next < rp_val {
+            rp_val_next = columns.len() as u8;
+        }
+
         let mut check_col_subset = false;
         let mut x_in_column = 0;
         for col_subset_pos in rp_val..rp_val_next {
@@ -196,6 +222,7 @@ fn value_ptr(row_ptrs: &Vec<u8>, columns: &Vec<u8>, values: &Vec<u8>, x: u8, y: 
                 break;
             } else if col_subset_pos == rp_val_next - 1 {
                 insert_point = Some(col_subset_pos + 1);
+                break;
             }
         }
         let check_minimum = check_col_subset;

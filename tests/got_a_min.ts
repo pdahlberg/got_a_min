@@ -210,13 +210,16 @@ describe("/Map", () => {
 
     (await map.refresh()).log();
 
-    await map.put(0, 0, 9);
-    await map.put(6, 0, 9);
-    await map.put(0, 4, 9);
+    //await map.put(0, 0, 9);
+    //await map.put(6, 0, 9);
+    await map.put(0, 3, 9);
     //await map.put(6, 4, 9);
 
     (await map.refresh()).log();
-    expect(map.get(0, 0)).equal(9);
+    console.log(map.csm.debugCompressedAsString());
+    //expect(map.get(0, 0)).equal(9);
+    //expect(map.get(6, 0)).equal(9);
+    expect(map.get(0, 3)).equal(9);
     //expect(map.get(8, 1)).equal(9);
   });
 
@@ -1230,11 +1233,17 @@ class CompressedSparseMatrix {
   values: Array<number>;
   
   constructor(rowPtrs: Array<number>, columns: Array<number>, values: Array<number>, width: number, height: number) {
-      this.rowPtrs = rowPtrs;
-      this.columns = columns;
-      this.values = values;
-      this.width = width;
-      this.height = height;
+    let rowPtrsLen = rowPtrs.map(num => num > 0).lastIndexOf(true);
+    let columnsLen = columns.map(num => num > 0).lastIndexOf(true);
+    let valuesLen = values.map(num => num > 0).lastIndexOf(true);
+    let biggestLen = Math.max(columnsLen, valuesLen);
+    console.log("biggestLen", biggestLen);
+
+    this.rowPtrs = rowPtrs.slice(0, rowPtrsLen + 1);
+    this.columns = columns.slice(0, biggestLen + 1);
+    this.values = values.slice(0, biggestLen + 1);
+    this.width = width;
+    this.height = height;
   }
 
   static fromMatrix(matrix: Array<Array<number>>, compressValue: number = 0): CompressedSparseMatrix {

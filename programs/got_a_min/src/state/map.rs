@@ -24,9 +24,9 @@ impl Map {
 }
 
 const DISCRIMINATOR_LENGTH: usize = 8;
-pub const ROW_PTR_MAX: usize = 64;
+pub const ROW_PTR_MAX: usize = 16;
 const ROW_PTR_LENGTH: usize = 1 * ROW_PTR_MAX;
-pub const COL_MAX: usize = 64;
+pub const COL_MAX: usize = 16;
 const COL_LENGTH: usize = 1 * COL_MAX;
 const VAL_LENGTH: usize = 1 * COL_MAX;
 const PUBLIC_KEY_LENGTH: usize = 32;
