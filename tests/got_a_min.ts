@@ -210,10 +210,14 @@ describe("/Map", () => {
 
     (await map.refresh()).log();
 
-    await map.put(1, 1, 9);
-    
+    await map.put(0, 0, 9);
+    await map.put(6, 0, 9);
+    await map.put(0, 4, 9);
+    //await map.put(6, 4, 9);
+
     (await map.refresh()).log();
-    expect(map.get(1, 1)).equal(9);
+    expect(map.get(0, 0)).equal(9);
+    //expect(map.get(8, 1)).equal(9);
   });
 
 

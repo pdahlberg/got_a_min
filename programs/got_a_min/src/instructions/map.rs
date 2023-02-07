@@ -88,7 +88,9 @@ fn put_2(
     new_value: u8,
 ) {
     let mut row_ptrs: Vec<u8> = map.row_ptrs.to_vec();
+    let mut row_ptrs_changed = false;
     let mut columns: Vec<u8> = map.columns.to_vec();
+    let mut columns_changed = false;
     let mut values: Vec<u8> = map.values.to_vec();
     let mut values_changed = false;
     //let xu = x as usize;
@@ -104,7 +106,10 @@ fn put_2(
         if insert_point_opt.is_some() {
             let insert_point = insert_point_opt.unwrap() as usize;
             columns.insert(insert_point, x);
+            columns_changed = true;
+
             values.insert(insert_point, new_value);
+            values_changed = true;
 
             let row_ptrs_len: u8 = row_ptrs.len() as u8;
             if y < row_ptrs_len {
@@ -115,6 +120,7 @@ fn put_2(
                 for i in yu + 1..row_ptrs.len() {
                     let new_rp_val = row_ptrs[i] + 1;
                     row_ptrs.splice(i..i + 1, [new_rp_val]);
+                    row_ptrs_changed = true;
                 }
             }
 
@@ -122,24 +128,32 @@ fn put_2(
                 new_width = x + 1;
             }
         } else {
-            let x_diff = (x + 1) - new_width;
-            if x_diff > 0 {
-                new_width += x_diff;
+            if (x + 1) >= new_width {
+                new_width += (x + 1) - new_width;
             }
-
-            let y_diff = (y + 1) - new_height;
 
             for _add_y in new_height..y + 1 {
                 row_ptrs.push(columns.len() as u8);
+                row_ptrs_changed = true;
+
                 columns.push(0);
+                columns_changed = true;
+
                 values.push(0);
+                values_changed = true;
             }
 
-            if y_diff > 0 {
+            if (y + 1) >= new_height {
                 row_ptrs.push(columns.len() as u8);
+                row_ptrs_changed = true;
+
                 columns.push(x);
+                columns_changed = true;
+
                 values.push(new_value);
-                new_height += y_diff;
+                values_changed = true;
+
+                new_height += (y + 1) - new_height;
             }
         }
 
@@ -147,8 +161,14 @@ fn put_2(
         map.height = new_height;
     }
 
+    if row_ptrs_changed {
+        map.row_ptrs[..].copy_from_slice(&row_ptrs[..ROW_PTR_MAX]);
+    }
+    if columns_changed {
+        map.columns[..].copy_from_slice(&columns[..COL_MAX]);
+    }
     if values_changed {
-        map.values[..].copy_from_slice(&values[..]);
+        map.values[..].copy_from_slice(&values[..COL_MAX]);
     }
 }
 
