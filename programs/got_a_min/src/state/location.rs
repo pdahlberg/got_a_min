@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
 
-use crate::{errors::ValidationError, instructions::location::fake_rng};
+use crate::{errors::ValidationError, instructions::{location::fake_rng, map}};
+
+use super::Map;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct OwnershipRef {
@@ -72,7 +74,7 @@ impl Location {
         diff_x + diff_y
     }
 
-    pub fn explore(&mut self) {
+    pub fn explore(&mut self, map: &mut Account<Map>) {
         self.location_type = match fake_rng(self.owner) {
             0 => LocationType::Planet,
             1 => LocationType::Moon,
@@ -82,6 +84,8 @@ impl Location {
             5 => LocationType::Asteroid,
             _ => LocationType::Space,
         };
+
+        map::put_2(map, self.pos_x as u8, self.pos_y as u8, 1);
     }
 }
 

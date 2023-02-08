@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::state::{unit::*, Location, LocationType};
+use crate::state::{unit::*, Location, LocationType, Map};
 use crate::errors::ValidationError;
 
 pub fn init(ctx: Context<InitUnit>, name: String, _x: i64, _y: i64) -> Result<()> {
@@ -12,6 +12,8 @@ pub fn init(ctx: Context<InitUnit>, name: String, _x: i64, _y: i64) -> Result<()
     unit.owner = *owner.key;
     unit.name = name;
     unit.at_location_id = location.key();
+    unit.movement_speed = 1;
+    unit.arrives_at = 0;
     unit.bump = *ctx.bumps.get("unit").unwrap();
 
     require!(unit.name.len() <= NAME_LENGTH, ValidationError::NameTooLong);
@@ -60,11 +62,13 @@ pub fn move_unit(ctx: Context<MoveUnit>, _from_x: i64, _from_y: i64, _to_x: i64,
     let unit: &mut Account<Unit> = &mut ctx.accounts.unit;
     let from_location: &Account<Location> = &ctx.accounts.from_location;
     let to_location: &mut Account<Location> = &mut ctx.accounts.to_location;
+    let map: &mut Account<Map> = &mut ctx.accounts.map;
 
     require!(unit.at_location_id == from_location.key(), ValidationError::ExperimentalError);
+    require!(from_location.distance(to_location) == 1, ValidationError::UnitMoveInvalid);
 
     if to_location.location_type == LocationType::Unexplored {
-        to_location.explore();
+        to_location.explore(map);
     }
 
     unit.at_location_id = to_location.key();
@@ -107,6 +111,8 @@ pub struct MoveUnit<'info> {
         bump = to_location.bump,
     )]
     pub to_location: Account<'info, Location>,
+    #[account(mut)]
+    pub map: Account<'info, Map>,
     #[account(mut)]
     pub owner: Signer<'info>,
     pub system_program: Program<'info, System>,

@@ -29,37 +29,18 @@ pub fn init(ctx: Context<InitMap>, compressed_value: u8) -> Result<()> {
     // RP => 0248
     map.row_ptrs[1] = 2;
     map.row_ptrs[2] = 4;
-    map.row_ptrs[3] = 8;
 
     // C  => 2312012512345
-    map.columns[0] = 2;
-    map.columns[1] = 3;
-    map.columns[2] = 1;
-    map.columns[3] = 2;
-    map.columns[4] = 0;
-    map.columns[5] = 1;
-    map.columns[6] = 2;
-    map.columns[7] = 5;
-    map.columns[8] = 1;
-    map.columns[9] = 2;
-    map.columns[10] = 3;
-    map.columns[11] = 4;
-    map.columns[12] = 5;
+    map.columns[0] = 0;
+    map.columns[1] = 1;
+    map.columns[2] = 0;
+    map.columns[3] = 1;
 
     // V  => 3121421351421
-    map.values[0] = 3;
+    map.values[0] = 1;
     map.values[1] = 1;
-    map.values[2] = 2;
+    map.values[2] = 1;
     map.values[3] = 1;
-    map.values[4] = 4;
-    map.values[5] = 2;
-    map.values[6] = 1;
-    map.values[7] = 3;
-    map.values[8] = 5;
-    map.values[9] = 1;
-    map.values[10] = 4;
-    map.values[11] = 2;
-    map.values[12] = 1;
 
     Ok(())
 }
@@ -90,7 +71,7 @@ fn clear(
     put_2(map, x, y, map.compressed_value)
 }
 
-fn put_2(
+pub fn put_2(
     map: &mut Account<Map>,
     x: u8,
     y: u8,
