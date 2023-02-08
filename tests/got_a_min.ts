@@ -200,11 +200,28 @@ describe("/Map", () => {
   it("Init map", async () => {
     let map = await initMap(program);
 
-    await (await map.refresh()).log();
+    (await map.refresh()).log();
     
     expect(map.initialized).equal(true);
   });
 
+  it("Update map", async () => {
+    let map = await initMap(program);
+
+    (await map.refresh()).log();
+
+    await map.put(0, 0, 9);
+    await map.put(6, 0, 9);
+    await map.put(0, 4, 9);
+    await map.put(6, 4, 9);
+
+    (await map.refresh()).log();
+    console.log(map.csm.debugCompressedAsString());
+    expect(map.get(0, 0)).equal(9);
+    expect(map.get(6, 0)).equal(9);
+    expect(map.get(0, 4)).equal(9);
+    expect(map.get(6, 4)).equal(9);
+  });
 
 });
 
@@ -1130,20 +1147,103 @@ function anchorBNtoNum(val: anchor.BN){
   return val.toNumber()
 }
 
+class MapState extends BaseState<MapState> {
+
+  csm: CompressedSparseMatrix;
+
+  async refresh(): Promise<MapState> {
+    let state = await this.program.account.map.fetch(this.getPubKey());
+    this.initialized = true;
+    this.csm = new CompressedSparseMatrix(state.rowPtrs, state.columns, state.values, state.width, state.height, state.compressedValue);
+    return this;
+  }
+
+  async put(x: number, y: number, value: number) {
+    await this.program.methods
+    .mapPut(x, y, value)
+    .accounts({map: this.getPubKey()})
+    .rpc();
+  }
+
+  get(x: number, y: number): number {
+    return this.csm.get(x, y);
+  }
+
+  toString(): string {
+    return `${this.instanceName}(${this.csm.width}x${this.csm.height} matrix=\n${this.csm.asMatrixToString()})`;
+  }
+
+  initMatrix(columns: number, rows: number): Array<Array<number>> {
+    let matrix = new Array<Array<number>>(rows);
+
+    for(let x = 0; x < columns; x++) {
+        matrix[x] = new Array(rows);
+        for(let y = 0; y < rows; y++) {
+            matrix[x][y] = 0;
+        }
+    }
+  
+    return matrix;
+}
+
+  toMatrix(rowPtrs: Array<number>, columns: Array<number>, values: Array<number>): string {
+    let csm = new CompressedSparseMatrix(rowPtrs, columns, values, 6, 5, 0);
+    let matrix = this.initMatrix(20, 12);
+    let costM = (matrix[0].length * 8) * (matrix.length * 8);
+    let costCSM = (rowPtrs.length * 8) + (columns.length * 8) + values.length;
+    //console.log("Matrix cost: " + costM + ", CSM cost: " + costCSM);
+
+    let lines = "\n";
+    lines += "row2: ";
+    rowPtrs.forEach(function(a) { lines += a; });
+    lines += "\n";
+    lines += "col2: ";
+    columns.forEach(function(a) { lines += a; });
+    lines += "\n";
+    lines += "val2: ";
+    values.forEach(function(a) { lines += a; });
+    lines += "\n";
+
+    csm.unpack(matrix, 0, 0);
+
+    let str = "";
+
+    str += lines;
+
+    str += "-- 1 --\n";
+    for(let y = 0; y < matrix[0].length; y++) {
+        for(let x = 0; x < matrix.length; x++) {
+            str += matrix[x][y];
+        }
+        str += "\n";
+    }
+    str += "-- 2 --";
+
+    return str;
+  }
+}
+
 class CompressedSparseMatrix {
   width: number;
   height: number;
-  compressedValue: number = 0;
+  compressedValue: number;
   rowPtrs: Array<number>;
   columns: Array<number>;
   values: Array<number>;
   
-  constructor(rowPtrs: Array<number>, columns: Array<number>, values: Array<number>, width: number, height: number) {
-      this.rowPtrs = rowPtrs;
-      this.columns = columns;
-      this.values = values;
-      this.width = width;
-      this.height = height;
+  constructor(rowPtrs: Array<number>, columns: Array<number>, values: Array<number>, width: number, height: number, compressedValue: number) {
+    let rowPtrsLen = rowPtrs.map(num => num > 0).lastIndexOf(true);
+    let columnsLen = columns.map(num => num > 0).lastIndexOf(true);
+    let valuesLen = values.map(num => num > 0).lastIndexOf(true);
+    let biggestLen = Math.max(columnsLen, valuesLen);
+    console.log("biggestLen", biggestLen);
+
+    this.rowPtrs = rowPtrs.slice(0, rowPtrsLen + 1);
+    this.columns = columns.slice(0, biggestLen + 1);
+    this.values = values.slice(0, biggestLen + 1);
+    this.width = width;
+    this.height = height;
+    this.compressedValue = compressedValue;
   }
 
   static fromMatrix(matrix: Array<Array<number>>, compressValue: number = 0): CompressedSparseMatrix {
@@ -1174,16 +1274,16 @@ class CompressedSparseMatrix {
       }
       }
 
-      return new CompressedSparseMatrix(ptrs, cols, vals, matrix[0].length, matrix.length);
+      return new CompressedSparseMatrix(ptrs, cols, vals, matrix[0].length, matrix.length, compressValue);
   }
 
-  static initMatrix(columns: number, rows: number): Array<Array<number>> {
+  static initMatrix(columns: number, rows: number, compressedValue: number): Array<Array<number>> {
       let matrix = new Array<Array<number>>(rows);
   
       for(let x = 0; x < columns; x++) {
           matrix[x] = new Array(rows);
           for(let y = 0; y < rows; y++) {
-              matrix[x][y] = 0;
+              matrix[x][y] = compressedValue;
           }
       }
     
@@ -1229,7 +1329,7 @@ class CompressedSparseMatrix {
   }
 
   get(x: number, y: number): number {
-      let r = 0;
+      let r = this.compressedValue;
       let [i, _] = this.valuePtr(x, y);
       if(i >= 0) {
           r = this.values[i];
@@ -1327,7 +1427,7 @@ class CompressedSparseMatrix {
   }
   
   asMatrixToString(): string {
-      let matrix = CompressedSparseMatrix.initMatrix(this.width, this.height);
+      let matrix = CompressedSparseMatrix.initMatrix(this.width, this.height, this.compressedValue);
       this.unpack(matrix);
       let str = "";
       for(let y = 0; y < matrix[0].length; y++) {
@@ -1350,75 +1450,6 @@ class CompressedSparseMatrix {
       lines += "val: ";
       this.values.forEach(function(a) { lines += a; });
       return lines;        
-  }
-}
-
-class MapState extends BaseState<MapState> {
-
-  rowPtrs: Array<number>;
-  columns: Array<number>;
-  values: Array<number>;
-
-  async refresh(): Promise<MapState> {
-    let state = await this.program.account.map.fetch(this.getPubKey());
-    this.initialized = true;
-    this.rowPtrs = state.rowPtrs.map(anchorBNtoNum);
-    this.columns = state.columns.map(anchorBNtoNum);
-    this.values = state.values;
-    return this;
-  }
-
-  toString(): string {
-    return `${this.instanceName}(${this.rowPtrs}) =>\n${this.toMatrix(this.rowPtrs, this.columns, this.values)}`;
-  }
-
-  initMatrix(columns: number, rows: number): Array<Array<number>> {
-    let matrix = new Array<Array<number>>(rows);
-
-    for(let x = 0; x < columns; x++) {
-        matrix[x] = new Array(rows);
-        for(let y = 0; y < rows; y++) {
-            matrix[x][y] = 0;
-        }
-    }
-  
-    return matrix;
-}
-
-  toMatrix(rowPtrs: Array<number>, columns: Array<number>, values: Array<number>): string {
-    let csm = new CompressedSparseMatrix(rowPtrs, columns, values, 6, 5);
-    let matrix = this.initMatrix(20, 12);
-    let costM = (matrix[0].length * 8) * (matrix.length * 8);
-    let costCSM = (rowPtrs.length * 8) + (columns.length * 8) + values.length;
-    //console.log("Matrix cost: " + costM + ", CSM cost: " + costCSM);
-
-    let lines = "\n";
-    lines += "row2: ";
-    rowPtrs.forEach(function(a) { lines += a; });
-    lines += "\n";
-    lines += "col2: ";
-    columns.forEach(function(a) { lines += a; });
-    lines += "\n";
-    lines += "val2: ";
-    values.forEach(function(a) { lines += a; });
-    lines += "\n";
-
-    csm.unpack(matrix, 0, 0);
-
-    let str = "";
-
-    str += lines;
-
-    str += "-- 1 --\n";
-    for(let y = 0; y < matrix[0].length; y++) {
-        for(let x = 0; x < matrix.length; x++) {
-            str += matrix[x][y];
-        }
-        str += "\n";
-    }
-    str += "-- 2 --";
-
-    return str;
   }
 }
 
@@ -1756,7 +1787,7 @@ async function initMap(program: Program<GotAMin>): Promise<MapState> {
   const key: anchor.web3.Keypair = anchor.web3.Keypair.generate();
 
   await program.methods
-    .initMap()
+    .initMap(0)
     .accounts({
       map: key.publicKey,
       owner: pk,
@@ -1766,3 +1797,4 @@ async function initMap(program: Program<GotAMin>): Promise<MapState> {
 
   return new MapState(program, key, "Map");
 }
+
