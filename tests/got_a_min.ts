@@ -322,7 +322,7 @@ describe("/Unit", () => {
     unit.log();
     expect(unit.name).equal(unitName)
 
-    await moveUnit(unit, locationTo, map);
+    await moveUnit(unit, locationTo, map, 0);
 
     (await unit.refresh()).log();
     (await locationTo.refresh()).log();
@@ -1536,7 +1536,7 @@ async function initLocation2(program: Program<GotAMin>, name: string, position: 
   return locationPda;
 }
 
-async function moveUnit(unit: UnitState, toLocation: LocationState, map: MapState) {
+async function moveUnit(unit: UnitState, toLocation: LocationState, map: MapState, current_timestamp: number) {
   let program = unit.program;
   const provider = program.provider as anchor.AnchorProvider;
   let pk = provider.wallet.publicKey;
@@ -1545,7 +1545,14 @@ async function moveUnit(unit: UnitState, toLocation: LocationState, map: MapStat
   let currentLocation = await fetchLocationStatePK(program, unit.atLocation);
   
   await program.methods
-    .moveUnit(currentLocation.xBN, currentLocation.yBN, toLocation.xBN, toLocation.yBN, unit.name)
+    .debugMoveUnit(
+      currentLocation.xBN, 
+      currentLocation.yBN, 
+      toLocation.xBN, 
+      toLocation.yBN, 
+      unit.name, 
+      new anchor.BN(current_timestamp),
+    )
     .accounts({
       unit: unitPda,
       fromLocation: unit.atLocation,

@@ -12,6 +12,8 @@ pub fn init(ctx: Context<InitUnit>, name: String, _x: i64, _y: i64) -> Result<()
     unit.owner = *owner.key;
     unit.name = name;
     unit.at_location_id = location.key();
+    unit.movement_speed = 1;
+    unit.arrives_at = 0;
     unit.bump = *ctx.bumps.get("unit").unwrap();
 
     require!(unit.name.len() <= NAME_LENGTH, ValidationError::NameTooLong);
@@ -63,6 +65,7 @@ pub fn move_unit(ctx: Context<MoveUnit>, _from_x: i64, _from_y: i64, _to_x: i64,
     let map: &mut Account<Map> = &mut ctx.accounts.map;
 
     require!(unit.at_location_id == from_location.key(), ValidationError::ExperimentalError);
+    require!(from_location.distance(to_location) == 1, ValidationError::UnitMoveInvalid);
 
     if to_location.location_type == LocationType::Unexplored {
         to_location.explore(map);

@@ -22,6 +22,7 @@ pub enum ValidationError {
     #[msg("Fuel not supplied to processor.")]                                   FuelNotSupplied,
     #[msg("Not enough fuel.")]                                                  FuelNotEnough,
     #[msg("Location has not yet been explored.")]                               LocationUnexplored,
+    #[msg("Unit attempting invalid move.")]                                     UnitMoveInvalid,
     #[msg("Invalid input parameter.")]                                          InvalidInput,
     #[msg("Trying stuff out and failing quite deliberately.")]                  ExperimentalError,
 }
