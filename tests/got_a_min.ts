@@ -223,7 +223,6 @@ describe("/Map", () => {
     expect(map.get(6, 4)).equal(9);
   });
 
-
 });
 
 describe("/Initializations", () => {
@@ -1155,7 +1154,7 @@ class MapState extends BaseState<MapState> {
   async refresh(): Promise<MapState> {
     let state = await this.program.account.map.fetch(this.getPubKey());
     this.initialized = true;
-    this.csm = new CompressedSparseMatrix(state.rowPtrs, state.columns, state.values, state.width, state.height);
+    this.csm = new CompressedSparseMatrix(state.rowPtrs, state.columns, state.values, state.width, state.height, state.compressedValue);
     return this;
   }
 
@@ -1188,7 +1187,7 @@ class MapState extends BaseState<MapState> {
 }
 
   toMatrix(rowPtrs: Array<number>, columns: Array<number>, values: Array<number>): string {
-    let csm = new CompressedSparseMatrix(rowPtrs, columns, values, 6, 5);
+    let csm = new CompressedSparseMatrix(rowPtrs, columns, values, 6, 5, 0);
     let matrix = this.initMatrix(20, 12);
     let costM = (matrix[0].length * 8) * (matrix.length * 8);
     let costCSM = (rowPtrs.length * 8) + (columns.length * 8) + values.length;
@@ -1227,12 +1226,12 @@ class MapState extends BaseState<MapState> {
 class CompressedSparseMatrix {
   width: number;
   height: number;
-  compressedValue: number = 0;
+  compressedValue: number;
   rowPtrs: Array<number>;
   columns: Array<number>;
   values: Array<number>;
   
-  constructor(rowPtrs: Array<number>, columns: Array<number>, values: Array<number>, width: number, height: number) {
+  constructor(rowPtrs: Array<number>, columns: Array<number>, values: Array<number>, width: number, height: number, compressedValue: number) {
     let rowPtrsLen = rowPtrs.map(num => num > 0).lastIndexOf(true);
     let columnsLen = columns.map(num => num > 0).lastIndexOf(true);
     let valuesLen = values.map(num => num > 0).lastIndexOf(true);
@@ -1244,6 +1243,7 @@ class CompressedSparseMatrix {
     this.values = values.slice(0, biggestLen + 1);
     this.width = width;
     this.height = height;
+    this.compressedValue = compressedValue;
   }
 
   static fromMatrix(matrix: Array<Array<number>>, compressValue: number = 0): CompressedSparseMatrix {
@@ -1274,16 +1274,16 @@ class CompressedSparseMatrix {
       }
       }
 
-      return new CompressedSparseMatrix(ptrs, cols, vals, matrix[0].length, matrix.length);
+      return new CompressedSparseMatrix(ptrs, cols, vals, matrix[0].length, matrix.length, compressValue);
   }
 
-  static initMatrix(columns: number, rows: number): Array<Array<number>> {
+  static initMatrix(columns: number, rows: number, compressedValue: number): Array<Array<number>> {
       let matrix = new Array<Array<number>>(rows);
   
       for(let x = 0; x < columns; x++) {
           matrix[x] = new Array(rows);
           for(let y = 0; y < rows; y++) {
-              matrix[x][y] = 0;
+              matrix[x][y] = compressedValue;
           }
       }
     
@@ -1329,7 +1329,7 @@ class CompressedSparseMatrix {
   }
 
   get(x: number, y: number): number {
-      let r = 0;
+      let r = this.compressedValue;
       let [i, _] = this.valuePtr(x, y);
       if(i >= 0) {
           r = this.values[i];
@@ -1427,7 +1427,7 @@ class CompressedSparseMatrix {
   }
   
   asMatrixToString(): string {
-      let matrix = CompressedSparseMatrix.initMatrix(this.width, this.height);
+      let matrix = CompressedSparseMatrix.initMatrix(this.width, this.height, this.compressedValue);
       this.unpack(matrix);
       let str = "";
       for(let y = 0; y < matrix[0].length; y++) {
@@ -1787,7 +1787,7 @@ async function initMap(program: Program<GotAMin>): Promise<MapState> {
   const key: anchor.web3.Keypair = anchor.web3.Keypair.generate();
 
   await program.methods
-    .initMap()
+    .initMap(0)
     .accounts({
       map: key.publicKey,
       owner: pk,

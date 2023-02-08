@@ -113,8 +113,8 @@ pub mod got_a_min {
         unit::move_unit(ctx, from_x, from_y, to_x, to_y, name, current_timestamp)
     }
 
-    pub fn init_map(ctx: Context<InitMap>) -> Result<()> {
-        map::init(ctx)
+    pub fn init_map(ctx: Context<InitMap>, compressed_value: u8) -> Result<()> {
+        map::init(ctx, compressed_value)
     }
 
     pub fn map_put(ctx: Context<MapPut>, x: u8, y: u8, num: u8) -> Result<()> {

@@ -13,17 +13,18 @@ pub struct InitMap<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn init(ctx: Context<InitMap>) -> Result<()> {
+pub fn init(ctx: Context<InitMap>, compressed_value: u8) -> Result<()> {
     let map: &mut Account<Map> = &mut ctx.accounts.map;
     let owner: &Signer = &ctx.accounts.owner;
 
     map.owner = owner.key();
-    map.row_ptrs = [0; ROW_PTR_MAX];
-    map.columns = [0; COL_MAX];
-    map.values = [0; COL_MAX];
+    map.row_ptrs = [0; MAP_MAX_HEIGHT];
+    map.columns = [0; MAP_MAX_WIDTH];
+    map.values = [0; MAP_MAX_WIDTH];
 
     map.width = 6;
     map.height = 5;
+    map.compressed_value = compressed_value;
 
     // RP => 0248
     map.row_ptrs[1] = 2;
@@ -81,6 +82,14 @@ pub fn put(ctx: Context<MapPut>, x: u8, y: u8, num: u8) -> Result<()> {
     Ok(())
 }
 
+fn clear(
+    map: &mut Account<Map>,
+    x: u8,
+    y: u8,
+) {
+    put_2(map, x, y, map.compressed_value)
+}
+
 fn put_2(
     map: &mut Account<Map>,
     x: u8,
@@ -89,7 +98,7 @@ fn put_2(
 ) {
     let mut row_ptrs_changed = false;
     let mut row_ptrs = map.row_ptrs.to_vec();
-    if let Some(i) = row_ptrs.iter().rposition(|x| *x != 0) {
+    if let Some(i) = row_ptrs.iter().rposition(|x| *x != map.compressed_value) {
         row_ptrs.truncate(i + 1);
     }
 
@@ -98,8 +107,8 @@ fn put_2(
     let mut values_changed = false;
     let mut values: Vec<u8> = map.values.to_vec();
 
-    let col_size = columns.iter().rposition(|x| *x != 0);
-    let val_size = values.iter().rposition(|x| *x != 0);
+    let col_size = columns.iter().rposition(|x| *x != map.compressed_value);
+    let val_size = values.iter().rposition(|x| *x != map.compressed_value);
 
     if let Some(bigger_size) = col_size.max(val_size) {
         columns.truncate(bigger_size + 1);
@@ -150,10 +159,10 @@ fn put_2(
                 row_ptrs.push(columns.len() as u8);
                 row_ptrs_changed = true;
 
-                columns.push(0);
+                columns.push(map.compressed_value);
                 columns_changed = true;
 
-                values.push(0);
+                values.push(map.compressed_value);
                 values_changed = true;
             }
 
@@ -176,22 +185,22 @@ fn put_2(
     }
 
     if row_ptrs_changed {
-        if row_ptrs.len() < ROW_PTR_MAX {
-            row_ptrs.extend(vec![0; ROW_PTR_MAX - row_ptrs.len()]);
+        if row_ptrs.len() < MAP_MAX_HEIGHT {
+            row_ptrs.extend(vec![map.compressed_value; MAP_MAX_HEIGHT - row_ptrs.len()]);
         }
-        map.row_ptrs[..].copy_from_slice(&row_ptrs[..ROW_PTR_MAX]);
+        map.row_ptrs[..].copy_from_slice(&row_ptrs[..MAP_MAX_HEIGHT]);
     }
     if columns_changed {
-        if columns.len() < COL_MAX {
-            columns.extend(vec![0; COL_MAX - columns.len()]);
+        if columns.len() < MAP_MAX_WIDTH {
+            columns.extend(vec![map.compressed_value; MAP_MAX_WIDTH - columns.len()]);
         }
-        map.columns[..].copy_from_slice(&columns[..COL_MAX]);
+        map.columns[..].copy_from_slice(&columns[..MAP_MAX_WIDTH]);
     }
     if values_changed {
-        if values.len() < COL_MAX {
-            values.extend(vec![0; COL_MAX - values.len()]);
+        if values.len() < MAP_MAX_WIDTH {
+            values.extend(vec![map.compressed_value; MAP_MAX_WIDTH - values.len()]);
         }
-        map.values[..].copy_from_slice(&values[..COL_MAX]);
+        map.values[..].copy_from_slice(&values[..MAP_MAX_WIDTH]);
     }
 }
 
