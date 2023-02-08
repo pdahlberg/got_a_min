@@ -309,19 +309,24 @@ describe("/Unit", () => {
   it("Init and move unit", async () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
-    let unitName = "s1";
+    let unitName = "Shp1";
     let locationFrom = await (await createLocation2(program, "L1", [1, 1], 10, {space:{}})).withName("From");
     let locationTo = await (await createLocation2(program, "L2", [2, 1], 10)).withName("To");
     let unit = await initUnit(unitName, locationFrom);
+    let map = await initMap(program);
+    //await map.put(0, 0, 9);
+
+    (await map.refresh()).log();
     (await locationTo.refresh()).log();
 
     unit.log();
     expect(unit.name).equal(unitName)
 
-    await moveUnit(unit, locationTo);
+    await moveUnit(unit, locationTo, map);
 
     (await unit.refresh()).log();
     (await locationTo.refresh()).log();
+    (await map.refresh()).log();
     
     expect(unit.atLocation.toBase58()).equal(locationTo.getPubKeyStr(), "Target location")
     expect(locationTo.typeAsJson()).equal(JSON.stringify({space:{}}));
@@ -1531,7 +1536,7 @@ async function initLocation2(program: Program<GotAMin>, name: string, position: 
   return locationPda;
 }
 
-async function moveUnit(unit: UnitState, toLocation: LocationState) {
+async function moveUnit(unit: UnitState, toLocation: LocationState, map: MapState) {
   let program = unit.program;
   const provider = program.provider as anchor.AnchorProvider;
   let pk = provider.wallet.publicKey;
@@ -1545,6 +1550,7 @@ async function moveUnit(unit: UnitState, toLocation: LocationState) {
       unit: unitPda,
       fromLocation: unit.atLocation,
       toLocation: toLocation.getPubKey(),
+      map: map.getPubKey(),
       owner: pk,
     })
     .rpc();
