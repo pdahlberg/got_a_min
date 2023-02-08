@@ -213,14 +213,14 @@ describe("/Map", () => {
     await map.put(0, 0, 9);
     await map.put(6, 0, 9);
     await map.put(0, 4, 9);
-    await map.put(1, 4, 9);
+    await map.put(6, 4, 9);
 
     (await map.refresh()).log();
     console.log(map.csm.debugCompressedAsString());
     expect(map.get(0, 0)).equal(9);
     expect(map.get(6, 0)).equal(9);
     expect(map.get(0, 4)).equal(9);
-    expect(map.get(1, 4)).equal(9);
+    expect(map.get(6, 4)).equal(9);
   });
 
 
