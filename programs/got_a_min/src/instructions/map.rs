@@ -95,14 +95,15 @@ fn put_2(
 
     let mut columns_changed = false;
     let mut columns: Vec<u8> = map.columns.to_vec();
-    if let Some(i) = columns.iter().rposition(|x| *x != 0) {
-        columns.truncate(i + 1);
-    }
-
     let mut values_changed = false;
     let mut values: Vec<u8> = map.values.to_vec();
-    if let Some(i) = values.iter().rposition(|x| *x != 0) {
-        values.truncate(i + 1);
+
+    let col_size = columns.iter().rposition(|x| *x != 0);
+    let val_size = values.iter().rposition(|x| *x != 0);
+
+    if let Some(bigger_size) = col_size.max(val_size) {
+        columns.truncate(bigger_size + 1);
+        values.truncate(bigger_size + 1);
     }
 
     let yu = y as usize;
