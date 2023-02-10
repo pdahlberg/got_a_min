@@ -92,8 +92,8 @@ pub fn move_to_location(ctx: Context<MoveStorage>, current_timestamp: i64) -> Re
     require!(!storage.is_moving(current_timestamp), ValidationError::NotAllowedWhileMoving);
 
     storage.location_id = to_location.key();
-    let distance = from_location.distance(to_location);
-    let travel_time = distance / storage.movement_speed;
+    let distance_time = from_location.distance_time(to_location);
+    let travel_time = distance_time / storage.movement_speed;
     storage.arrives_at = match travel_time {
         0 => 0,
         _ => current_timestamp + travel_time,

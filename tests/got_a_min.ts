@@ -323,7 +323,7 @@ describe("/Unit", () => {
     expect(unit.name).equal(unitName)
 
     await moveUnitStart(unit, locationTo, 0);
-    await moveUnitComplete(unit, locationTo, map, 1);
+    await moveUnitComplete(unit, locationTo, map, 1000);
 
     (await unit.refresh()).log();
     (await locationTo.refresh()).log();
