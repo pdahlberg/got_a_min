@@ -108,9 +108,14 @@ pub mod got_a_min {
         unit::init(ctx, name, x, y)
     }
 
-    pub fn move_unit(ctx: Context<MoveUnit>, from_x: i64, from_y: i64, to_x: i64, to_y: i64, name: String) -> Result<()> {
+    pub fn move_unit_start(ctx: Context<MoveUnitStart>, from_x: i64, from_y: i64, to_x: i64, to_y: i64, name: String) -> Result<()> {
         let current_timestamp = Clock::get()?.unix_timestamp;
-        unit::move_unit(ctx, from_x, from_y, to_x, to_y, name, current_timestamp)
+        unit::move_unit_start(ctx, from_x, from_y, to_x, to_y, name, current_timestamp)
+    }
+
+    pub fn move_unit_complete(ctx: Context<MoveUnitComplete>, to_x: i64, to_y: i64, name: String) -> Result<()> {
+        let current_timestamp = Clock::get()?.unix_timestamp;
+        unit::move_unit_complete(ctx, to_x, to_y, name, current_timestamp)
     }
 
     pub fn init_map(ctx: Context<InitMap>, compressed_value: u8) -> Result<()> {
@@ -146,8 +151,12 @@ pub mod got_a_min {
         processor::init(ctx, processor_type, fuel_resource_id, output_resource_id, output_rate, processing_duration, fuel_cost_type, current_timestamp)
     }
 
-    pub fn debug_move_unit(ctx: Context<MoveUnit>, from_x: i64, from_y: i64, to_x: i64, to_y: i64, name: String, current_timestamp: i64) -> Result<()> {
-        unit::move_unit(ctx, from_x, from_y, to_x, to_y, name, current_timestamp)
+    pub fn debug_move_unit_start(ctx: Context<MoveUnitStart>, from_x: i64, from_y: i64, to_x: i64, to_y: i64, name: String, current_timestamp: i64) -> Result<()> {
+        unit::move_unit_start(ctx, from_x, from_y, to_x, to_y, name, current_timestamp)
+    }
+
+    pub fn debug_move_unit_complete(ctx: Context<MoveUnitComplete>, to_x: i64, to_y: i64, name: String, current_timestamp: i64) -> Result<()> {
+        unit::move_unit_complete(ctx, to_x, to_y, name, current_timestamp)
     }
 
     pub fn debug_update_storage_move_status(ctx: Context<UpdateStorageMoveStatus>, current_timestamp: i64) -> Result<()> {

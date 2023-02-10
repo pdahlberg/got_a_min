@@ -1,7 +1,5 @@
 use anchor_lang::prelude::*;
 
-use crate::errors::ValidationError;
-
 #[account]
 pub struct Unit {
     pub owner: Pubkey,
@@ -23,6 +21,25 @@ impl Unit {
         + BUMP_LENGTH
     ;
 
+    pub fn location_id(&self, current_time: i64) -> Option<Pubkey> {
+        match self.arrives_at {
+            0 => Some(self.at_location_id),
+            timestamp => {
+                match current_time >= timestamp {
+                    true => Some(self.at_location_id),
+                    false => None,
+                }
+            },
+        }
+    }
+
+    pub fn is_moving(&self, current_time: i64) -> bool {
+        self.location_id(current_time).is_none()
+    }
+
+    pub fn has_arrived(&self, current_time: i64) -> bool {
+        self.location_id(current_time).is_some() && self.arrives_at > 0
+    }
 }
 
 const DISCRIMINATOR_LENGTH: usize = 8;

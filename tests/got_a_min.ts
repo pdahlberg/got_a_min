@@ -322,7 +322,8 @@ describe("/Unit", () => {
     unit.log();
     expect(unit.name).equal(unitName)
 
-    await moveUnit(unit, locationTo, map, 0);
+    await moveUnitStart(unit, locationTo, 0);
+    await moveUnitComplete(unit, locationTo, map, 1);
 
     (await unit.refresh()).log();
     (await locationTo.refresh()).log();
@@ -1130,6 +1131,7 @@ class UnitState extends BaseState<UnitState> {
 
   name: string;
   atLocation: PublicKey;
+  arrivesAt: number;
 
   public static async createPda(program: Program<GotAMin>, publicKey: PublicKey, instanceName: string): Promise<UnitState> {
     return new UnitState(program, null, instanceName, publicKey)
@@ -1140,11 +1142,12 @@ class UnitState extends BaseState<UnitState> {
     let state = await this.program.account.unit.fetch(this.getPubKey());
     this.name = state.name;
     this.atLocation = state.atLocationId;
+    this.arrivesAt = state.arrivesAt.toNumber();;
     return this;
   }
 
   toString(): string {
-    return `${this.instanceName}(${this.name})`;
+    return `${this.instanceName}(${this.name}, arrives: ${this.arrivesAt})`;
   }
 }
 
@@ -1536,7 +1539,7 @@ async function initLocation2(program: Program<GotAMin>, name: string, position: 
   return locationPda;
 }
 
-async function moveUnit(unit: UnitState, toLocation: LocationState, map: MapState, current_timestamp: number) {
+async function moveUnitStart(unit: UnitState, toLocation: LocationState, current_timestamp: number) {
   let program = unit.program;
   const provider = program.provider as anchor.AnchorProvider;
   let pk = provider.wallet.publicKey;
@@ -1545,7 +1548,7 @@ async function moveUnit(unit: UnitState, toLocation: LocationState, map: MapStat
   let currentLocation = await fetchLocationStatePK(program, unit.atLocation);
   
   await program.methods
-    .debugMoveUnit(
+    .debugMoveUnitStart(
       currentLocation.xBN, 
       currentLocation.yBN, 
       toLocation.xBN, 
@@ -1556,6 +1559,29 @@ async function moveUnit(unit: UnitState, toLocation: LocationState, map: MapStat
     .accounts({
       unit: unitPda,
       fromLocation: unit.atLocation,
+      toLocation: toLocation.getPubKey(),
+      owner: pk,
+    })
+    .rpc();
+
+}
+
+async function moveUnitComplete(unit: UnitState, toLocation: LocationState, map: MapState, current_timestamp: number) {
+  let program = unit.program;
+  const provider = program.provider as anchor.AnchorProvider;
+  let pk = provider.wallet.publicKey;
+
+  let unitPda = getUnitPda(program, pk, unit.name);
+  
+  await program.methods
+    .debugMoveUnitComplete(
+      toLocation.xBN, 
+      toLocation.yBN, 
+      unit.name, 
+      new anchor.BN(current_timestamp),
+    )
+    .accounts({
+      unit: unitPda,
       toLocation: toLocation.getPubKey(),
       map: map.getPubKey(),
       owner: pk,
