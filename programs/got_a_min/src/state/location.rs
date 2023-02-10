@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{errors::ValidationError, instructions::{location::fake_rng, map}};
 
-use super::Map;
+use super::{Map, game};
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct OwnershipRef {
@@ -72,6 +72,10 @@ impl Location {
         let diff_x = (self.pos_x - other_location.pos_x).abs();
         let diff_y = (self.pos_y - other_location.pos_y).abs();
         diff_x + diff_y
+    }
+    
+    pub fn distance_time(&self, other_location: &Location) -> i64 {
+        return self.distance(other_location) * game::DISTANCE_TIME_FACTOR;
     }
 
     pub fn explore(&mut self, map: &mut Account<Map>) {

@@ -69,8 +69,8 @@ pub fn move_unit_start(ctx: Context<MoveUnitStart>, _from_x: i64, _from_y: i64, 
     require!(!unit.is_moving(current_timestamp), ValidationError::NotAllowedWhileMoving);
 
     unit.at_location_id = to_location.key();
-    let distance = from_location.distance(to_location);
-    let travel_time = distance / unit.movement_speed;
+    let distance_time = from_location.distance_time(to_location);
+    let travel_time = distance_time / unit.movement_speed;
     unit.arrives_at = match travel_time {
         0 => 0,
         _ => current_timestamp + travel_time,
