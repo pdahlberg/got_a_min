@@ -83,6 +83,7 @@ function getStuffPda(program, pubKey: PublicKey, key: string, x: number): Public
     [
       anchor.utils.bytes.utf8.encode(key),
       pubKey.toBuffer(),
+      arrX,
     ],
     program.programId,
   );

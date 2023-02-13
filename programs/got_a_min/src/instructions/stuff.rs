@@ -17,6 +17,7 @@ pub fn init(ctx: Context<InitStuff>, x: i64) -> Result<()> {
 }
 
 #[derive(Accounts)]
+#[instruction(x: i64)]
 pub struct InitStuff<'info> {
     #[account(
         init, 
@@ -25,6 +26,7 @@ pub struct InitStuff<'info> {
         seeds = [
             b"stuff", 
             owner.key().as_ref(),
+            &x.to_le_bytes(),
         ],
         bump,
     )]
