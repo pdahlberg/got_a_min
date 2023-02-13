@@ -23,6 +23,8 @@ pub fn init(ctx: Context<InitLocation>, name: String, x: i64, y: i64, capacity: 
 
     require!(location.name.len() <= NAME_LENGTH, ValidationError::NameTooLong);
 
+    msg!("Location {}x{} init", x, y);
+
     Ok(())
 }
 
