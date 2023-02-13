@@ -24,85 +24,13 @@ before("Init", async () => {
   DEFAULT_LOCATION = await initDefaultLocation(program);
 });
 
-async function createGameTile(program, pk, x, y, ) {
-  const provider = program.provider as anchor.AnchorProvider;
-  let pos: [number, number] = [x, y];
-
-  let gameTilePda = getMapTilePda(program, pk, x, y);
-  let locationPda = getLocationPda(program, pk, pos);
-
-  // Location test
-  await initLocation2(program, 'name', pos, 5);
-  
-  const storage: KP = anchor.web3.Keypair.generate();
-  await program.methods
-    .simpleInitStorage(pos)
-    .accounts({
-      storage: storage.publicKey,
-      location: locationPda,
-      owner: pk,
-      systemProgram: anchor.web3.SystemProgram.programId,
-    })
-    .signers([storage])
-    .rpc();
-
-  const gameTilePdaInfo = await provider.connection.getAccountInfo(gameTilePda);
-  if(gameTilePdaInfo == null) {
-    await program.methods
-      .createGameTile(pos)
-      .accounts({
-        owner: pk,
-        gameTile: gameTilePda,
-        //location: locationPda,
-        //storage: storage.publicKey,
-      })
-      //.signers([p1])
-      .rpc();
-  }
-
-  return gameTilePda;
-}
-
-async function exploreGameTile(program, pk, x, y, map) {
-  let pos: [number, number] = [x, y];
-
-  let gameTilePda = getMapTilePda(program, pk, x, y);
-  //let locationPda = getLocationPda(program, pk, pos);
-
-  await program.methods
-    .exploreGameTile(pos)
-    .accounts({
-      owner: pk,
-      gameTile: gameTilePda,
-      //location: locationPda,
-    })
-    .rpc();
-
-  let updatedState = await fetchMapTileState(program, pk, x, y);
-  map[y][x] = updatedState;
-  return updatedState;
-}
-
-function getMapTilePda(program, pk, x, y) {
-  let pos = [x, y];
-  const [pda, _] = PublicKey.findProgramAddressSync(
-    [
-      anchor.utils.bytes.utf8.encode("game-tile"),
-      pk.toBuffer(),
-      new Uint8Array(pos),
-    ],
-    program.programId,
-  );
-  return pda;
-}
-
 function getLocationPda(program, pubKey: PublicKey, pos: [number, number]): PublicKey {
   let x = pos[0];
   let y = pos[1];
   return getPda(program, pubKey, "map-location", x, y);
 }
 
-function getPda(program, pubKey: PublicKey, key, x: number, y: number): PublicKey {
+function getPda(program, pubKey: PublicKey, key: string, x: number, y: number): PublicKey {
   let arrX = new Uint8Array(new anchor.BN(x).toArray('le', 8));
   let arrY = new Uint8Array(new anchor.BN(y).toArray('le', 8));
 
@@ -130,57 +58,8 @@ function getUnitPda(program, pk: PublicKey, name: string): PublicKey {
   return pda;
 }
 
-async function fetchMapTileState(program, pk, x, y) {
-  let pda = getMapTilePda(program, pk, x, y);
-  return await program.account.gameTile.fetch(pda);
-}
-
 async function fetchLocationStatePK(program, pos: PublicKey): Promise<LocationState> {
   return (await LocationState.createPda(program, pos, "Location")).refresh();
-}
-
-async function fetchLocationState(program, pk, pos: [number, number]): Promise<LocationState> {
-  let pda = getLocationPda(program, pk, pos);
-  return await fetchLocationStatePK(program, pda);
-}
-
-async function fetchStorageStatePK(program, pk) {
-  return await program.account.storage.fetch(pk)
-}
-
-async function fetchUnitStatePK(program, unitPda: PublicKey) {
-  return await program.account.unit.fetch(unitPda);
-}
-
-async function fetchUnitState(program, pk, name) {
-  let pda = getUnitPda(program, pk, name);
-  return await fetchUnitStatePK(program, pda);
-}
-
-function printMap(map, debug = false) {
-  var debugStr = "";
-  for(let y = 0; y < map.length; y++) {
-    var row = "";
-    for(let x = 0; x < map[y].length; x++) {
-      if(map[y][x].tileType == 1) {
-        row = row + " ";
-      } else if(map[y][x].tileType == 3) {
-        row = row + "*";
-      } else if(map[y][x].tileType == 2) {
-        row = row + ":";
-      } else {
-        row = row + "?";
-      }
-
-      if(debug) {
-        debugStr = debugStr + "\n" + x + "/" + y + "=" + map[y][x].tileType + "(" + map[y][x].name + ")";
-      }
-    }
-    console.log(row);
-  }
-  if(debug) {
-    console.log(debugStr);
-  }
 }
 
 describe("/Sandbox", () => {
@@ -189,7 +68,47 @@ describe("/Sandbox", () => {
   const program = anchor.workspace.GotAMin as Program<GotAMin>;
   const programProvider = program.provider as anchor.AnchorProvider;
 
+  it("Init stuff #init_stuff", async () => {
+    let stuff = await initStuff(program, 1);
+
+    let state = await program.account.stuff.fetch(stuff);
+    expect(state.x.toString()).equal("1");
+  });
 });
+
+function getStuffPda(program, pubKey: PublicKey, key: string, x: number): PublicKey {
+  let arrX = new Uint8Array(new anchor.BN(x).toArray('le', 8));
+
+  const [pda, _] = PublicKey.findProgramAddressSync(
+    [
+      anchor.utils.bytes.utf8.encode(key),
+      pubKey.toBuffer(),
+    ],
+    program.programId,
+  );
+  return pda;
+}
+
+async function initStuff(program: Program<GotAMin>, x: number): Promise<PublicKey> {
+  const provider = program.provider as anchor.AnchorProvider;
+  let pubKey = provider.wallet.publicKey;
+
+  let pda = getStuffPda(program, pubKey, "stuff", x);
+  
+  const pdaInfo = await provider.connection.getAccountInfo(pda);
+  console.log("pda", pdaInfo);
+  if(pdaInfo == null) {
+    await program.methods
+      .debugInitStuff(new anchor.BN(x))
+      .accounts({
+        stuff: pda,
+        owner: pubKey,
+      })
+      .rpc();
+  }
+
+  return pda;
+}
 
 describe("/Map", () => {
   let provider = anchor.AnchorProvider.env();
@@ -764,64 +683,6 @@ describe("/Location", () => {
     expect(location2.occupiedSpace).equal(1);
   });  
 
-  /*it("init_stuff", async () => {
-    const program = anchor.workspace.GotAMin as Program<GotAMin>;
-    const provider = program.provider as anchor.AnchorProvider;
-    let pk = provider.wallet.publicKey;
-
-    let num2 = 999;
-    let pos: [number, number] = [1, 2];
-    let locPda = getLocationPda(program, pk, pos);
-    console.log("pda", locPda.toBase58());
-    let loc = await initLocation2(program, "loc1", pos, 10, {space:{}});
-
-    let num = new anchor.BN(num2);
-    let buffer = num.toArray('le', 8);
-    console.log("stuff. num: ", num, ", toArray().len: ", buffer.length);
-    buffer.forEach((i) => {
-      console.log("buffer: ", i);
-    });
-    let uint8: Uint8Array = new Uint8Array(buffer);
-    uint8.forEach((i) => {
-      console.log("uint8: ", i);
-    });
-
-    await program.methods
-    .stuff(new anchor.BN(1), new anchor.BN(2))
-    .accounts({
-      owner: programProvider.wallet.publicKey,
-      location: locPda,
-      systemProgram: anchor.web3.SystemProgram.programId,
-    })
-    .rpc();
-
-  });*/
-
-/*  it("update stuff", async () => {
-    let key = new anchor.web3.PublicKey("FCHm4Ef3b1aKpBPTk6XkKsQwf8Z3zUhkh6VbZuSrwDi8");
-    console.log("Updating: ", key.toBase58());
-
-    await program.methods
-    .updateStuff(new anchor.BN(999))
-    .accounts({
-      stuff: key,
-    })
-    .signers(key)
-    .rpc();
-
-    let res = await program.account.stuff.fetch(account.publicKey);
-    expect(res.number.toNumber()).equal(123);
-  });
-
-  it("read stuff", async () => {
-    let key = new anchor.web3.PublicKey("FCHm4Ef3b1aKpBPTk6XkKsQwf8Z3zUhkh6VbZuSrwDi8");
-    console.log("Fetching location for: ", key.toBase58());
-
-    let res = await program.account.stuff.fetch(key);
-
-    console.log("stuff: ", res.number.toNumber());
-  });
-  */
 });
 
 function assertAnchorError(error: any, errorName: String) {
@@ -871,12 +732,6 @@ async function initResource(program: Program<GotAMin>, resource, name: string, i
 async function createProcessor(program: Program<GotAMin>, output_resource, outputRate, processingDuration = 5, location = DEFAULT_LOCATION, type: ProcessorType = {producer:{}}, fuel_resource = DEFAULT_FUEL_RES, fuelCostType: FuelCostType = {nothing:{}}): Promise<[KP, any]> {
   const processor = anchor.web3.Keypair.generate();
   return [processor, await initProcessor(processor, fuel_resource, output_resource, outputRate, processingDuration, location, type, fuelCostType)];
-}
-
-async function createProcessor2(program: Program<GotAMin>, output_resource, outputRate, processingDuration = 5, location = DEFAULT_LOCATION, type: ProcessorType = {producer:{}}, fuel_resource = DEFAULT_FUEL_RES, fuelCostType: FuelCostType = {nothing:{}}): Promise<KP> {
-  const processor = anchor.web3.Keypair.generate();
-  await initProcessor(processor, fuel_resource, output_resource, outputRate, processingDuration, location, type, fuelCostType);
-  return processor;
 }
 
 async function createProcessor3(output_resource: ResourceState, outputRate, processingDuration = 5, location: LocationState = DEFAULT_LOCATION, type: ProcessorType = {producer:{}}, fuelCostType: FuelCostType = {nothing:{}}, fuel_resource = DEFAULT_FUEL_RES): Promise<ProcessorState> {
@@ -1502,10 +1357,6 @@ async function debugStorage(
 
 async function initDefaultFuel(program: Program<GotAMin>): Promise<ResourceState> {
   return await createResource2(program, "default_fuel", []);
-}
-
-async function createLocation(program: Program<GotAMin>, name: string, position: [number, number], capacity: number):  Promise<PublicKey> {
-  return await initLocation2(program, name, position, capacity);
 }
 
 async function createLocation2(program: Program<GotAMin>, name: string, position: [number, number], capacity: number, locationType = null):  Promise<LocationState> {

@@ -65,12 +65,3 @@ pub struct InitLocation<'info> {
     pub owner: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
-
-#[derive(Accounts)]
-pub struct Stuff<'info> {
-    #[account(init, payer = owner, space = Location::LEN)]
-    pub location: Account<'info, Location>,
-    #[account(mut)]
-    pub owner: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}

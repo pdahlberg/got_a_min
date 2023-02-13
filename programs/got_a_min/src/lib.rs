@@ -31,14 +31,6 @@ pub mod got_a_min {
         location::init(ctx, name, x, y, capacity, location_type)
     }
 
-    pub fn stuff(ctx: Context<InitStuff>, x: i64, y: i64) -> Result<()> {
-        stuff::init(ctx, x, y)
-    }
-
-    pub fn update_stuff(ctx: Context<UpdateStuff>, number: i64) -> Result<()> {
-        stuff::update(ctx, number)
-    }
-
     pub fn init_processor(ctx: Context<InitProcessor>, processor_type: ProcessorType, fuel_resource_id: Pubkey, output_resource_id: Pubkey, output_rate: i64, processing_duration: i64, fuel_cost_type: FuelCostType) -> Result<()> {
         let current_timestamp = Clock::get()?.unix_timestamp;
         processor::init(ctx, processor_type, fuel_resource_id, output_resource_id, output_rate, processing_duration, fuel_cost_type, current_timestamp)
@@ -167,6 +159,9 @@ pub mod got_a_min {
         storage::move_to_location(ctx, current_timestamp)
     }
 
+    pub fn debug_init_stuff(ctx: Context<InitStuff>, x: i64) -> Result<()> {
+        stuff::init(ctx, x)
+    }
 
 }
 
