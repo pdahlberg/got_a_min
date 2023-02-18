@@ -14,7 +14,7 @@ pub fn init(ctx: Context<InitLocation>, name: String, x: i64, y: i64, capacity: 
     location.pos_y = y;
     location.occupied_space = 0;
     location.capacity = capacity;
-    location.occupied_by = vec!();
+    //location.occupied_by = vec!();
     location.location_type = match location_type {
         Some(loc_type) => loc_type,
         None => LocationType::Unexplored,

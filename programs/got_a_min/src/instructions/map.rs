@@ -42,6 +42,8 @@ pub fn init(ctx: Context<InitMap>, compressed_value: u8) -> Result<()> {
     map.values[2] = 1;
     map.values[3] = 1;
 
+    msg!("Map init done");
+
     Ok(())
 }
 

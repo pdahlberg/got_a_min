@@ -18,7 +18,7 @@ pub struct Location {
     pub name: String,
     pub pos_x: i64,
     pub pos_y: i64,
-    pub occupied_by: Vec<OwnershipRef>,
+    //pub occupied_by: Vec<OwnershipRef>,
     pub location_type: LocationType,
     pub bump: u8,
 }
@@ -31,7 +31,7 @@ impl Location {
         + NAME_LENGTH
         + POS_X_LENGTH
         + POS_Y_LENGTH
-        + OCCUPIED_BY_LENGTH
+        //+ OCCUPIED_BY_LENGTH
         + LOCATION_TYPE_LENGTH
         + BUMP_LENGTH
     ;
@@ -40,7 +40,7 @@ impl Location {
         require!(ownership_ref.player == owner.key(), ValidationError::OwnerRequired);
 
         self.occupied_space += 1;
-        self.occupied_by.push(ownership_ref);
+        //self.occupied_by.push(ownership_ref);
         // verify that it only exists once in the list
         require!(self.occupied_space() <= self.capacity, ValidationError::LocationFull);
         Ok(())
@@ -50,22 +50,23 @@ impl Location {
         require!(ownership_ref.player == owner.key(), ValidationError::OwnerRequired);
 
         self.occupied_space -= 1;
-        match self.occupied_by.iter().position(|i| i.item == ownership_ref.item) {
+        /*match self.occupied_by.iter().position(|i| i.item == ownership_ref.item) {
             Some(index) => {
                 self.occupied_by.remove(index);
                 require!(self.occupied_space() >= 0, ValidationError::ExperimentalError);        
             },
             None => require!(false, ValidationError::ExperimentalError), // Custom error for not finding item
-        }
+        }*/
 
         Ok(())    
     }
 
     pub fn occupied_space(&self) -> i64 {
-        match i64::try_from(self.occupied_by.len()) {
+        /*match i64::try_from(self.occupied_by.len()) {
             Ok(value) => value,
             Err(_) => MAX_CAPACITY_I64,
-        }
+        }*/
+        0
     }
 
     pub fn distance(&self, other_location: &Location) -> i64 {
@@ -115,7 +116,7 @@ const CAPACITY_LENGTH: usize = 8;
 const DISCRIMINATOR_LENGTH: usize = 8;
 const LOCATION_TYPE_LENGTH: usize = 1;
 pub const NAME_LENGTH: usize = 64 * 4;
-const OCCUPIED_BY_LENGTH: usize = MAX_CAPACITY * (PUBLIC_KEY_LENGTH * 2);
+//const OCCUPIED_BY_LENGTH: usize = MAX_CAPACITY * (PUBLIC_KEY_LENGTH * 2);
 const OCCUPIED_SPACE_LENGTH: usize = 8;
 const POS_X_LENGTH: usize = 8;
 const POS_Y_LENGTH: usize = 8;
