@@ -43,7 +43,6 @@ pub struct InitUnit<'info> {
     )]
     pub unit: Account<'info, Unit>,
     #[account(
-        mut,
         seeds = [
             b"map-location", 
             owner.key().as_ref(),
