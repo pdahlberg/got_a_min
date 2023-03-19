@@ -106,13 +106,14 @@ pub trait InLocation {
     }
 }
 
+const VEC_BASE_LEN: usize = 68; // Why? Ought to be 4... ?
 const MAX_CAPACITY: usize = 1;
 const MAX_CAPACITY_I64: i64 = 1;
 
 const CAPACITY_LENGTH: usize = 8;
 const DISCRIMINATOR_LENGTH: usize = 8;
 const LOCATION_TYPE_LENGTH: usize = 1;
-const OCCUPIED_BY_LENGTH: usize = MAX_CAPACITY * (PUBLIC_KEY_LENGTH * 2);
+const OCCUPIED_BY_LENGTH: usize = VEC_BASE_LEN + (MAX_CAPACITY * (PUBLIC_KEY_LENGTH * 2));
 const OCCUPIED_SPACE_LENGTH: usize = 8;
 const POS_X_LENGTH: usize = 8;
 const POS_Y_LENGTH: usize = 8;

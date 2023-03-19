@@ -41,6 +41,7 @@ pub fn init(
 pub struct InitStorage<'info> {
     #[account(init, payer = owner, space = Storage::LEN)]
     pub storage: Account<'info, Storage>,
+
     #[account(
         mut,
         seeds = [
@@ -52,6 +53,7 @@ pub struct InitStorage<'info> {
         bump = location.bump,
     )]
     pub location: Account<'info, Location>,
+
     #[account(mut)]
     pub owner: Signer<'info>,
     pub system_program: Program<'info, System>,

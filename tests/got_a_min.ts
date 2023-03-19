@@ -70,8 +70,11 @@ describe("/Sandbox", () => {
 
   it("Init stuff #init_stuff", async () => {
     let stuff = await initStuff(program, 1);
-    let locationPda = await initLocation2(program, "loc", [1, 1], 10);
+    let location = await createLocation2(program, "loc", [1, 1], 10);
+    let resource = await createResource2(program, 'A', []);
+    let storage = (await createStorage4(resource, 999, location)).withName("Storage");
 
+    (await location.refresh()).log();
     let state = await program.account.stuff.fetch(stuff);
     expect(state.x.toString()).equal("1");
   });
@@ -997,7 +1000,7 @@ class UnitState extends BaseState<UnitState> {
 
   async refresh(): Promise<UnitState> {
     let state = await this.program.account.unit.fetch(this.getPubKey());
-    this.name = state.name;
+    //this.name = state.name;
     this.atLocation = state.atLocationId;
     this.arrivesAt = state.arrivesAt.toNumber();;
     return this;
@@ -1361,7 +1364,7 @@ async function initDefaultFuel(program: Program<GotAMin>): Promise<ResourceState
   return await createResource2(program, "default_fuel", []);
 }
 
-async function createLocation2(program: Program<GotAMin>, name: string, position: [number, number], capacity: number, locationType = { unexplored: {} }):  Promise<LocationState> {
+async function createLocation2(program: Program<GotAMin>, name: string, position: [number, number], capacity: number, locationType = null):  Promise<LocationState> {
   let publicKey = await initLocation2(program, name, position, capacity, locationType);
   return LocationState.createPda(program, publicKey, `Loc(${position[0]/position[1]})`);
 }
@@ -1370,10 +1373,11 @@ async function initDefaultLocation(program: Program<GotAMin>): Promise<LocationS
   return await createLocation2(program, "L", [9999, 9999], 999);
 }
 
-async function initLocation2(program: Program<GotAMin>, name: string, position: [number, number], capacity: number, locationType = { unexplored: {} }): Promise<PublicKey> {
+async function initLocation2(program: Program<GotAMin>, name: string, position: [number, number], capacity: number, locationType = null): Promise<PublicKey> {
   const provider = program.provider as anchor.AnchorProvider;
   let pubKey = provider.wallet.publicKey;
 
+  let type = locationType == null ? { unexplored: {} } : locationType;
   let x = position[0];
   let y = position[1];
   let locationPda = getLocationPda(program, pubKey, position);
@@ -1381,7 +1385,7 @@ async function initLocation2(program: Program<GotAMin>, name: string, position: 
   const pdaInfo = await provider.connection.getAccountInfo(locationPda);
   if(pdaInfo == null) {
     await program.methods
-      .initLocation(new anchor.BN(x), new anchor.BN(y), new anchor.BN(capacity), locationType)
+      .initLocation(new anchor.BN(x), new anchor.BN(y), new anchor.BN(capacity), type)
       .accounts({
         location: locationPda,
         owner: pubKey,
