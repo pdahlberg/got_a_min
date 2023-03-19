@@ -27,8 +27,8 @@ pub mod got_a_min {
         game::explore_game_tile(ctx, xy)
     }
 
-    pub fn init_location(ctx: Context<InitLocation>, name: String, x: i64, y: i64, capacity: i64, location_type: LocationType) -> Result<()> {
-        location::init(ctx, name, x, y, capacity, location_type)
+    pub fn init_location(ctx: Context<InitLocation>, x: i64, y: i64, capacity: i64, location_type: LocationType) -> Result<()> {
+        location::init(ctx, x, y, capacity, location_type)
     }
 
     pub fn init_processor(ctx: Context<InitProcessor>, processor_type: ProcessorType, fuel_resource_id: Pubkey, output_resource_id: Pubkey, output_rate: i64, processing_duration: i64, fuel_cost_type: FuelCostType) -> Result<()> {

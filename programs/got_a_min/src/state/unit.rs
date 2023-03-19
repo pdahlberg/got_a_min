@@ -43,6 +43,6 @@ impl Unit {
 }
 
 const DISCRIMINATOR_LENGTH: usize = 8;
-pub const NAME_LENGTH: usize = 64 * 4;
+pub const NAME_LENGTH: usize = 8;
 const PUBLIC_KEY_LENGTH: usize = 32;
 const BUMP_LENGTH: usize = 1;
