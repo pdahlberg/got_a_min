@@ -70,7 +70,11 @@ describe("/Sandbox", () => {
 
   it("Init stuff #init_stuff", async () => {
     let stuff = await initStuff(program, 1);
+    let location = await createLocation2(program, "loc", [1, 1], 10);
+    let resource = await createResource2(program, 'A', []);
+    let storage = (await createStorage4(resource, 999, location)).withName("Storage");
 
+    (await location.refresh()).log();
     let state = await program.account.stuff.fetch(stuff);
     expect(state.x.toString()).equal("1");
   });
@@ -83,6 +87,7 @@ function getStuffPda(program, pubKey: PublicKey, key: string, x: number): Public
     [
       anchor.utils.bytes.utf8.encode(key),
       pubKey.toBuffer(),
+      arrX,
     ],
     program.programId,
   );
@@ -229,8 +234,8 @@ describe("/Unit", () => {
     const p1: KP = anchor.web3.Keypair.generate();
     let pk = provider.wallet.publicKey;
     let unitName = "Shp1";
-    let locationFrom = await (await createLocation2(program, "L1", [1, 1], 10, {space:{}})).withName("From");
-    let locationTo = await (await createLocation2(program, "L2", [2, 1], 10)).withName("To");
+    let locationFrom = (await createLocation2(program, "L1", [1, 1], 10, { space: {} })).withName("From");
+    let locationTo = (await createLocation2(program, "L2", [2, 1], 10)).withName("To");
     let unit = await initUnit(unitName, locationFrom);
     let map = await initMap(program);
     //await map.put(0, 0, 9);
@@ -300,8 +305,8 @@ describe("/Production", () => {
     let prodRate = 1;
     let duration = 1;
     let resource = await createResource2(program, 'A', []);
-    let producer = await (await createProcessor3(resource, prodRate, duration)).withName("Producer");
-    let storage = await (await createStorage4(resource, 999)).withName("Storage");
+    let producer = (await createProcessor3(resource, prodRate, duration)).withName("Producer");
+    let storage = (await createStorage4(resource, 999)).withName("Storage");
     
     for(let num = 0; num < 5; num += 1) {
       await debug_produce_without_input(producer, storage, resource, num);
@@ -317,8 +322,8 @@ describe("/Production", () => {
     let prodRate = 5;
     let duration = 1;
     let resource = await createResource2(program, 'A', []);
-    let producer = await (await createProcessor3(resource, prodRate, duration)).withName("Producer");
-    let storage = await (await createStorage4(resource, 3)).withName("Storage");
+    let producer = (await createProcessor3(resource, prodRate, duration)).withName("Producer");
+    let storage = (await createStorage4(resource, 3)).withName("Storage");
 
     await debug_produce_without_input(producer, storage, resource, 1);
 
@@ -333,26 +338,26 @@ describe("/Production", () => {
     let duration = 1;
     let resourceA = await createResource2(program, 'A', []);
     let resourceB = await createResource2(program, 'B', [[resourceA, 2]]);
-    let storageA = await (await createStorage4(resourceA, 5)).withName("StorageA");
-    let storageB = await (await createStorage4(resourceB, 5)).withName("StorageB");
+    let storageA = (await createStorage4(resourceA, 5)).withName("StorageA");
+    let storageB = (await createStorage4(resourceB, 5)).withName("StorageB");
     let storageFuel = await createStorage4(DEFAULT_FUEL_RES, 10, DEFAULT_LOCATION);
-    let producer = await (await createProcessor3(resourceB, rate, duration)).withName("Prod[2A=>B]");
+    let producer = (await createProcessor3(resourceB, rate, duration)).withName("Prod[2A=>B]");
 
     await debugStorage(storageA, 5);
     await storageA.refresh();
     expect(storageA.amount).to.equal(5);
 
     let time = 0;
-    await (await producer.refresh()).log(time);
-    await (await storageA.refresh()).log(time);
-    await (await storageB.refresh()).log(time);
+    (await producer.refresh()).log(time);
+    (await storageA.refresh()).log(time);
+    (await storageB.refresh()).log(time);
 
     time = 3;
     await debug_produce_with_1_input(producer, storageB, resourceB, storageA, storageFuel, time);
     
-    await (await producer.refresh()).log(time);
-    await (await storageA.refresh()).log(time);
-    await (await storageB.refresh()).log(time);
+    (await producer.refresh()).log(time);
+    (await storageA.refresh()).log(time);
+    (await storageB.refresh()).log(time);
     expect(storageB.amount, "Storage B amount").to.equal(2);
     expect(storageA.amount, "Storage A amount").to.equal(1);    
   });
@@ -407,18 +412,18 @@ describe("/Production", () => {
     await debugStorage(storageA, 5);
     await debugStorage(storageB, 5);
 
-    await (await producer.refresh()).log(time);
-    await (await storageA.refresh()).log(time);
-    await (await storageB.refresh()).log(time);
-    await (await storageC.refresh()).log(time);
+    (await producer.refresh()).log(time);
+    (await storageA.refresh()).log(time);
+    (await storageB.refresh()).log(time);
+    (await storageC.refresh()).log(time);
 
     time = 2;
     await debug_produce_with_2_inputs(producer, storageC, resourceC, storageA, storageB, time);
     
-    await (await producer.refresh()).log(time);
-    await (await storageA.refresh()).log(time);
-    await (await storageB.refresh()).log(time);
-    await (await storageC.refresh()).log(time);
+    (await producer.refresh()).log(time);
+    (await storageA.refresh()).log(time);
+    (await storageB.refresh()).log(time);
+    (await storageC.refresh()).log(time);
 
     expect(storageA.amount).equal(3);
     expect(storageB.amount).equal(3);
@@ -448,7 +453,7 @@ describe("/Sending", () => {
     let location1 = await createLocation2(program, 'loc1', [1, 0], 9999);
     let location2 = await createLocation2(program, 'loc2', [12, 3], 9999);
     let resource = await createResource2(program, 'A', []);
-    let sender = await (await createProcessor3(resource, 5, 6, location1, {sender:{}}, {distance:{}}))
+    let sender = (await createProcessor3(resource, 5, 6, location1, { sender: {} }, { distance: {} }))
       .withName("Sender");
     let localStorage = (await createStorage4(resource, 100, location1))
       .withName("local_storage")
@@ -456,7 +461,7 @@ describe("/Sending", () => {
     let remoteStorage = (await createStorage4(resource, 100, location2))
       .withName("remote_storage")
       .log();
-    let fuelStorage = await (await createStorage4(DEFAULT_FUEL_RES, 10, location1))
+    let fuelStorage = (await createStorage4(DEFAULT_FUEL_RES, 10, location1))
       .withName("fuel_storage");
 
     await debugStorage(fuelStorage, 2000);
@@ -995,7 +1000,7 @@ class UnitState extends BaseState<UnitState> {
 
   async refresh(): Promise<UnitState> {
     let state = await this.program.account.unit.fetch(this.getPubKey());
-    this.name = state.name;
+    //this.name = state.name;
     this.atLocation = state.atLocationId;
     this.arrivesAt = state.arrivesAt.toNumber();;
     return this;
@@ -1365,13 +1370,14 @@ async function createLocation2(program: Program<GotAMin>, name: string, position
 }
 
 async function initDefaultLocation(program: Program<GotAMin>): Promise<LocationState> {
-  return await createLocation2(program, "default", [9999, 9999], 999);
+  return await createLocation2(program, "L", [9999, 9999], 999);
 }
 
 async function initLocation2(program: Program<GotAMin>, name: string, position: [number, number], capacity: number, locationType = null): Promise<PublicKey> {
   const provider = program.provider as anchor.AnchorProvider;
   let pubKey = provider.wallet.publicKey;
 
+  let type = locationType == null ? { unexplored: {} } : locationType;
   let x = position[0];
   let y = position[1];
   let locationPda = getLocationPda(program, pubKey, position);
@@ -1379,7 +1385,7 @@ async function initLocation2(program: Program<GotAMin>, name: string, position: 
   const pdaInfo = await provider.connection.getAccountInfo(locationPda);
   if(pdaInfo == null) {
     await program.methods
-      .initLocation(name, new anchor.BN(x), new anchor.BN(y), new anchor.BN(capacity), locationType)
+      .initLocation(new anchor.BN(x), new anchor.BN(y), new anchor.BN(capacity), type)
       .accounts({
         location: locationPda,
         owner: pubKey,

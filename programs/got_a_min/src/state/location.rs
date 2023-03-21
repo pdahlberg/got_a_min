@@ -15,11 +15,10 @@ pub struct Location {
     pub owner: Pubkey,
     pub occupied_space: i64,
     pub capacity: i64,
-    pub name: String,
     pub pos_x: i64,
     pub pos_y: i64,
-    pub occupied_by: Vec<OwnershipRef>,
     pub location_type: LocationType,
+    pub occupied_by: Vec<OwnershipRef>,
     pub bump: u8,
 }
 
@@ -28,11 +27,10 @@ impl Location {
         + PUBLIC_KEY_LENGTH  // owner
         + OCCUPIED_SPACE_LENGTH
         + CAPACITY_LENGTH
-        + NAME_LENGTH
         + POS_X_LENGTH
         + POS_Y_LENGTH
-        + OCCUPIED_BY_LENGTH
         + LOCATION_TYPE_LENGTH
+        + OCCUPIED_BY_LENGTH
         + BUMP_LENGTH
     ;
 
@@ -108,14 +106,14 @@ pub trait InLocation {
     }
 }
 
-const MAX_CAPACITY: usize = 10;
-const MAX_CAPACITY_I64: i64 = 10;
+const VEC_BASE_LEN: usize = 68; // Why? Ought to be 4... ?
+const MAX_CAPACITY: usize = 1;
+const MAX_CAPACITY_I64: i64 = 1;
 
 const CAPACITY_LENGTH: usize = 8;
 const DISCRIMINATOR_LENGTH: usize = 8;
 const LOCATION_TYPE_LENGTH: usize = 1;
-pub const NAME_LENGTH: usize = 64 * 4;
-const OCCUPIED_BY_LENGTH: usize = MAX_CAPACITY * (PUBLIC_KEY_LENGTH * 2);
+const OCCUPIED_BY_LENGTH: usize = VEC_BASE_LEN + (MAX_CAPACITY * (PUBLIC_KEY_LENGTH * 2));
 const OCCUPIED_SPACE_LENGTH: usize = 8;
 const POS_X_LENGTH: usize = 8;
 const POS_Y_LENGTH: usize = 8;

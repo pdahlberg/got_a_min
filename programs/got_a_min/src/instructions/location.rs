@@ -2,26 +2,22 @@ use anchor_lang::prelude::*;
 use std::hash::{Hasher, Hash};
 use std::collections::hash_map::DefaultHasher;
 use crate::state::location::*;
-use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitLocation>, name: String, x: i64, y: i64, capacity: i64, location_type: Option<LocationType>) -> Result<()> {
+
+pub fn init(ctx: Context<InitLocation>, x: i64, y: i64, capacity: i64, location_type: LocationType) -> Result<()> {
     let location: &mut Account<Location> = &mut ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
 
     location.owner = *owner.key;
-    location.name = name;
     location.pos_x = x;
     location.pos_y = y;
     location.occupied_space = 0;
     location.capacity = capacity;
     location.occupied_by = vec!();
-    location.location_type = match location_type {
-        Some(loc_type) => loc_type,
-        None => LocationType::Unexplored,
-    };
+    location.location_type = location_type;
     location.bump = *ctx.bumps.get("location").unwrap();
 
-    require!(location.name.len() <= NAME_LENGTH, ValidationError::NameTooLong);
+    msg!("Location {}x{} init", x, y);
 
     Ok(())
 }
@@ -46,7 +42,7 @@ pub fn fake_rng(key: Pubkey) -> u8 {
 }
 
 #[derive(Accounts)]
-#[instruction(name: String, x: i64, y: i64, capacity: i64)]
+#[instruction(x: i64, y: i64, capacity: i64, location_type: LocationType)]
 pub struct InitLocation<'info> {
     #[account(
         init, 
@@ -61,7 +57,9 @@ pub struct InitLocation<'info> {
         bump,
     )]
     pub location: Account<'info, Location>,
+
     #[account(mut)]
     pub owner: Signer<'info>,
+    
     pub system_program: Program<'info, System>,
 }

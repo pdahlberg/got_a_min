@@ -2,7 +2,7 @@
 seeds = false
 skip-lint = false
 [programs.localnet]
-got_a_min = "3113AWybUqHaSKaEmUXnUFwXu4EUp1VDpqQFCvY7oajN"
+got_a_min = "CbU9TfAS58V2JprRyMZ54hM48nMseTxth6FW6sCW79nM"
 
 [registry]
 url = "https://api.apr.dev"
