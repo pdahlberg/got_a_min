@@ -96,8 +96,8 @@ pub mod got_a_min {
         processor::send(ctx, send_amount, current_timestamp, from_x, from_y, to_x, to_y)
     }
 
-    pub fn init_unit(ctx: Context<InitUnit>, name: String, x: i64, y: i64) -> Result<()> {
-        unit::init(ctx, name, x, y)
+    pub fn init_unit(ctx: Context<InitUnit>, name: String, x: i64, y: i64, game: Pubkey) -> Result<()> {
+        unit::init(ctx, name, x, y, game)
     }
 
     pub fn move_unit_start(ctx: Context<MoveUnitStart>, from_x: i64, from_y: i64, to_x: i64, to_y: i64, name: String) -> Result<()> {

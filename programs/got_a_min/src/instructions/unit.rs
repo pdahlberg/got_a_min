@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use crate::state::{unit::*, Location, LocationType, Map};
 use crate::errors::ValidationError;
 
-pub fn init(ctx: Context<InitUnit>, name: String, _x: i64, _y: i64) -> Result<()> {
+pub fn init(ctx: Context<InitUnit>, name: String, _x: i64, _y: i64, _game: Pubkey) -> Result<()> {
     let unit: &mut Account<Unit> = &mut ctx.accounts.unit;
     let location: &Account<Location> = &ctx.accounts.location;
     let owner: &Signer = &ctx.accounts.owner;
@@ -28,7 +28,7 @@ fn string_to_seed(value: &str) -> &[u8] {
 }
 
 #[derive(Accounts)]
-#[instruction(name: String, x: i64, y: i64)]
+#[instruction(name: String, x: i64, y: i64, game: Pubkey)]
 pub struct InitUnit<'info> {
     #[account(
         init, 
@@ -45,7 +45,7 @@ pub struct InitUnit<'info> {
     #[account(
         seeds = [
             b"map-location", 
-            owner.key().as_ref(),
+            game.as_ref(),
             &x.to_le_bytes(),
             &y.to_le_bytes(),
         ],

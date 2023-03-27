@@ -1000,7 +1000,7 @@ class UnitState extends BaseState<UnitState> {
 
   async refresh(): Promise<UnitState> {
     let state = await this.program.account.unit.fetch(this.getPubKey());
-    //this.name = state.name;
+    this.name = state.name;
     this.atLocation = state.atLocationId;
     this.arrivesAt = state.arrivesAt.toNumber();;
     return this;
